@@ -1,0 +1,42 @@
+# Devlog
+
+- Initial spec created
+- Implemented booking state machine and core transition tests
+- Added booking aggregate with transition guards and tests
+- Scaffolded FastAPI app with health check and API test
+- Added booking lifecycle endpoints with domain-backed transitions
+- Expanded domain and API tests for transition edge cases
+- Started web frontend shell for progress visibility
+- Added persistence stubs (SQLAlchemy models + repository interface)
+- Added OpenAPI response models for booking endpoints
+- Split API schemas into a dedicated module
+- Implemented SQLAlchemy booking repository adapter
+- Built minimal UI for booking creation, lookup, and transitions
+- Added booking list endpoint and recent bookings UI
+- Disabled UI actions based on server-allowed transitions
+- Scaffolded Expo worker app with minimal status screen
+- Added root .gitignore for repo hygiene
+- Added repository dependency injection and DB config hook
+- Added Alembic scaffold and initial bookings migration
+- Added worker app bookings list and check-in/out actions
+- Added worker booking detail screen and check-in window display
+- Added role-based API access stub with X-Actor-Role
+- Added conda environment.yml and requirements.txt
+- Added CORS allowlist for local dev
+- Added worker app polling for bookings
+- Added worker applications API and approval flow
+- Added operator UI for reviewing applications
+- Added worker application form
+- Cleaned up API schema definitions
+- Added shift posting/listing and mobile tabs
+- Added worker apply sheet with shift details
+- Added worker booking filters
+- Added worker profile API and public view for operators
+- Pinned mobile bottom navigation
+- Added operator profile view in applications
+- Added worker profile editing and operator public view
+- Added safe-area inset handling for mobile nav
+- Added worker profile fields and endpoints
+- Added mobile applications tab
+- Adjusted mobile top bar for safe-area
+
