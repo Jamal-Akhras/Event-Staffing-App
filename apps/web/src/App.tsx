@@ -64,6 +64,8 @@ type WorkerProfile = {
 };
 
 const apiBase = import.meta.env.VITE_API_BASE ?? "";
+const resolvedApiBase =
+  apiBase || (import.meta.env.DEV ? "http://127.0.0.1:8000" : "");
 const operatorHeaders = {
   "X-Actor-Role": "operator",
   "Content-Type": "application/json",
@@ -101,7 +103,7 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${apiBase}/health`, { signal: controller.signal })
+    fetch(`${resolvedApiBase}/health`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
@@ -109,14 +111,19 @@ export default function App() {
         return response.json();
       })
       .then((data) => setHealth(data))
-      .catch((err) => setError(err.message));
+      .catch((err) => {
+        if ((err as Error).name === "AbortError") {
+          return;
+        }
+        setError((err as Error).message);
+      });
 
     return () => controller.abort();
   }, []);
 
   const loadRecent = async () => {
     try {
-      const response = await fetch(`${apiBase}/bookings`, {
+      const response = await fetch(`${resolvedApiBase}/bookings`, {
         headers: operatorHeaders,
       });
       if (!response.ok) {
@@ -131,7 +138,7 @@ export default function App() {
 
   const loadApplications = async () => {
     try {
-      const response = await fetch(`${apiBase}/applications`, {
+      const response = await fetch(`${resolvedApiBase}/applications`, {
         headers: operatorHeaders,
       });
       if (!response.ok) {
@@ -148,7 +155,7 @@ export default function App() {
 
   const loadShifts = async () => {
     try {
-      const response = await fetch(`${apiBase}/shifts`, {
+      const response = await fetch(`${resolvedApiBase}/shifts`, {
         headers: operatorHeaders,
       });
       if (!response.ok) {
@@ -166,7 +173,7 @@ export default function App() {
   const loadWorkerProfile = async (workerId: string) => {
     setProfileError(null);
     try {
-      const response = await fetch(`${apiBase}/workers/${workerId}`, {
+      const response = await fetch(`${resolvedApiBase}/workers/${workerId}`, {
         headers: operatorHeaders,
       });
       if (!response.ok) {
@@ -197,7 +204,7 @@ export default function App() {
         end_time: new Date(formValues.end_time).toISOString(),
         now: new Date().toISOString(),
       };
-      const response = await fetch(`${apiBase}/bookings`, {
+      const response = await fetch(`${resolvedApiBase}/bookings`, {
         method: "POST",
         headers: operatorHeaders,
         body: JSON.stringify(payload),
@@ -227,7 +234,7 @@ export default function App() {
         notes: shiftForm.notes || null,
         now: new Date().toISOString(),
       };
-      const response = await fetch(`${apiBase}/shifts`, {
+      const response = await fetch(`${resolvedApiBase}/shifts`, {
         method: "POST",
         headers: operatorHeaders,
         body: JSON.stringify(payload),
@@ -247,7 +254,7 @@ export default function App() {
     }
     setBookingError(null);
     try {
-      const response = await fetch(`${apiBase}/bookings/${lookupId}`, {
+      const response = await fetch(`${resolvedApiBase}/bookings/${lookupId}`, {
         headers: operatorHeaders,
       });
       if (!response.ok) {
@@ -266,7 +273,7 @@ export default function App() {
     }
     setBookingError(null);
     try {
-      const response = await fetch(`${apiBase}${path}`, {
+      const response = await fetch(`${resolvedApiBase}${path}`, {
         method: "POST",
         headers: operatorHeaders,
         body: JSON.stringify({ now: new Date().toISOString() }),
@@ -286,7 +293,7 @@ export default function App() {
   const decideApplication = async (applicationId: string, action: "approve" | "reject") => {
     setApplicationsError(null);
     try {
-      const response = await fetch(`${apiBase}/applications/${applicationId}/${action}`, {
+      const response = await fetch(`${resolvedApiBase}/applications/${applicationId}/${action}`, {
         method: "POST",
         headers: operatorHeaders,
         body: JSON.stringify({ now: new Date().toISOString() }),
@@ -318,27 +325,71 @@ export default function App() {
 
   return (
     <div className="page">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">Reliability-first ops</p>
-          <h1>Event Staffing Control Room</h1>
-          <p className="subtitle">
-            The MVP is focused on the booking lifecycle: request, confirm, check-in,
-            check-out, approve, pay.
-          </p>
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark" />
+          <div>
+            <p className="brand-eyebrow">Reliability-first ops</p>
+            <p className="brand-title">Event Staffing</p>
+          </div>
         </div>
-        <div className="status-card">
-          <h2>API Status</h2>
-          {error && <p className="status error">{error}</p>}
-          {!error && !health && <p className="status pending">Checking...</p>}
-          {health && <p className="status ok">Healthy</p>}
-          <p className="status-meta">GET /health</p>
+        <div className="status-pill">
+          <span className="status-label">API</span>
+          {error && <span className="status error">{error}</span>}
+          {!error && !health && <span className="status pending">Checking</span>}
+          {health && <span className="status ok">Healthy</span>}
         </div>
       </header>
 
-      <section className="workspace">
-        <div className="panel">
-          <h3>Create Shift</h3>
+      <section className="hero">
+        <div className="hero-copy">
+          <p className="eyebrow">Control room</p>
+          <h1>Command staffing with the polish of a premium marketplace.</h1>
+          <p className="subtitle">
+            Manage shifts, applications, and booking lifecycles with the speed and
+            clarity operators expect.
+          </p>
+          <div className="hero-actions">
+            <button className="btn primary" type="button" onClick={loadShifts}>
+              Refresh shifts
+            </button>
+            <button className="btn ghost" type="button" onClick={loadApplications}>
+              View applications
+            </button>
+          </div>
+        </div>
+        <div className="hero-card">
+          <div className="hero-card-header">
+            <h2>Live API</h2>
+            <span className="pill">GET /health</span>
+          </div>
+          <div className="hero-card-body">
+            {error && <p className="status error">{error}</p>}
+            {!error && !health && <p className="status pending">Checking...</p>}
+            {health && <p className="status ok">Healthy</p>}
+            <p className="status-meta">
+              Runtime status updates for operator consoles and worker apps.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-header">
+          <div>
+            <h2>Operations</h2>
+            <p>Post shifts, confirm bookings, and manage outcomes from one place.</p>
+          </div>
+          <button className="btn secondary" type="button" onClick={loadRecent}>
+            Refresh bookings
+          </button>
+        </div>
+        <div className="workspace">
+          <div className="panel card">
+            <div className="panel-title">
+              <h3>Create Shift</h3>
+              <span className="pill">Operator</span>
+            </div>
           <form className="form" onSubmit={handleCreateShift}>
             <label>
               Operator ID
@@ -407,12 +458,17 @@ export default function App() {
                 }
               />
             </label>
-            <button type="submit">Post shift</button>
+            <button className="btn primary" type="submit">
+              Post shift
+            </button>
             {shiftError && <p className="status error">{shiftError}</p>}
           </form>
-        </div>
-        <div className="panel">
-          <h3>Open Shifts</h3>
+          </div>
+          <div className="panel card">
+            <div className="panel-title">
+              <h3>Open Shifts</h3>
+              <span className="pill">Live</span>
+            </div>
           {openShifts.length === 0 && (
             <p className="status pending">No open shifts.</p>
           )}
@@ -430,9 +486,12 @@ export default function App() {
               </div>
             ))}
           </div>
-        </div>
-        <div className="panel">
-          <h3>Create Booking</h3>
+          </div>
+          <div className="panel card">
+            <div className="panel-title">
+              <h3>Create Booking</h3>
+              <span className="pill">Lifecycle</span>
+            </div>
           <form className="form" onSubmit={handleCreate}>
             <label>
               Shift ID
@@ -483,18 +542,23 @@ export default function App() {
                 required
               />
             </label>
-            <button type="submit">Create booking</button>
+            <button className="btn primary" type="submit">
+              Create booking
+            </button>
           </form>
-        </div>
-        <div className="panel">
-          <h3>Booking Status</h3>
+          </div>
+          <div className="panel card">
+            <div className="panel-title">
+              <h3>Booking Status</h3>
+              <span className="pill">Operator</span>
+            </div>
           <div className="lookup">
             <input
               placeholder="Booking ID"
               value={lookupId}
               onChange={(event) => setLookupId(event.target.value)}
             />
-            <button type="button" onClick={handleLookup}>
+            <button className="btn secondary" type="button" onClick={handleLookup}>
               Load
             </button>
           </div>
@@ -503,42 +567,51 @@ export default function App() {
           {booking && (
             <div className="booking-card">
               <p className="booking-id">{booking.booking_id}</p>
-              <p className="booking-state">{booking.state}</p>
+              <div className="booking-state-row">
+                <p className="booking-state">{booking.state}</p>
+                <span className="pill">{booking.allowed_transitions.length} actions</span>
+              </div>
               <p className="booking-meta">
                 {booking.start_time} -&gt; {booking.end_time}
               </p>
               <div className="actions">
                 <button
+                  className="btn secondary"
                   onClick={() => transition(`/bookings/${booking.booking_id}/confirm`)}
                   disabled={!canTransition("confirmed")}
                 >
                   Confirm
                 </button>
                 <button
+                  className="btn secondary"
                   onClick={() => transition(`/bookings/${booking.booking_id}/approve`)}
                   disabled={!canTransition("approved")}
                 >
                   Approve
                 </button>
                 <button
+                  className="btn primary"
                   onClick={() => transition(`/bookings/${booking.booking_id}/pay`)}
                   disabled={!canTransition("paid")}
                 >
                   Pay
                 </button>
                 <button
+                  className="btn ghost"
                   onClick={() => transition(`/bookings/${booking.booking_id}/no-show`)}
                   disabled={!canTransition("no_show")}
                 >
                   No-show
                 </button>
                 <button
+                  className="btn ghost"
                   onClick={() => transition(`/bookings/${booking.booking_id}/cancel/worker`)}
                   disabled
                 >
                   Cancel (worker)
                 </button>
                 <button
+                  className="btn ghost"
                   onClick={() => transition(`/bookings/${booking.booking_id}/cancel/operator`)}
                   disabled={!canTransition("cancelled_by_operator")}
                 >
@@ -547,9 +620,12 @@ export default function App() {
               </div>
             </div>
           )}
-        </div>
-        <div className="panel">
-          <h3>Recent Bookings</h3>
+          </div>
+          <div className="panel card">
+            <div className="panel-title">
+              <h3>Recent Bookings</h3>
+              <span className="pill">Feed</span>
+            </div>
           {recentBookings.length === 0 && (
             <p className="status pending">No recent bookings.</p>
           )}
@@ -557,7 +633,7 @@ export default function App() {
             {recentBookings.map((item) => (
               <button
                 key={item.booking_id}
-                className="recent-item"
+                className="recent-item btn ghost"
                 onClick={() => {
                   setBooking(item);
                   setLookupId(item.booking_id);
@@ -568,9 +644,12 @@ export default function App() {
               </button>
             ))}
           </div>
-        </div>
-        <div className="panel">
-          <h3>Applications</h3>
+          </div>
+          <div className="panel card">
+            <div className="panel-title">
+              <h3>Applications</h3>
+              <span className="pill">Review</span>
+            </div>
           {applicationsError && <p className="status error">{applicationsError}</p>}
           {applications.length === 0 && (
             <p className="status pending">No applications yet.</p>
@@ -588,18 +667,21 @@ export default function App() {
                 </div>
                 <div className="actions">
                   <button
+                    className="btn secondary"
                     onClick={() => decideApplication(item.application_id, "approve")}
                     disabled={item.status !== "applied"}
                   >
                     Approve
                   </button>
                   <button
+                    className="btn ghost"
                     onClick={() => decideApplication(item.application_id, "reject")}
                     disabled={item.status !== "applied"}
                   >
                     Reject
                   </button>
                   <button
+                    className="btn ghost"
                     onClick={() => loadWorkerProfile(item.worker_id)}
                   >
                     View profile
@@ -636,40 +718,51 @@ export default function App() {
                 )}
               </div>
               <div className="actions">
-                <button onClick={() => setSelectedProfile(null)}>Close</button>
+                <button className="btn secondary" onClick={() => setSelectedProfile(null)}>
+                  Close
+                </button>
               </div>
             </div>
           )}
+          </div>
         </div>
       </section>
 
-      <section className="grid">
-        <div className="panel">
-          <h3>Operator Flow</h3>
-          <ol>
-            <li>Post shift</li>
-            <li>Review applications</li>
-            <li>Approve booking</li>
-            <li>Trigger payment</li>
-          </ol>
+      <section className="section">
+        <div className="section-header">
+          <div>
+            <h2>Operational Clarity</h2>
+            <p>Every step is explicit, auditable, and designed for reliability.</p>
+          </div>
         </div>
-        <div className="panel">
-          <h3>Worker Flow</h3>
-          <ol>
-            <li>Apply for shift</li>
-            <li>Check-in window</li>
-            <li>Check-out</li>
-            <li>Performance recorded</li>
-          </ol>
-        </div>
-        <div className="panel">
-          <h3>System Rules</h3>
-          <ol>
-            <li>Explicit state machine</li>
-            <li>Time-window guards</li>
-            <li>Idempotent transitions</li>
-            <li>Audit-ready timestamps</li>
-          </ol>
+        <div className="grid">
+          <div className="panel card">
+            <h3>Operator Flow</h3>
+            <ol>
+              <li>Post shift</li>
+              <li>Review applications</li>
+              <li>Approve booking</li>
+              <li>Trigger payment</li>
+            </ol>
+          </div>
+          <div className="panel card">
+            <h3>Worker Flow</h3>
+            <ol>
+              <li>Apply for shift</li>
+              <li>Check-in window</li>
+              <li>Check-out</li>
+              <li>Performance recorded</li>
+            </ol>
+          </div>
+          <div className="panel card">
+            <h3>System Rules</h3>
+            <ol>
+              <li>Explicit state machine</li>
+              <li>Time-window guards</li>
+              <li>Idempotent transitions</li>
+              <li>Audit-ready timestamps</li>
+            </ol>
+          </div>
         </div>
       </section>
     </div>

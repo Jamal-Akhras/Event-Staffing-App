@@ -15,6 +15,7 @@ Current status:
 - React web shell with API health status
 - Persistence layer stubs for repository + models
 - SQLAlchemy repository adapter and shared API schemas
+- SQLAlchemy repositories for shifts, applications, and worker profiles
 - Minimal booking UI for create/load/transition
 - Booking list endpoint and recent bookings UI
 - Worker applications and operator approvals
@@ -27,6 +28,9 @@ Current status:
 - Worker mobile app polls bookings every 15 seconds
 - Root .gitignore added for repo hygiene
 - CORS allowlist for local Vite dev
+- Web UI refreshed with premium styling and updated layout
+- Reliability scoring based on booking outcomes
+- System no-show sweep endpoint and tests
 
 API config:
 - Default repo is in-memory; set `DATABASE_URL` to use SQLAlchemy (SQLite or Postgres).
@@ -41,6 +45,22 @@ Conda setup:
 - Create env: `conda env create -f environment.yml`
 - Activate: `conda activate event_staffing`
 - Update deps after changes: `conda env update -f environment.yml --prune`
+
+Running:
+- API (FastAPI): from `apps/api` run `uvicorn apps.api.src.main:app --reload`
+- Web (Vite): from `apps/web` run `npm install` then `npm run dev`
+- Mobile (Expo): from `apps/mobile` run `npm install` then `npx expo start`
+- Web API base URL: set `VITE_API_BASE` (example: `http://127.0.0.1:8000`)
+- Web dev default: if `VITE_API_BASE` is unset, the web app uses `http://127.0.0.1:8000` in dev mode
+- No-show sweep job: from `apps/api` run `python -m apps.api.src.jobs.run_no_show_sweep`
+
+API flows:
+- See `docs/api_flows.md` for web/mobile/backend flow diagram
+
+Mobile polling:
+- The mobile app refreshes bookings/shifts/applications every 15 seconds when `EXPO_PUBLIC_API_BASE` is set
+- Mobile default API base (physical device): `http://192.168.10.131:8000`
+- Mobile polling skips overlapping requests to avoid piling up
 
 See docs/ for authoritative specifications.
 

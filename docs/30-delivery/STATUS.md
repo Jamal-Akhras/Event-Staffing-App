@@ -2,7 +2,7 @@
 # Project Status
 
 ## Last Updated
-- Date: YYYY-MM-DD
+- Date: 2025-12-27
 
 ## Implemented
 - Booking state machine (domain)
@@ -47,13 +47,29 @@
 - Worker profile API and editing
 - My applications tab in mobile shifts
 - Mobile top bar respects safe-area inset
+- Reliability scoring from booking outcomes (domain + API)
+- System no-show sweep endpoint and background job runner
+- Web UI refreshed with premium styling
+- SQLAlchemy persistence for shifts, applications, and worker profiles
+- No-show sweep service and runnable job
+- Service layer for booking operations (reliability refresh, no-show sweep)
+- API flows diagram added
+- API flows diagram labels fixed
+- Reliability domain logic and tests
+- Comprehensive tests for reliability scoring and no-show sweep
+
 ## In Progress
-- API wiring (domain + endpoints)
-- Web UI layout and API status check
+- None (ready for authentication implementation)
 
 ## Next
-- Domain tests
-- API wiring
+- JWT-based authentication system (user registration, login, token validation)
+- Automated no-show sweep scheduler
+- Basic notification system (email/SMS)
+- WebSocket event stream for mobile shift updates (future)
+
+## Notes
+- Mobile app default API base set for physical device testing (LAN IP)
+- Mobile polling guards against overlapping requests
 
 ## Decisions
 - Web-first MVP

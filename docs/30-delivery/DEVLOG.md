@@ -39,4 +39,15 @@
 - Added worker profile fields and endpoints
 - Added mobile applications tab
 - Adjusted mobile top bar for safe-area
+- Added reliability scoring and a system no-show sweep endpoint with tests
+- Refreshed web UI styling and layout
+- Added SQLAlchemy persistence for shifts, applications, and worker profiles
+- Added no-show sweep service and job runner
+- Added API flows diagram for web/mobile/backend
+- Fixed Mermaid labels in API flows diagram
+- Fixed mobile polling interval and guarded against overlapping polls
+- Set mobile default API base to LAN IP for physical device testing
+- Reapplied mobile polling interval/guard changes
+- Added .vscode/ to .gitignore for IDE settings isolation
+- Consolidated all recent work: reliability scoring, no-show sweep, service layer, and SQLAlchemy repositories for all entities
 

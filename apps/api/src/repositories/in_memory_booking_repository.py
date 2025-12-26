@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict
 
 from packages.domain.src.booking import Booking
+from packages.domain.src.booking_state import BookingState
 
 
 class InMemoryBookingRepository:
@@ -20,6 +21,12 @@ class InMemoryBookingRepository:
         bookings = list(self._bookings.values())
         bookings.sort(key=lambda item: item.created_at or item.start_time, reverse=True)
         return bookings[:limit]
+
+    def list_by_worker(self, worker_id: str) -> list[Booking]:
+        return [booking for booking in self._bookings.values() if booking.worker_id == worker_id]
+
+    def list_by_state(self, state: BookingState) -> list[Booking]:
+        return [booking for booking in self._bookings.values() if booking.state == state]
 
     def clear(self) -> None:
         self._bookings.clear()

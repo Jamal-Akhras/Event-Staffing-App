@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, Enum, String
+from sqlalchemy import Column, DateTime, Enum, Float, Integer, JSON, String
 
 from apps.api.src.db.database import Base
 from packages.domain.src.booking_state import BookingState
@@ -25,3 +25,55 @@ class BookingModel(Base):
     paid_at = Column(DateTime, nullable=True)
     cancelled_at = Column(DateTime, nullable=True)
     no_show_at = Column(DateTime, nullable=True)
+
+
+class ShiftModel(Base):
+    __tablename__ = "shifts"
+
+    shift_id = Column(String, primary_key=True)
+    operator_id = Column(String, nullable=False)
+    role = Column(String, nullable=False)
+    location = Column(String, nullable=False)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    pay_rate = Column(Float, nullable=False)
+    notes = Column(String, nullable=True)
+    status = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+
+
+class ApplicationModel(Base):
+    __tablename__ = "applications"
+
+    application_id = Column(String, primary_key=True)
+    shift_id = Column(String, nullable=False)
+    worker_id = Column(String, nullable=False)
+    operator_id = Column(String, nullable=False)
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    message = Column(String, nullable=True)
+    booking_id = Column(String, nullable=True)
+    status = Column(String, nullable=False)
+    created_at = Column(DateTime, nullable=False)
+    decided_at = Column(DateTime, nullable=True)
+
+
+class WorkerProfileModel(Base):
+    __tablename__ = "worker_profiles"
+
+    worker_id = Column(String, primary_key=True)
+    display_name = Column(String, nullable=False)
+    role = Column(String, nullable=False)
+    city = Column(String, nullable=False)
+    experience_years = Column(Integer, nullable=False)
+    reliability_score = Column(Float, nullable=False)
+    badges = Column(JSON, nullable=False)
+    bio = Column(String, nullable=True)
+    languages = Column(JSON, nullable=False)
+    email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+    emergency_contact = Column(String, nullable=True)
+    pay_rate = Column(Float, nullable=True)
+    notes = Column(String, nullable=True)
+    updated_at = Column(DateTime, nullable=False)

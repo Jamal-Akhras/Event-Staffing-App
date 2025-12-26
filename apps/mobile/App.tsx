@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -96,10 +96,24 @@ const workerHeaders = {
 };
 
 const TAB_BAR_HEIGHT = 64;
+const COLORS = {
+  ink: "#0f1720",
+  inkMuted: "#6b7785",
+  surface: "#ffffff",
+  canvas: "#f4f0ea",
+  border: "#e1e6ec",
+  primary: "#0e5a3a",
+  primaryDeep: "#123a2a",
+  primarySoft: "#2f8f5f",
+  warning: "#d97706",
+  error: "#b83b32",
+  onPrimary: "#f7efe8",
+};
 
 function AppContent() {
   const insets = useSafeAreaInsets();
-  const defaultBase = process.env.EXPO_PUBLIC_API_BASE ?? "";
+  const defaultBase =
+    process.env.EXPO_PUBLIC_API_BASE ?? "http://192.168.10.131:8000";
   const [apiBase, setApiBase] = useState(defaultBase);
   const [health, setHealth] = useState<string>("Unknown");
   const [error, setError] = useState<string | null>(null);
@@ -133,9 +147,12 @@ function AppContent() {
   });
   const [profileMeta, setProfileMeta] = useState<WorkerProfile | null>(null);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
+  const pollInFlight = useRef(false);
 
   useEffect(() => {
     if (!apiBase) {
+      setHealth("Missing API base");
+      setError("Set API base URL to continue.");
       return;
     }
     const controller = new AbortController();
@@ -174,6 +191,7 @@ function AppContent() {
       }
       const data = (await response.json()) as Booking[];
       setBookings(data);
+      setBookingError(null);
       if (!selected && data.length > 0) {
         setSelected(data[0]);
       }
@@ -259,10 +277,20 @@ function AppContent() {
     }
   };
 
+  const pollAll = async () => {
+    if (!apiBase || pollInFlight.current) {
+      return;
+    }
+    pollInFlight.current = true;
+    try {
+      await Promise.all([loadBookings(), loadShifts(), loadApplications()]);
+    } finally {
+      pollInFlight.current = false;
+    }
+  };
+
   useEffect(() => {
-    loadBookings();
-    loadShifts();
-    loadApplications();
+    pollAll();
     loadProfile();
   }, [apiBase, profileForm.worker_id]);
 
@@ -271,9 +299,7 @@ function AppContent() {
       return;
     }
     const interval = setInterval(() => {
-      loadBookings();
-      loadShifts();
-      loadApplications();
+      pollAll();
     }, 15000);
     return () => clearInterval(interval);
   }, [apiBase, profileForm.worker_id]);
@@ -283,7 +309,7 @@ function AppContent() {
       return;
     }
     setBookingError(null);
-    try {
+    try {  
       const response = await fetch(
         `${apiBase}/bookings/${selected.booking_id}/${action}`,
         {
@@ -809,7 +835,7 @@ export default function App() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#f4f0ea",
+    backgroundColor: COLORS.canvas,
   },
   container: {
     padding: 24,
@@ -819,18 +845,18 @@ const styles = StyleSheet.create({
   topBar: {
     paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#e1e6ec",
+    borderBottomColor: COLORS.border,
   },
   topTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#0e1a24",
+    color: COLORS.ink,
   },
   topSubtitle: {
     fontSize: 12,
-    color: "#6b7785",
+    color: COLORS.inkMuted,
   },
   tabBar: {
     position: "absolute",
@@ -839,8 +865,8 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: "#e1e6ec",
-    backgroundColor: "#fff",
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
   tabButton: {
     flex: 1,
@@ -849,20 +875,20 @@ const styles = StyleSheet.create({
   },
   tabButtonActive: {
     borderTopWidth: 2,
-    borderTopColor: "#0e1a24",
+    borderTopColor: COLORS.primary,
   },
   tabText: {
     fontWeight: "600",
-    color: "#0e1a24",
+    color: COLORS.ink,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#0e1a24",
+    color: COLORS.ink,
   },
   sectionHint: {
     fontSize: 12,
-    color: "#6b7785",
+    color: COLORS.inkMuted,
   },
   shiftTabs: {
     flexDirection: "row",
@@ -872,24 +898,24 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     alignItems: "center",
   },
   shiftTabActive: {
-    backgroundColor: "#0e1a24",
+    backgroundColor: COLORS.primary,
   },
   shiftTabText: {
     fontWeight: "600",
-    color: "#0e1a24",
+    color: COLORS.ink,
   },
   shiftTabTextActive: {
-    color: "#f7efe8",
+    color: COLORS.onPrimary,
   },
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: COLORS.surface,
     borderRadius: 18,
     padding: 18,
-    shadowColor: "#0e1a24",
+    shadowColor: COLORS.ink,
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 2,
@@ -898,29 +924,29 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#0e1a24",
+    color: COLORS.ink,
   },
   cardValue: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#0e1a24",
+    color: COLORS.ink,
   },
   cardError: {
-    color: "#b83b32",
+    color: COLORS.error,
     fontSize: 12,
   },
   cardLabel: {
     fontSize: 12,
-    color: "#6c4f3d",
+    color: COLORS.primary,
     marginTop: 8,
   },
   cardHint: {
     fontSize: 12,
-    color: "#6b7785",
+    color: COLORS.inkMuted,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#d4dbe3",
+    borderColor: COLORS.border,
     borderRadius: 12,
     padding: 10,
     fontSize: 14,
@@ -930,19 +956,19 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   button: {
-    backgroundColor: "#0e1a24",
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 12,
   },
   buttonSecondary: {
-    backgroundColor: "#324656",
+    backgroundColor: COLORS.primaryDeep,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonText: {
-    color: "#f7efe8",
+    color: COLORS.onPrimary,
     fontWeight: "600",
   },
   listItem: {
@@ -950,20 +976,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e1e6ec",
+    borderColor: COLORS.border,
     marginTop: 8,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
   },
   listItemTitle: {
     fontWeight: "600",
-    color: "#0e1a24",
+    color: COLORS.ink,
   },
   listItemMeta: {
     fontSize: 12,
-    color: "#6b7785",
+    color: COLORS.inkMuted,
   },
   sheet: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderRadius: 18,
     padding: 18,
     gap: 10,

@@ -37,6 +37,10 @@ from apps.api.src.schemas import (
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
 from packages.domain.src.booking_state_machine import TransitionError, allowed_next_states
+from apps.api.src.services.booking_ops import (
+    refresh_reliability,
+    sweep_no_shows as run_no_show_sweep,
+)
 
 
 app = FastAPI(title="Event Staffing Platform API", version="0.1.0")
@@ -143,6 +147,8 @@ def _apply_transition(booking: Booking, target: BookingState, now: datetime) -> 
         return booking.transition_to(target, now)
     except TransitionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 
 
 @app.post(
@@ -464,12 +470,16 @@ def check_out_booking(
     booking_id: str,
     request: BookingTransitionRequest,
     repo: BookingRepository = Depends(get_booking_repo),
+    profile_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     actor: ActorRole = Depends(get_actor_role),
 ) -> BookingResponse:
     require_role(actor, {ActorRole.WORKER})
     booking = _get_booking(repo, booking_id)
-    booking = _apply_transition(booking, BookingState.CHECKED_OUT, _now_or(request.now))
-    return _booking_view(_save_booking(repo, booking))
+    now = _now_or(request.now)
+    booking = _apply_transition(booking, BookingState.CHECKED_OUT, now)
+    booking = _save_booking(repo, booking)
+    refresh_reliability(repo, profile_repo, booking.worker_id, now)
+    return _booking_view(booking)
 
 
 @app.post(
@@ -481,12 +491,16 @@ def approve_booking(
     booking_id: str,
     request: BookingTransitionRequest,
     repo: BookingRepository = Depends(get_booking_repo),
+    profile_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     actor: ActorRole = Depends(get_actor_role),
 ) -> BookingResponse:
     require_role(actor, {ActorRole.OPERATOR})
     booking = _get_booking(repo, booking_id)
-    booking = _apply_transition(booking, BookingState.APPROVED, _now_or(request.now))
-    return _booking_view(_save_booking(repo, booking))
+    now = _now_or(request.now)
+    booking = _apply_transition(booking, BookingState.APPROVED, now)
+    booking = _save_booking(repo, booking)
+    refresh_reliability(repo, profile_repo, booking.worker_id, now)
+    return _booking_view(booking)
 
 
 @app.post(
@@ -498,12 +512,16 @@ def pay_booking(
     booking_id: str,
     request: BookingTransitionRequest,
     repo: BookingRepository = Depends(get_booking_repo),
+    profile_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     actor: ActorRole = Depends(get_actor_role),
 ) -> BookingResponse:
     require_role(actor, {ActorRole.OPERATOR, ActorRole.SYSTEM})
     booking = _get_booking(repo, booking_id)
-    booking = _apply_transition(booking, BookingState.PAID, _now_or(request.now))
-    return _booking_view(_save_booking(repo, booking))
+    now = _now_or(request.now)
+    booking = _apply_transition(booking, BookingState.PAID, now)
+    booking = _save_booking(repo, booking)
+    refresh_reliability(repo, profile_repo, booking.worker_id, now)
+    return _booking_view(booking)
 
 
 @app.post(
@@ -515,12 +533,16 @@ def no_show_booking(
     booking_id: str,
     request: BookingTransitionRequest,
     repo: BookingRepository = Depends(get_booking_repo),
+    profile_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     actor: ActorRole = Depends(get_actor_role),
 ) -> BookingResponse:
     require_role(actor, {ActorRole.OPERATOR, ActorRole.SYSTEM})
     booking = _get_booking(repo, booking_id)
-    booking = _apply_transition(booking, BookingState.NO_SHOW, _now_or(request.now))
-    return _booking_view(_save_booking(repo, booking))
+    now = _now_or(request.now)
+    booking = _apply_transition(booking, BookingState.NO_SHOW, now)
+    booking = _save_booking(repo, booking)
+    refresh_reliability(repo, profile_repo, booking.worker_id, now)
+    return _booking_view(booking)
 
 
 @app.post(
@@ -532,12 +554,16 @@ def cancel_by_worker(
     booking_id: str,
     request: BookingTransitionRequest,
     repo: BookingRepository = Depends(get_booking_repo),
+    profile_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     actor: ActorRole = Depends(get_actor_role),
 ) -> BookingResponse:
     require_role(actor, {ActorRole.WORKER})
     booking = _get_booking(repo, booking_id)
-    booking = _apply_transition(booking, BookingState.CANCELLED_BY_WORKER, _now_or(request.now))
-    return _booking_view(_save_booking(repo, booking))
+    now = _now_or(request.now)
+    booking = _apply_transition(booking, BookingState.CANCELLED_BY_WORKER, now)
+    booking = _save_booking(repo, booking)
+    refresh_reliability(repo, profile_repo, booking.worker_id, now)
+    return _booking_view(booking)
 
 
 @app.post(
@@ -555,3 +581,20 @@ def cancel_by_operator(
     booking = _get_booking(repo, booking_id)
     booking = _apply_transition(booking, BookingState.CANCELLED_BY_OPERATOR, _now_or(request.now))
     return _booking_view(_save_booking(repo, booking))
+
+
+@app.post(
+    "/system/no-show-sweep",
+    response_model=list[BookingResponse],
+    responses={400: {"model": ErrorResponse}},
+)
+def sweep_no_shows(
+    request: BookingTransitionRequest,
+    repo: BookingRepository = Depends(get_booking_repo),
+    profile_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
+    actor: ActorRole = Depends(get_actor_role),
+) -> list[BookingResponse]:
+    require_role(actor, {ActorRole.SYSTEM})
+    now = _now_or(request.now)
+    updated = run_no_show_sweep(repo, profile_repo, now)
+    return [_booking_view(item) for item in updated]

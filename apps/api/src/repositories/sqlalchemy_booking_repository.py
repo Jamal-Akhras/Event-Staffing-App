@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import BookingModel
 from packages.domain.src.booking import Booking
+from packages.domain.src.booking_state import BookingState
 
 
 class SqlAlchemyBookingRepository:
@@ -31,6 +32,24 @@ class SqlAlchemyBookingRepository:
             self._session.query(BookingModel)
             .order_by(desc(BookingModel.created_at))
             .limit(limit)
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
+    def list_by_worker(self, worker_id: str) -> list[Booking]:
+        rows = (
+            self._session.query(BookingModel)
+            .filter(BookingModel.worker_id == worker_id)
+            .order_by(desc(BookingModel.created_at))
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
+    def list_by_state(self, state: BookingState) -> list[Booking]:
+        rows = (
+            self._session.query(BookingModel)
+            .filter(BookingModel.state == state)
+            .order_by(desc(BookingModel.created_at))
             .all()
         )
         return [_to_domain(row) for row in rows]

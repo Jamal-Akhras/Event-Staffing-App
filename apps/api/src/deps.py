@@ -15,6 +15,13 @@ from apps.api.src.repositories.application_repository import ApplicationReposito
 from apps.api.src.repositories.sqlalchemy_booking_repository import (
     SqlAlchemyBookingRepository,
 )
+from apps.api.src.repositories.sqlalchemy_application_repository import (
+    SqlAlchemyApplicationRepository,
+)
+from apps.api.src.repositories.sqlalchemy_shift_repository import SqlAlchemyShiftRepository
+from apps.api.src.repositories.sqlalchemy_worker_profile_repository import (
+    SqlAlchemyWorkerProfileRepository,
+)
 
 _IN_MEMORY_REPO = InMemoryBookingRepository()
 _IN_MEMORY_APPLICATIONS = InMemoryApplicationRepository()
@@ -41,13 +48,37 @@ def get_booking_repo() -> Generator[BookingRepository, None, None]:
 
 
 def get_application_repo() -> Generator[ApplicationRepository, None, None]:
-    yield _IN_MEMORY_APPLICATIONS
+    if _use_in_memory():
+        yield _IN_MEMORY_APPLICATIONS
+        return
+
+    session = SessionLocal()
+    try:
+        yield SqlAlchemyApplicationRepository(session)
+    finally:
+        session.close()
 
 
 def get_shift_repo() -> Generator[ShiftRepository, None, None]:
-    yield _IN_MEMORY_SHIFTS
+    if _use_in_memory():
+        yield _IN_MEMORY_SHIFTS
+        return
+
+    session = SessionLocal()
+    try:
+        yield SqlAlchemyShiftRepository(session)
+    finally:
+        session.close()
 
 
 def get_worker_profile_repo() -> Generator[WorkerProfileRepository, None, None]:
-    yield _IN_MEMORY_WORKERS
+    if _use_in_memory():
+        yield _IN_MEMORY_WORKERS
+        return
+
+    session = SessionLocal()
+    try:
+        yield SqlAlchemyWorkerProfileRepository(session)
+    finally:
+        session.close()
 
