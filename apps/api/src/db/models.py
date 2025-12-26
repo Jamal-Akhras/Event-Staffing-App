@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, Enum, Float, Integer, JSON, String
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, Integer, JSON, String
 
 from apps.api.src.db.database import Base
 from packages.domain.src.booking_state import BookingState
@@ -40,6 +40,8 @@ class ShiftModel(Base):
     notes = Column(String, nullable=True)
     status = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False)
+    workers_needed = Column(Integer, nullable=False, default=1)
+    workers_filled = Column(Integer, nullable=False, default=0)
 
 
 class ApplicationModel(Base):
@@ -76,4 +78,17 @@ class WorkerProfileModel(Base):
     emergency_contact = Column(String, nullable=True)
     pay_rate = Column(Float, nullable=True)
     notes = Column(String, nullable=True)
+    updated_at = Column(DateTime, nullable=False)
+
+
+class UserModel(Base):
+    __tablename__ = "users"
+
+    user_id = Column(String, primary_key=True)
+    email = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    role = Column(String, nullable=False)
+    worker_profile_id = Column(String, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)

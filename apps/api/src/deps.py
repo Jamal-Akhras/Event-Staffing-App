@@ -22,11 +22,15 @@ from apps.api.src.repositories.sqlalchemy_shift_repository import SqlAlchemyShif
 from apps.api.src.repositories.sqlalchemy_worker_profile_repository import (
     SqlAlchemyWorkerProfileRepository,
 )
+from apps.api.src.repositories.user_repository import UserRepository
+from apps.api.src.repositories.in_memory_user_repository import InMemoryUserRepository
+from apps.api.src.repositories.sqlalchemy_user_repository import SqlAlchemyUserRepository
 
 _IN_MEMORY_REPO = InMemoryBookingRepository()
 _IN_MEMORY_APPLICATIONS = InMemoryApplicationRepository()
 _IN_MEMORY_SHIFTS = InMemoryShiftRepository()
 _IN_MEMORY_WORKERS = InMemoryWorkerProfileRepository()
+_IN_MEMORY_USERS = InMemoryUserRepository()
 
 
 def _use_in_memory() -> bool:
@@ -79,6 +83,18 @@ def get_worker_profile_repo() -> Generator[WorkerProfileRepository, None, None]:
     session = SessionLocal()
     try:
         yield SqlAlchemyWorkerProfileRepository(session)
+    finally:
+        session.close()
+
+
+def get_user_repo() -> Generator[UserRepository, None, None]:
+    if _use_in_memory():
+        yield _IN_MEMORY_USERS
+        return
+
+    session = SessionLocal()
+    try:
+        yield SqlAlchemyUserRepository(session)
     finally:
         session.close()
 

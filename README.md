@@ -31,15 +31,26 @@ Current status:
 - Web UI refreshed with premium styling and updated layout
 - Reliability scoring based on booking outcomes
 - System no-show sweep endpoint and tests
+- JWT-based authentication system (registration, login)
+- Multi-worker shift capacity tracking (operators specify workers_needed per shift)
 
 API config:
 - Default repo is in-memory; set `DATABASE_URL` to use SQLAlchemy (SQLite or Postgres).
 - Set `USE_IN_MEMORY=true` to force in-memory even if `DATABASE_URL` is set.
 - API endpoints require `X-Actor-Role` header: `operator`, `worker`, or `system`.
+- JWT authentication available via `/auth/register` and `/auth/login` endpoints.
+
+Authentication:
+- Workers can self-register via `/auth/register` (creates user + worker profile).
+- Login via `/auth/login` returns a JWT token.
+- JWT tokens expire after 24 hours (configurable via `JWT_EXPIRATION_HOURS`).
+- Set `JWT_SECRET_KEY` environment variable in production (see `.env.example`).
+- Create operator accounts using: `python -m apps.api.scripts.create_operator <email> <password>`
 
 Migrations:
 - Alembic config lives in `apps/api/alembic.ini`.
 - Run migrations from `apps/api`: `alembic upgrade head`
+- Migrations: 001 (bookings), 002 (core tables), 003 (users), 004 (shift capacity)
 
 Conda setup:
 - Create env: `conda env create -f environment.yml`

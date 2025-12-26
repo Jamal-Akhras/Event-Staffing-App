@@ -57,12 +57,24 @@
 - API flows diagram labels fixed
 - Reliability domain logic and tests
 - Comprehensive tests for reliability scoring and no-show sweep
+- JWT-based authentication system with bcrypt password hashing
+- User registration and login endpoints
+- User model and repository (interface + SQLAlchemy + in-memory)
+- Database migration 003 for users table
+- Operator account creation script
+- Authentication test suite
+- Multi-worker shift capacity (workers_needed/workers_filled tracking)
+- Database migration 004 for shift capacity fields
+- Shift status auto-update to "filled" when capacity reached
+- Application validation to prevent overstaffing
+- Comprehensive tests for shift capacity functionality
 
 ## In Progress
-- None (ready for authentication implementation)
+- None
 
 ## Next
-- JWT-based authentication system (user registration, login, token validation)
+- Update web and mobile UIs to use JWT authentication
+- Migrate existing endpoints from X-Actor-Role to JWT validation
 - Automated no-show sweep scheduler
 - Basic notification system (email/SMS)
 - WebSocket event stream for mobile shift updates (future)

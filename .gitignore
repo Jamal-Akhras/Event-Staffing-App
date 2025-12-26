@@ -14,3 +14,10 @@ Thumbs.db
 
 # IDE
 .vscode/
+
+# Database
+*.db
+*.db-journal
+
+# Windows null device files
+nul

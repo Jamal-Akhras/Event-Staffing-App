@@ -8,18 +8,24 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from apps.api.src.auth import ActorRole, get_actor_role, require_role
+from apps.api.src.auth.password import hash_password, verify_password
+from apps.api.src.auth.jwt import create_access_token
+from apps.api.src.auth.schemas import UserRegisterRequest, UserLoginRequest, TokenResponse
 from apps.api.src.deps import (
     get_application_repo,
     get_booking_repo,
     get_shift_repo,
     get_worker_profile_repo,
+    get_user_repo,
 )
 from apps.api.src.models.application import Application
 from apps.api.src.models.shift import Shift
+from apps.api.src.models.user import User
 from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.repositories.application_repository import ApplicationRepository
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
+from apps.api.src.repositories.user_repository import UserRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
 from apps.api.src.schemas import (
     ApplicationCreateRequest,
@@ -57,6 +63,110 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# Authentication Endpoints
+
+
+@app.post("/auth/register", response_model=TokenResponse)
+def register(
+    request: UserRegisterRequest,
+    user_repo: UserRepository = Depends(get_user_repo),
+    worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
+) -> TokenResponse:
+    """Register a new worker account.
+
+    Creates a user account and an empty worker profile.
+    Only workers can self-register via this endpoint.
+    """
+    # Check if email already exists
+    existing = user_repo.get_by_email(request.email)
+    if existing is not None:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Create user with worker role
+    now = datetime.utcnow()
+    user_id = str(uuid4())
+    worker_profile_id = str(uuid4())
+
+    user = User(
+        user_id=user_id,
+        email=request.email,
+        hashed_password=hash_password(request.password),
+        role="worker",
+        worker_profile_id=worker_profile_id,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+    user_repo.save(user)
+
+    # Create empty worker profile
+    profile = WorkerProfile(
+        worker_id=worker_profile_id,
+        display_name="",
+        role="",
+        city="",
+        experience_years=0,
+        reliability_score=0.0,
+        badges=[],
+        bio=None,
+        languages=[],
+        email=request.email,
+        phone=None,
+        address=None,
+        emergency_contact=None,
+        pay_rate=None,
+        notes=None,
+        updated_at=now,
+    )
+    worker_repo.save(profile)
+
+    # Create and return JWT token
+    token = create_access_token(
+        {"user_id": user_id, "email": user.email, "role": user.role}
+    )
+
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user_id=user.user_id,
+        email=user.email,
+        role=user.role,
+    )
+
+
+@app.post("/auth/login", response_model=TokenResponse)
+def login(
+    request: UserLoginRequest,
+    user_repo: UserRepository = Depends(get_user_repo),
+) -> TokenResponse:
+    """Login and receive JWT token.
+
+    Validates credentials and returns a JWT token for authenticated requests.
+    """
+    user = user_repo.get_by_email(request.email)
+    if user is None or not verify_password(request.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not user.is_active:
+        raise HTTPException(status_code=401, detail="Account is inactive")
+
+    # Create and return JWT token
+    token = create_access_token(
+        {"user_id": user.user_id, "email": user.email, "role": user.role}
+    )
+
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user_id=user.user_id,
+        email=user.email,
+        role=user.role,
+    )
+
+
+# Helper Functions
 
 
 def _now_or(request_time: datetime | None) -> datetime:
@@ -230,6 +340,8 @@ def create_shift(
         notes=request.notes,
         status="open",
         created_at=now,
+        workers_needed=request.workers_needed,
+        workers_filled=0,
     )
     return _shift_view(_save_shift(repo, shift))
 
@@ -269,6 +381,8 @@ def create_application(
     shift = _get_shift(shift_repo, request.shift_id)
     if shift.status != "open":
         raise HTTPException(status_code=400, detail="Shift is not accepting applications.")
+    if shift.workers_filled >= shift.workers_needed:
+        raise HTTPException(status_code=400, detail="Shift is already fully staffed.")
     now = _now_or(request.now)
     application = Application(
         application_id=str(uuid4()),
@@ -327,6 +441,11 @@ def approve_application(
     application = _get_application(repo, application_id)
     if application.status != "applied":
         raise HTTPException(status_code=400, detail="Application already decided.")
+
+    shift = _get_shift(shift_repo, application.shift_id)
+    if shift.workers_filled >= shift.workers_needed:
+        raise HTTPException(status_code=400, detail="Shift is already fully staffed.")
+
     now = _now_or(request.now)
     booking = Booking(
         booking_id=str(uuid4()),
@@ -340,8 +459,11 @@ def approve_application(
     booking = booking.transition_to(BookingState.CONFIRMED, now)
     _save_booking(booking_repo, booking)
 
-    shift = _get_shift(shift_repo, application.shift_id)
-    shift = replace(shift, status="filled")
+    # Increment workers_filled
+    new_workers_filled = shift.workers_filled + 1
+    # Update status to "filled" if all positions are now taken
+    new_status = "filled" if new_workers_filled >= shift.workers_needed else shift.status
+    shift = replace(shift, workers_filled=new_workers_filled, status=new_status)
     _save_shift(shift_repo, shift)
 
     application = replace(

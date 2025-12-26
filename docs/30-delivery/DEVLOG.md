@@ -50,4 +50,24 @@
 - Reapplied mobile polling interval/guard changes
 - Added .vscode/ to .gitignore for IDE settings isolation
 - Consolidated all recent work: reliability scoring, no-show sweep, service layer, and SQLAlchemy repositories for all entities
+- Fixed Alembic import path (parents[3] not [2]) for proper module resolution
+- Added *.db and *.db-journal to .gitignore for database files
+- Implemented JWT-based authentication system with bcrypt password hashing
+- Added user registration and login endpoints (/auth/register, /auth/login)
+- Created User domain model and repository (interface + SQLAlchemy + in-memory implementations)
+- Created database migration 003 for users table
+- Added operator account creation script (apps/api/scripts/create_operator.py)
+- Created comprehensive auth test suite (test_auth.py, test_user_repository.py)
+- Added .env.example file for JWT configuration documentation
+- Updated authentication dependencies (python-jose, passlib, python-multipart)
+- Implemented multi-worker shift capacity tracking (workers_needed/workers_filled)
+- Updated Shift domain model and database model with capacity fields
+- Created database migration 004 to add workers_needed and workers_filled columns
+- Updated SQLAlchemy shift repository to persist capacity fields
+- Updated shift schemas (ShiftCreateRequest and ShiftResponse) with capacity fields
+- Modified shift creation endpoint to initialize workers_needed and workers_filled
+- Added logic to increment workers_filled when approving applications
+- Added automatic shift status change to "filled" when capacity is reached
+- Added validation to prevent applications/approvals when shift is fully staffed
+- Created comprehensive test suite for shift capacity functionality (test_workers_needed.py)
 

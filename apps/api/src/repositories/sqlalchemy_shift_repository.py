@@ -48,6 +48,8 @@ def _to_domain(model: ShiftModel) -> Shift:
         notes=model.notes,
         status=model.status,
         created_at=model.created_at,
+        workers_needed=model.workers_needed,
+        workers_filled=model.workers_filled,
     )
 
 
@@ -61,3 +63,5 @@ def _apply_domain(model: ShiftModel, shift: Shift) -> None:
     model.notes = shift.notes
     model.status = shift.status
     model.created_at = shift.created_at
+    model.workers_needed = shift.workers_needed
+    model.workers_filled = shift.workers_filled

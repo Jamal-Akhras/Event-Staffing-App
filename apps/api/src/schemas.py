@@ -45,6 +45,7 @@ class ShiftCreateRequest(BaseModel):
     end_time: datetime
     pay_rate: float
     notes: str | None = None
+    workers_needed: int = 1  # Number of workers needed for this shift
     now: datetime | None = None
 
 
@@ -59,6 +60,8 @@ class ShiftResponse(BaseModel):
     notes: str | None = None
     status: str
     created_at: datetime
+    workers_needed: int  # Number of workers needed
+    workers_filled: int  # Number of workers currently assigned (confirmed bookings)
 
 
 class ApplicationCreateRequest(BaseModel):

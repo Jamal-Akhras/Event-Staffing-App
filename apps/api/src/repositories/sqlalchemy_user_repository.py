@@ -1,0 +1,64 @@
+from __future__ import annotations
+
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+
+from apps.api.src.db.models import UserModel
+from apps.api.src.models.user import User
+
+
+class SqlAlchemyUserRepository:
+    """SQLAlchemy implementation of UserRepository."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get(self, user_id: str) -> User | None:
+        """Get a user by ID."""
+        model = self._session.get(UserModel, user_id)
+        if model is None:
+            return None
+        return _to_domain(model)
+
+    def get_by_email(self, email: str) -> User | None:
+        """Get a user by email address."""
+        stmt = select(UserModel).where(UserModel.email == email)
+        model = self._session.execute(stmt).scalar_one_or_none()
+        if model is None:
+            return None
+        return _to_domain(model)
+
+    def save(self, user: User) -> User:
+        """Save a user (create or update)."""
+        model = self._session.get(UserModel, user.user_id)
+        if model is None:
+            model = UserModel(user_id=user.user_id)
+            self._session.add(model)
+        _apply_domain(model, user)
+        self._session.commit()
+        return user
+
+
+def _to_domain(model: UserModel) -> User:
+    """Convert SQLAlchemy model to domain model."""
+    return User(
+        user_id=model.user_id,
+        email=model.email,
+        hashed_password=model.hashed_password,
+        role=model.role,
+        worker_profile_id=model.worker_profile_id,
+        is_active=model.is_active,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
+
+
+def _apply_domain(model: UserModel, user: User) -> None:
+    """Apply domain model fields to SQLAlchemy model."""
+    model.email = user.email
+    model.hashed_password = user.hashed_password
+    model.role = user.role
+    model.worker_profile_id = user.worker_profile_id
+    model.is_active = user.is_active
+    model.created_at = user.created_at
+    model.updated_at = user.updated_at

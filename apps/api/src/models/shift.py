@@ -16,3 +16,5 @@ class Shift:
     notes: str | None
     status: str
     created_at: datetime
+    workers_needed: int  # Number of workers needed for this shift
+    workers_filled: int = 0  # Number of workers currently assigned (confirmed bookings)
