@@ -14,3 +14,4 @@ apscheduler
 slowapi
 redis
 sentry-sdk[fastapi]
+httpx2
