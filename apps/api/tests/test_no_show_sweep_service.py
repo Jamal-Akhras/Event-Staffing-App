@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
+from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 from apps.api.src.repositories.in_memory_worker_profile_repository import (
     InMemoryWorkerProfileRepository,
 )
@@ -13,6 +14,7 @@ from packages.domain.src.booking_state import BookingState
 def test_sweep_no_shows_updates_booking_and_reliability():
     booking_repo = InMemoryBookingRepository()
     worker_repo = InMemoryWorkerProfileRepository()
+    shift_repo = InMemoryShiftRepository()
     now = datetime(2030, 1, 1, 12, 0, 0)
     start_time = now - timedelta(hours=1)
 
@@ -49,7 +51,7 @@ def test_sweep_no_shows_updates_booking_and_reliability():
     )
     worker_repo.save(profile)
 
-    updated = sweep_no_shows(booking_repo, worker_repo, now)
+    updated = sweep_no_shows(booking_repo, worker_repo, shift_repo, now)
 
     assert len(updated) == 1
     assert updated[0].state == BookingState.NO_SHOW

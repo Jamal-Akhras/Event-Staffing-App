@@ -16,7 +16,28 @@ class BookingRepository(Protocol):
     def list_recent(self, limit: int = 25) -> list[Booking]:
         raise NotImplementedError
 
-    def list_by_worker(self, worker_id: str) -> list[Booking]:
+    def list_by_worker(
+        self,
+        worker_id: str,
+        limit: int | None = None,
+        operator_id: str | None = None,
+    ) -> list[Booking]:
+        raise NotImplementedError
+
+    def list_by_operator(
+        self,
+        operator_id: str,
+        limit: int = 25,
+        worker_id: str | None = None,
+    ) -> list[Booking]:
+        raise NotImplementedError
+
+    def list_for_account(
+        self,
+        account_id: str,
+        limit: int = 25,
+        worker_id: str | None = None,
+    ) -> list[Booking]:
         raise NotImplementedError
 
     def list_by_state(self, state: BookingState) -> list[Booking]:

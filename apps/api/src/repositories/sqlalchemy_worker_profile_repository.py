@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from apps.api.src.db.models import WorkerProfileModel
+from apps.api.src.db.models import BookingModel, ShiftModel, WorkerProfileModel
 from apps.api.src.models.worker_profile import WorkerProfile
+from packages.domain.src.booking_state import BookingState
 
 
 class SqlAlchemyWorkerProfileRepository:
@@ -25,6 +26,30 @@ class SqlAlchemyWorkerProfileRepository:
         self._session.commit()
         return profile
 
+    def list_all(self) -> list[WorkerProfile]:
+        return [_to_domain(m) for m in self._session.query(WorkerProfileModel).all()]
+
+    def list_for_account(self, account_id: str) -> list[WorkerProfile]:
+        completed_states = {BookingState.CHECKED_OUT, BookingState.PAID}
+        # Deduplicate worker ids on the bookings side (String column) — selecting
+        # DISTINCT directly on worker_profiles would fail in Postgres because the
+        # row carries JSON columns (badges, languages) with no equality operator.
+        worker_id_subq = (
+            self._session.query(BookingModel.worker_id)
+            .join(ShiftModel, ShiftModel.shift_id == BookingModel.shift_id)
+            .filter(ShiftModel.account_id == account_id)
+            .filter(BookingModel.state.in_(completed_states))
+            .distinct()
+            .subquery()
+        )
+        rows = (
+            self._session.query(WorkerProfileModel)
+            .filter(WorkerProfileModel.worker_id.in_(self._session.query(worker_id_subq)))
+            .filter(WorkerProfileModel.allow_venue_recontact.is_(True))
+            .all()
+        )
+        return [_to_domain(m) for m in rows]
+
 
 def _to_domain(model: WorkerProfileModel) -> WorkerProfile:
     return WorkerProfile(
@@ -44,6 +69,8 @@ def _to_domain(model: WorkerProfileModel) -> WorkerProfile:
         pay_rate=model.pay_rate,
         notes=model.notes,
         updated_at=model.updated_at,
+        avatar_url=getattr(model, "avatar_url", None),
+        allow_venue_recontact=bool(getattr(model, "allow_venue_recontact", False)),
     )
 
 
@@ -63,3 +90,5 @@ def _apply_domain(model: WorkerProfileModel, profile: WorkerProfile) -> None:
     model.pay_rate = profile.pay_rate
     model.notes = profile.notes
     model.updated_at = profile.updated_at
+    model.avatar_url = profile.avatar_url
+    model.allow_venue_recontact = profile.allow_venue_recontact

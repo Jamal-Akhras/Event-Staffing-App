@@ -8,6 +8,10 @@ from apps.api.src.repositories.in_memory_worker_profile_repository import (
     InMemoryWorkerProfileRepository,
 )
 
+OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-1"}
+WORKER_HEADERS = {"X-Actor-Role": "worker", "X-Actor-Id": "worker-1"}
+OTHER_WORKER_HEADERS = {"X-Actor-Role": "worker", "X-Actor-Id": "worker-2"}
+
 
 def _client() -> TestClient:
     repo = InMemoryWorkerProfileRepository()
@@ -36,15 +40,22 @@ def test_worker_profile_update_and_public_view():
     update = client.put(
         "/workers/worker-1",
         json=payload,
-        headers={"X-Actor-Role": "worker"},
+        headers=WORKER_HEADERS,
     )
     assert update.status_code == 200
     assert update.json()["display_name"] == "Alex"
 
     public = client.get(
         "/workers/worker-1",
-        headers={"X-Actor-Role": "operator"},
+        headers=OPERATOR_HEADERS,
     )
     assert public.status_code == 200
     assert public.json()["email"] is None
     assert public.json()["phone"] is None
+
+    private = client.get("/workers/worker-1", headers=WORKER_HEADERS)
+    assert private.status_code == 200
+    assert private.json()["email"] == "alex@example.com"
+
+    forbidden = client.get("/workers/worker-1", headers=OTHER_WORKER_HEADERS)
+    assert forbidden.status_code == 403

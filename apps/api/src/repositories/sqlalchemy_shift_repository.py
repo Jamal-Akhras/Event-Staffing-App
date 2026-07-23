@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from apps.api.src.db.models import ShiftModel
+from apps.api.src.db.models import BookingModel, ShiftModel
 from apps.api.src.models.shift import Shift
 
 
@@ -35,6 +35,27 @@ class SqlAlchemyShiftRepository:
         )
         return [_to_domain(row) for row in rows]
 
+    def list_for_account(self, account_id: str, limit: int = 50) -> list[Shift]:
+        rows = (
+            self._session.query(ShiftModel)
+            .filter(ShiftModel.account_id == account_id)
+            .order_by(desc(ShiftModel.created_at))
+            .limit(limit)
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
+    def list_by_worker(self, worker_id: str, limit: int = 50) -> list[Shift]:
+        rows = (
+            self._session.query(ShiftModel)
+            .join(BookingModel, BookingModel.shift_id == ShiftModel.shift_id)
+            .filter(BookingModel.worker_id == worker_id)
+            .order_by(desc(ShiftModel.created_at))
+            .limit(limit)
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
 
 def _to_domain(model: ShiftModel) -> Shift:
     return Shift(
@@ -50,6 +71,10 @@ def _to_domain(model: ShiftModel) -> Shift:
         created_at=model.created_at,
         workers_needed=model.workers_needed,
         workers_filled=model.workers_filled,
+        account_id=getattr(model, "account_id", None),
+        currency=getattr(model, "currency", None) or "GBP",
+        latitude=getattr(model, "latitude", None),
+        longitude=getattr(model, "longitude", None),
     )
 
 
@@ -65,3 +90,7 @@ def _apply_domain(model: ShiftModel, shift: Shift) -> None:
     model.created_at = shift.created_at
     model.workers_needed = shift.workers_needed
     model.workers_filled = shift.workers_filled
+    model.account_id = shift.account_id
+    model.currency = shift.currency
+    model.latitude = shift.latitude
+    model.longitude = shift.longitude

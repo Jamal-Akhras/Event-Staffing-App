@@ -30,6 +30,17 @@ class UserRepository(Protocol):
         """
         raise NotImplementedError
 
+    def get_by_verification_token(self, token: str) -> User | None:
+        """Get a user by their email verification token.
+
+        Args:
+            token: The email verification token
+
+        Returns:
+            User if found, None otherwise
+        """
+        raise NotImplementedError
+
     def save(self, user: User) -> User:
         """Save a user (create or update).
 

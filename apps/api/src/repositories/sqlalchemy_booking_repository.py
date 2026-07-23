@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from apps.api.src.db.models import BookingModel
+from apps.api.src.db.models import BookingModel, ShiftModel
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
 
@@ -36,14 +36,29 @@ class SqlAlchemyBookingRepository:
         )
         return [_to_domain(row) for row in rows]
 
-    def list_by_worker(self, worker_id: str) -> list[Booking]:
-        rows = (
-            self._session.query(BookingModel)
-            .filter(BookingModel.worker_id == worker_id)
-            .order_by(desc(BookingModel.created_at))
-            .all()
-        )
-        return [_to_domain(row) for row in rows]
+    def list_by_worker(
+        self,
+        worker_id: str,
+        limit: int | None = None,
+        operator_id: str | None = None,
+    ) -> list[Booking]:
+        return self._list(limit, worker_id=worker_id, operator_id=operator_id)
+
+    def list_by_operator(
+        self,
+        operator_id: str,
+        limit: int = 25,
+        worker_id: str | None = None,
+    ) -> list[Booking]:
+        return self._list(limit, worker_id=worker_id, operator_id=operator_id)
+
+    def list_for_account(
+        self,
+        account_id: str,
+        limit: int = 25,
+        worker_id: str | None = None,
+    ) -> list[Booking]:
+        return self._list(limit, worker_id=worker_id, account_id=account_id)
 
     def list_by_state(self, state: BookingState) -> list[Booking]:
         rows = (
@@ -52,6 +67,27 @@ class SqlAlchemyBookingRepository:
             .order_by(desc(BookingModel.created_at))
             .all()
         )
+        return [_to_domain(row) for row in rows]
+
+    def _list(
+        self,
+        limit: int | None,
+        worker_id: str | None = None,
+        operator_id: str | None = None,
+        account_id: str | None = None,
+    ) -> list[Booking]:
+        query = self._session.query(BookingModel)
+        if account_id:
+            query = query.join(ShiftModel, ShiftModel.shift_id == BookingModel.shift_id)
+            query = query.filter(ShiftModel.account_id == account_id)
+        if worker_id:
+            query = query.filter(BookingModel.worker_id == worker_id)
+        if operator_id:
+            query = query.filter(BookingModel.operator_id == operator_id)
+        query = query.order_by(desc(BookingModel.created_at))
+        if limit is not None:
+            query = query.limit(limit)
+        rows = query.all()
         return [_to_domain(row) for row in rows]
 
 

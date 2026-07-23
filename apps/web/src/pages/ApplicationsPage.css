@@ -1,0 +1,9 @@
+.applications-skeleton-card {
+  min-height: 390px;
+}
+
+@media (max-width: 768px) {
+  .applications-skeleton-card {
+    min-height: 260px;
+  }
+}

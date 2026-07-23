@@ -9,6 +9,9 @@ from apps.api.src.repositories.in_memory_worker_profile_repository import (
     InMemoryWorkerProfileRepository,
 )
 
+OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-1"}
+SYSTEM_HEADERS = {"X-Actor-Role": "system", "X-Actor-Id": "system"}
+
 
 def _client() -> TestClient:
     booking_repo = InMemoryBookingRepository()
@@ -36,7 +39,7 @@ def _create_profile(client: TestClient, worker_id: str, now: datetime) -> None:
             "notes": "Prefers evening shifts.",
             "now": now.isoformat(),
         },
-        headers={"X-Actor-Role": "worker"},
+        headers={"X-Actor-Role": "worker", "X-Actor-Id": worker_id},
     )
     assert response.status_code == 200
 
@@ -59,7 +62,7 @@ def _create_booking(
             "end_time": end.isoformat(),
             "now": now.isoformat(),
         },
-        headers={"X-Actor-Role": "operator"},
+        headers=OPERATOR_HEADERS,
     )
     assert response.status_code == 200
     return response.json()["booking_id"]
@@ -75,18 +78,18 @@ def test_reliability_updates_from_outcomes():
     client.post(
         f"/bookings/{booking_one}/confirm",
         json={"now": (base + timedelta(minutes=5)).isoformat()},
-        headers={"X-Actor-Role": "operator"},
+        headers=OPERATOR_HEADERS,
     )
     check_in_time = base + timedelta(minutes=40)
     client.post(
         f"/bookings/{booking_one}/check-in",
         json={"now": check_in_time.isoformat()},
-        headers={"X-Actor-Role": "worker"},
+        headers={"X-Actor-Role": "worker", "X-Actor-Id": worker_id},
     )
     check_out = client.post(
         f"/bookings/{booking_one}/check-out",
         json={"now": (check_in_time + timedelta(hours=4)).isoformat()},
-        headers={"X-Actor-Role": "worker"},
+        headers={"X-Actor-Role": "worker", "X-Actor-Id": worker_id},
     )
     assert check_out.status_code == 200
 
@@ -94,16 +97,16 @@ def test_reliability_updates_from_outcomes():
     client.post(
         f"/bookings/{booking_two}/confirm",
         json={"now": (base + timedelta(minutes=1)).isoformat()},
-        headers={"X-Actor-Role": "operator"},
+        headers=OPERATOR_HEADERS,
     )
     no_show = client.post(
         f"/bookings/{booking_two}/no-show",
         json={"now": (base + timedelta(minutes=30)).isoformat()},
-        headers={"X-Actor-Role": "operator"},
+        headers=OPERATOR_HEADERS,
     )
     assert no_show.status_code == 200
 
-    profile = client.get(f"/workers/{worker_id}", headers={"X-Actor-Role": "worker"})
+    profile = client.get(f"/workers/{worker_id}", headers={"X-Actor-Role": "worker", "X-Actor-Id": worker_id})
     assert profile.status_code == 200
     assert profile.json()["reliability_score"] == 0.5
 
@@ -126,23 +129,23 @@ def test_no_show_sweep_marks_expired_bookings():
             "end_time": end.isoformat(),
             "now": (base - timedelta(hours=2)).isoformat(),
         },
-        headers={"X-Actor-Role": "operator"},
+        headers=OPERATOR_HEADERS,
     )
     booking_id = booking.json()["booking_id"]
     client.post(
         f"/bookings/{booking_id}/confirm",
         json={"now": (base - timedelta(hours=1, minutes=50)).isoformat()},
-        headers={"X-Actor-Role": "operator"},
+        headers=OPERATOR_HEADERS,
     )
 
     sweep = client.post(
         "/system/no-show-sweep",
         json={"now": base.isoformat()},
-        headers={"X-Actor-Role": "system"},
+        headers=SYSTEM_HEADERS,
     )
     assert sweep.status_code == 200
     assert sweep.json()[0]["state"] == "no_show"
 
-    profile = client.get(f"/workers/{worker_id}", headers={"X-Actor-Role": "worker"})
+    profile = client.get(f"/workers/{worker_id}", headers={"X-Actor-Role": "worker", "X-Actor-Id": worker_id})
     assert profile.status_code == 200
     assert profile.json()["reliability_score"] == 0.0

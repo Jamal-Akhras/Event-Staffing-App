@@ -1,0 +1,15 @@
+.stepper-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepper-button {
+  min-width: 42px;
+  padding: 8px 12px;
+}
+
+.stepper-input {
+  flex: 1;
+  text-align: center;
+}

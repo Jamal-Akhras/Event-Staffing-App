@@ -11,3 +11,9 @@ class WorkerProfileRepository(Protocol):
 
     def save(self, profile: WorkerProfile) -> WorkerProfile:
         raise NotImplementedError
+
+    def list_all(self) -> list[WorkerProfile]:
+        raise NotImplementedError
+
+    def list_for_account(self, account_id: str) -> list[WorkerProfile]:
+        raise NotImplementedError

@@ -1,0 +1,25 @@
+from __future__ import annotations
+
+from typing import Protocol
+
+from apps.api.src.models.message import Message
+
+
+class MessageRepository(Protocol):
+    def get(self, message_id: str) -> Message | None:
+        raise NotImplementedError
+
+    def save(self, message: Message) -> Message:
+        raise NotImplementedError
+
+    def list_by_shift(self, shift_id: str) -> list[Message]:
+        raise NotImplementedError
+
+    def list_by_application(self, application_id: str) -> list[Message]:
+        raise NotImplementedError
+
+    def list_by_booking(self, booking_id: str) -> list[Message]:
+        raise NotImplementedError
+
+    def mark_as_read(self, message_id: str) -> bool:
+        raise NotImplementedError

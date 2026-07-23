@@ -14,3 +14,9 @@ class ShiftRepository(Protocol):
 
     def list_recent(self, limit: int = 50) -> list[Shift]:
         raise NotImplementedError
+
+    def list_for_account(self, account_id: str, limit: int = 50) -> list[Shift]:
+        raise NotImplementedError
+
+    def list_by_worker(self, worker_id: str, limit: int = 50) -> list[Shift]:
+        raise NotImplementedError

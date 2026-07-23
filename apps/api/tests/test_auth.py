@@ -9,8 +9,9 @@ from fastapi.testclient import TestClient
 from apps.api.src.main import app
 from apps.api.src.auth.password import hash_password
 from apps.api.src.models.user import User
-from apps.api.src.deps import get_user_repo
+from apps.api.src.deps import get_user_repo, get_worker_profile_repo
 from apps.api.src.repositories.in_memory_user_repository import InMemoryUserRepository
+from apps.api.src.repositories.in_memory_worker_profile_repository import InMemoryWorkerProfileRepository
 
 client = TestClient(app)
 
@@ -23,10 +24,18 @@ def user_repo():
     repo.clear()
 
 
+@pytest.fixture
+def worker_profile_repo():
+    repo = InMemoryWorkerProfileRepository()
+    yield repo
+    repo.clear()
+
+
 @pytest.fixture(autouse=True)
-def override_user_repo(user_repo):
+def override_repos(user_repo, worker_profile_repo):
     """Override the user repository dependency for all tests."""
-    app.dependency_overrides[get_user_repo] = lambda: iter([user_repo])
+    app.dependency_overrides[get_user_repo] = lambda: user_repo
+    app.dependency_overrides[get_worker_profile_repo] = lambda: worker_profile_repo
     yield
     app.dependency_overrides.clear()
 
@@ -62,6 +71,7 @@ def test_register_duplicate_email(user_repo):
         email="existing@example.com",
         hashed_password=hash_password("password123"),
         role="worker",
+        account_id=None,
         worker_profile_id=str(uuid4()),
         is_active=True,
         created_at=now,
@@ -79,6 +89,30 @@ def test_register_duplicate_email(user_repo):
     assert "already registered" in response.json()["detail"].lower()
 
 
+def test_short_password_rejection():
+    register_response = client.post(
+        "/auth/register",
+        json={"email": "short-worker@example.com", "password": "short"},
+    )
+    operator_response = client.post(
+        "/auth/register/operator",
+        json={
+            "email": "short-operator@example.com",
+            "password": "short",
+            "venue_name": "Short Venue",
+            "country": "GB",
+        },
+    )
+    reset_response = client.post(
+        "/auth/reset-password",
+        json={"token": "invalid-token", "new_password": "short"},
+    )
+
+    assert register_response.status_code == 422
+    assert operator_response.status_code == 422
+    assert reset_response.status_code == 422
+
+
 def test_login_success(user_repo):
     """Test successful login."""
     # Create a user
@@ -88,6 +122,7 @@ def test_login_success(user_repo):
         email="user@example.com",
         hashed_password=hash_password("correctpassword"),
         role="worker",
+        account_id=None,
         worker_profile_id=str(uuid4()),
         is_active=True,
         created_at=now,
@@ -107,6 +142,22 @@ def test_login_success(user_repo):
     assert data["email"] == "user@example.com"
     assert data["role"] == "worker"
     assert "access_token" in data
+
+
+def test_login_rate_limit_response():
+    for _ in range(5):
+        response = client.post(
+            "/auth/login",
+            json={"email": "limited@example.com", "password": "password123"},
+        )
+        assert response.status_code == 401
+
+    response = client.post(
+        "/auth/login",
+        json={"email": "limited@example.com", "password": "password123"},
+    )
+
+    assert response.status_code == 429
 
 
 def test_login_invalid_email(user_repo):
@@ -129,6 +180,7 @@ def test_login_invalid_password(user_repo):
         email="user@example.com",
         hashed_password=hash_password("correctpassword"),
         role="worker",
+        account_id=None,
         worker_profile_id=str(uuid4()),
         is_active=True,
         created_at=now,
@@ -155,6 +207,7 @@ def test_login_inactive_user(user_repo):
         email="inactive@example.com",
         hashed_password=hash_password("password123"),
         role="worker",
+        account_id=None,
         worker_profile_id=str(uuid4()),
         is_active=False,
         created_at=now,

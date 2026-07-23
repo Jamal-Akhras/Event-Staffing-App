@@ -22,3 +22,5 @@ class WorkerProfile:
     pay_rate: float | None
     notes: str | None
     updated_at: datetime
+    avatar_url: str | None = None
+    allow_venue_recontact: bool = False

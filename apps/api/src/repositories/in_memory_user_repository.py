@@ -20,6 +20,13 @@ class InMemoryUserRepository:
         """Get a user by email address."""
         return self._users_by_email.get(email.lower())
 
+    def get_by_verification_token(self, token: str) -> User | None:
+        """Get a user by email verification token."""
+        for user in self._users.values():
+            if user.email_verification_token == token:
+                return user
+        return None
+
     def save(self, user: User) -> User:
         """Save a user (create or update)."""
         self._users[user.user_id] = user

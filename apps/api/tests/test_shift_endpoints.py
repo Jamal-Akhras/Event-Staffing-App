@@ -6,6 +6,10 @@ from apps.api.src import main
 from apps.api.src.deps import get_shift_repo
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 
+OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-1"}
+OTHER_OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-2"}
+WORKER_HEADERS = {"X-Actor-Role": "worker", "X-Actor-Id": "worker-1"}
+
 
 def _client() -> TestClient:
     shift_repo = InMemoryShiftRepository()
@@ -31,10 +35,20 @@ def test_shift_create_and_list():
             "notes": "Black shirt",
             "now": now.isoformat(),
         },
-        headers={"X-Actor-Role": "operator"},
+        headers=OPERATOR_HEADERS,
     )
     assert create.status_code == 200
 
-    listed = client.get("/shifts", headers={"X-Actor-Role": "worker"})
+    listed = client.get("/shifts", headers=WORKER_HEADERS)
     assert listed.status_code == 200
     assert listed.json()[0]["role"] == "server"
+
+    other_operator_list = client.get("/shifts", headers=OTHER_OPERATOR_HEADERS)
+    assert other_operator_list.status_code == 200
+    assert other_operator_list.json() == []
+
+    other_operator_get = client.get(
+        f"/shifts/{create.json()['shift_id']}",
+        headers=OTHER_OPERATOR_HEADERS,
+    )
+    assert other_operator_get.status_code == 403
