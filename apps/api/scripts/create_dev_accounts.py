@@ -8,18 +8,24 @@ from apps.api.src.auth.password import hash_password
 from apps.api.src.db.database import Base, SessionLocal, engine
 from apps.api.src.db.models import AccountModel, UserModel
 
+import os
+
+# Local development seed accounts only. Addresses are RFC 2606 reserved
+# example domains; the password is dev-only and overridable via env.
+DEV_PASSWORD = os.environ.get("DEV_ACCOUNT_PASSWORD", "change-me-dev-only")
+
 ACCOUNTS = [
     {
         "email": "operator-one@example.com",
-        "password": "change-me-dev-only",
-        "venue_name": "Jamal's Venue",
+        "password": DEV_PASSWORD,
+        "venue_name": "Riverside Hall",
         "country": "GB",
         "currency": "GBP",
     },
     {
         "email": "operator-two@example.com",
-        "password": "change-me-dev-only",
-        "venue_name": "The Goat",
+        "password": DEV_PASSWORD,
+        "venue_name": "The Warehouse",
         "country": "GB",
         "currency": "GBP",
     },
