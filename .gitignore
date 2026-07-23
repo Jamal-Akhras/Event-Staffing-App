@@ -28,3 +28,4 @@ _to_delete/
 CONTINUITY.md
 .claude/settings.local.json
 artifacts/
+*.tsbuildinfo
