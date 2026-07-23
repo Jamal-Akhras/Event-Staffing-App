@@ -312,10 +312,26 @@ curl http://127.0.0.1:8000/protected-endpoint \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+### Development Mode vs Production Authentication
+
+**Development Mode (`DEV_MODE=true`, default):**
+- API accepts `X-Actor-Role` header for authentication
+- No JWT token required
+- Allows rapid frontend development without auth complexity
+- Example header: `X-Actor-Role: operator`
+
+**Production Mode (`DEV_MODE=false`):**
+- API requires JWT authentication
+- Must include `Authorization: Bearer <token>` header
+- Tokens obtained via `/auth/register` or `/auth/login`
+
+**⚠️ CRITICAL: Set `DEV_MODE=false` in production environments**
+
 ### Current Authentication State
 - ✅ JWT authentication implemented (/auth/register, /auth/login)
-- ✅ Old X-Actor-Role header system still working (for backward compatibility)
-- ⏳ Existing endpoints need migration to JWT (future work)
+- ✅ DEV_MODE allows X-Actor-Role header for development
+- ✅ All endpoints support both authentication modes
+- ⏳ Web and mobile UIs need JWT integration for production use
 
 ---
 

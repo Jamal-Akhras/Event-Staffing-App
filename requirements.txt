@@ -3,7 +3,14 @@ uvicorn
 sqlalchemy
 alembic
 pydantic
+pydantic[email]
 pytest
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+python-dotenv
+psycopg[binary]
+apscheduler
+slowapi
+redis
+sentry-sdk[fastapi]

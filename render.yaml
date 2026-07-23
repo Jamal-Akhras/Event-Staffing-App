@@ -1,0 +1,111 @@
+# Render Blueprint for the Event Staffing Platform.
+# Provisions: API web service, scheduler worker, managed Postgres, managed Redis,
+# and a static site for the web app. Secrets marked `sync: false` must be set in
+# the Render dashboard after the first deploy. See docs/30-delivery/DEPLOY.md.
+
+databases:
+  - name: event-staffing-postgres
+    plan: basic-256mb
+    databaseName: event_staffing
+    user: event_staffing
+
+services:
+  - type: redis
+    name: event-staffing-redis
+    plan: starter
+    ipAllowList: []  # only reachable from Render services in this blueprint
+    maxmemoryPolicy: noeviction
+
+  - type: web
+    name: event-staffing-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    dockerCommand: uvicorn apps.api.src.main:app --host 0.0.0.0 --port 8000
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEV_MODE
+        value: "false"
+      - key: TRUST_FORWARDED_FOR
+        value: "true"  # Render terminates TLS at a proxy and sets X-Forwarded-For
+      - key: DATABASE_URL
+        fromDatabase:
+          name: event-staffing-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: event-staffing-redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: OPERATOR_INVITE_CODES
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: EMAIL_TRANSPORT
+        value: smtp
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: WEB_BASE_URL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      # Phase 2 (payments) — placeholders, not yet consumed by the code.
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+  - type: worker
+    name: event-staffing-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    dockerCommand: python -m apps.api.src.worker
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEV_MODE
+        value: "false"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: event-staffing-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: event-staffing-redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        fromService:
+          type: web
+          name: event-staffing-api
+          envVarKey: JWT_SECRET_KEY
+      - key: SENTRY_DSN
+        sync: false
+
+  - type: web
+    name: event-staffing-web
+    runtime: static
+    buildCommand: cd apps/web && npm ci && npm run build
+    staticPublishPath: ./apps/web/dist
+    envVars:
+      - key: VITE_API_BASE
+        sync: false  # set to the deployed API URL, e.g. https://event-staffing-api.onrender.com
+      - key: VITE_SENTRY_DSN
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

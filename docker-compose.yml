@@ -1,0 +1,115 @@
+services:
+  api:
+    build: .
+    container_name: event-staffing-api
+    restart: unless-stopped
+    command: ["uvicorn", "apps.api.src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:-postgresql+psycopg://event_staffing:event_staffing_local_password@postgres:5432/event_staffing}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      REDIS_URL: ${COMPOSE_REDIS_URL:-redis://redis:6379/0}
+    ports:
+      - "${API_PORT:-8001}:8000"
+    volumes:
+      - event_staffing_uploads:/app/apps/api/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "python -c \"import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health', timeout=2).status == 200 else sys.exit(1)\""
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  worker:
+    build: .
+    container_name: event-staffing-worker
+    restart: unless-stopped
+    command: ["python", "-m", "apps.api.src.worker"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:-postgresql+psycopg://event_staffing:event_staffing_local_password@postgres:5432/event_staffing}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      REDIS_URL: ${COMPOSE_REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  migrate:
+    build: .
+    container_name: event-staffing-migrate
+    profiles: ["setup"]
+    command: ["python", "-m", "alembic", "-c", "apps/api/alembic.ini", "upgrade", "head"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:-postgresql+psycopg://event_staffing:event_staffing_local_password@postgres:5432/event_staffing}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  seed:
+    build: .
+    container_name: event-staffing-seed
+    profiles: ["setup"]
+    command: ["python", "-m", "apps.api.scripts.seed_demo_data"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:-postgresql+psycopg://event_staffing:event_staffing_local_password@postgres:5432/event_staffing}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: event-staffing-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - event_staffing_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: event-staffing-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-event_staffing}
+      POSTGRES_USER: ${POSTGRES_USER:-event_staffing}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-event_staffing_local_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - event_staffing_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-event_staffing} -d ${POSTGRES_DB:-event_staffing}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  event_staffing_postgres_data:
+  event_staffing_uploads:
+  event_staffing_redis_data:

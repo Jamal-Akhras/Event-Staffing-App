@@ -21,3 +21,10 @@ Thumbs.db
 
 # Windows null device files
 nul
+
+# local-only
+*.log
+_to_delete/
+CONTINUITY.md
+.claude/settings.local.json
+artifacts/

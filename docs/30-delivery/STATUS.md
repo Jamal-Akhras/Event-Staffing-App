@@ -1,97 +1,52 @@
-
 # Project Status
 
 ## Last Updated
-- Date: 2025-12-27
+- Date: 2026-05-04
+
+## Current Focus
+- Web and mobile UI operational passes are complete; next step is visual polish/review against running apps.
+- Backend production-readiness work has covered route ownership and shifted local DB config to Postgres.
+- Preserve the future worker Match Feed idea in docs without implementing it yet.
 
 ## Implemented
-- Booking state machine (domain)
-- Basic domain tests
-- Booking aggregate with transition guards
-- FastAPI app skeleton with health check
-- API tests (health check)
-- Booking lifecycle endpoints (request/confirm/check-in/out/approve/pay/no-show/cancel)
-- Booking domain and API tests for edge cases
-- Web MVP shell (React + Vite)
-- Minimal booking UI (create/load/transition)
-- Booking list endpoint and recent bookings UI
-- UI actions disabled based on server-allowed transitions
-- Expo worker app scaffold with minimal status screen
-- Root .gitignore added to keep the repo clean
-- API repository dependency injection and DB config hook
-- Alembic migrations scaffold + initial bookings table
-- Worker app bookings list and check-in/out actions
-- Worker app booking detail screen (timestamps + check-in window)
-- Role-based API access stub (X-Actor-Role)
-- Conda environment and requirements added
-- Persistence layer stubs (SQLAlchemy models + repository interface)
-- OpenAPI response models for booking endpoints
-- API schemas split into dedicated module
-- SQLAlchemy booking repository implementation
-
-- CORS allowlist for local Vite dev
-- Worker app polling every 15 seconds
-- Worker applications API and approval flow
-- Operator UI for reviewing applications
-- Worker app application form
-- API schema definitions cleaned
-- Shift posting and listing endpoints
-- Mobile tabbed navigation (Browse, Shifts, Profile)
-- Worker shift apply sheet with details
-- Worker profile API (public vs private)
-- Mobile bottom navigation pinned
-- Operator view of worker profiles
-- Worker profile editing and public operator view
-- Mobile bottom navigation fixed to screen
-- Mobile nav respects safe-area inset
-- Worker profile API and editing
-- My applications tab in mobile shifts
-- Mobile top bar respects safe-area inset
-- Reliability scoring from booking outcomes (domain + API)
-- System no-show sweep endpoint and background job runner
-- Web UI refreshed with premium styling
-- SQLAlchemy persistence for shifts, applications, and worker profiles
-- No-show sweep service and runnable job
-- Service layer for booking operations (reliability refresh, no-show sweep)
-- API flows diagram added
-- API flows diagram labels fixed
-- Reliability domain logic and tests
-- Comprehensive tests for reliability scoring and no-show sweep
-- JWT-based authentication system with bcrypt password hashing
-- User registration and login endpoints
-- User model and repository (interface + SQLAlchemy + in-memory)
-- Database migration 003 for users table
-- Operator account creation script
-- Authentication test suite
-- Multi-worker shift capacity (workers_needed/workers_filled tracking)
-- Database migration 004 for shift capacity fields
-- Shift status auto-update to "filled" when capacity reached
-- Application validation to prevent overstaffing
-- Comprehensive tests for shift capacity functionality
+- Booking lifecycle domain, API endpoints, transition guards, and tests.
+- SQLAlchemy persistence, Alembic migrations, repository interfaces, Docker-backed local Postgres setup, and SQLite fallback.
+- JWT auth with DEV_MODE header bypass for local web/mobile development.
+- Shift posting, capacity tracking, duplicate application prevention, application approval/rejection, worker profiles, templates, recurring shift generation, messaging, and message history.
+- Web React dashboard with routes for Dashboard, Shifts, Templates, Applications, Workers, Schedule, Analytics, and Settings.
+- Mobile Expo worker app with Browse, Shifts, Profile, applications, messaging, and check-in/out flows.
+- Backend service layer for shifts, applications, templates, messages, and booking lifecycle workflows.
+- 2026-05-03 web UI pass: dashboard now prioritizes attention queue, open seats, 7-day coverage, and quick venue-manager actions.
+- 2026-05-03 frontend structure pass: global CSS, Workers, and Schedule were split into smaller files; web source files are now under the 300-line rule.
+- 2026-05-03 mobile UI pass: app entrypoint simplified to the real navigator, worker Browse/Shifts/Earnings/Profile screens refreshed, messaging cleaned up, and mobile source files are under the 300-line rule.
+- 2026-05-03 worker feed-state pass: mobile Browse persists passed shifts per worker, supports undo, and backend exposes owned feed-state endpoints.
+- 2026-05-03 backend hardening pass: applications, worker feed state, bookings, shifts, worker profiles/earnings, and message threads now enforce actor ownership for core worker/operator paths.
+- 2026-05-03 migration reliability pass: Alembic resolves relative SQLite URLs against the repo root and can run from the repo root config path.
+- 2026-05-04 Postgres migration pass: `.env`/`.env.example` now target Postgres, `psycopg` is the configured driver, Docker Compose provisions local Postgres, and SQLite moved to `.env.sqlite.example`.
 
 ## In Progress
-- None
+- None.
 
 ## Next
-- Update web and mobile UIs to use JWT authentication
-- Migrate existing endpoints from X-Actor-Role to JWT validation
-- Automated no-show sweep scheduler
-- Basic notification system (email/SMS)
-- WebSocket event stream for mobile shift updates (future)
 
-## Notes
-- Mobile app default API base set for physical device testing (LAN IP)
-- Mobile polling guards against overlapping requests
+### Backend Production Readiness
+- Add Postgres-backed CI/integration tests and run migrations against Postgres in CI.
+- Move no-show sweep and recurring generation from manual/route-triggered flows into a scheduler or worker.
+- Add production observability: structured logs, request IDs, health details, error monitoring, and runbook notes.
+- Wire production auth into web/mobile clients instead of relying on DEV_MODE headers.
+- Model venues/accounts explicitly instead of relying only on string `operator_id` values.
+
+### Frontend Product Work
+- Visually review the upgraded web and mobile UIs and polish spacing, density, and responsive behavior.
+- Revisit worker discovery after core UI polish; see `docs/40-future/worker_match_feed.md`.
+
+## Known Issues
+- Current relational ownership is enforced in routes, but the schema still needs first-class venue/account relationships before production.
+- Background jobs still need a production scheduler/worker.
 
 ## Decisions
-- Web-first MVP
-- Reliability over discovery
-
-
-
-
-
-
-
-
-
+- Web-first MVP.
+- Reliability-first workflows.
+- Preserve the existing ocean green and warm paper palette.
+- Keep worker Match Feed as a future enhancement, not part of the current UI upgrade.
+- Use PostgreSQL for production and default local development; keep SQLite only for explicit lightweight fallback.

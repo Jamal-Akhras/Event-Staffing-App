@@ -70,4 +70,48 @@
 - Added automatic shift status change to "filled" when capacity is reached
 - Added validation to prevent applications/approvals when shift is fully staffed
 - Created comprehensive test suite for shift capacity functionality (test_workers_needed.py)
-
+- Implemented DEV_MODE authentication bypass for rapid frontend development
+- Added ActorRole enum and get_actor_role/require_role dependencies for role-based access control
+- Modified get_actor_role to accept X-Actor-Role header in DEV_MODE (default: true)
+- Updated dependencies.py to support both header-based (dev) and JWT-based (production) authentication
+- Added DEV_MODE flag to .env.example with production security warning
+- Updated README.md and documentation to explain DEV_MODE vs production authentication
+- Completed UI restructure planning for Uber/Deliveroo-style experience
+- Created comprehensive UI restructure plan in docs/40-future/ui_restructure_plan.md
+- Analyzed current web UI (operator dashboard) and mobile app (worker interface)
+- Researched modern gig economy UX patterns (Uber, Deliveroo, on-demand apps)
+- Planned mobile app enhancements: map-based shift discovery, 4-tab navigation, earnings tracking
+- Planned web dashboard redesign: sidebar navigation, dedicated pages, venue-focused terminology
+- Documented design decisions: map view, sidebar layout, earnings tab, professional navigation
+- Preserved color scheme requirements: ocean greens, warm paper backgrounds, premium aesthetic
+- Implemented complete web dashboard restructure (Phases 1-4)
+- Installed react-router-dom for multi-page navigation
+- Created DashboardLayout with sidebar navigation (260px fixed sidebar + responsive main content)
+- Refactored monolithic App.tsx (771 lines) into router setup (29 lines)
+- Created EmptyState component with 7shifts-inspired pattern (illustrations + helpful messages + CTAs)
+- Created StatusBadge component with Deputy-style color coding (green/yellow/blue/red status indicators)
+- Updated terminology throughout: Operator -> Venue Manager (UI only, backend compatible)
+- Added workers_needed field to shift creation form with +/- increment buttons
+- Created DashboardPage with real-time calculated metrics (shifts this week, fill rate, pending applications, active workers, urgent alerts)
+- Created ShiftsPage with shift creation form and open/filled shift lists
+- Created ApplicationsPage with pending/decided sections, approve/reject actions, and worker profile modal
+- Created SchedulePage with weekly calendar grid view, color-coded shifts, week navigation (Previous/Today/Next), and weekly summary stats
+- Created AnalyticsPage with performance metrics (fill rate, no-show rate, response time, pay rate), bar charts for day-of-week analysis, top roles ranking, and conditional performance insights
+- Created SettingsPage with venue profile configuration, contact information, notification preferences (3 toggles), and API configuration display
+- Created WorkersPage with search functionality, reliability sorting, worker grid cards with hover effects, application statistics, and worker detail modal
+- Added comprehensive CSS for sidebar layout, dashboard metrics, page containers, and responsive design (mobile sidebar collapse)
+- Tested complete build pipeline (builds successfully with no TypeScript errors)
+- 2026-05-03: Added future Worker Match Feed note documenting vertical feed plus swipe shortcut direction, UX guardrails, and later ranking signals.
+- 2026-05-03: Refreshed project status to reflect completed backend service-layer work, current web UI focus, and remaining production-readiness gaps.
+- 2026-05-03: Upgraded the web dashboard into an operational triage surface with attention queue, open-seat metrics, 7-day coverage, next open shifts, and quick actions.
+- 2026-05-03: Split oversized frontend files: global CSS, WorkersPage, and SchedulePage are now under the 300-line rule with focused helper/components.
+- 2026-05-03: Replaced corrupted UI glyphs with stable text tokens and CSS status indicators across the web frontend.
+- 2026-05-03: Updated the mobile app entrypoint to remove the legacy inactive AppContent implementation and use the real bottom-tab navigator directly.
+- 2026-05-03: Refreshed mobile Browse, Shifts, Earnings, Profile, shift cards, status badges, and messaging UI around worker shift discovery, application tracking, check-in/out, pay tracking, and profile readiness.
+- 2026-05-03: Split mobile screens/components so active TypeScript files are under the 300-line rule and removed corrupted mobile glyph text.
+- 2026-05-03: Added worker feed-state persistence with owned API endpoints, SQLAlchemy repository support, migration 009, and mobile Browse undo for passed shifts.
+- 2026-05-03: Tightened application endpoint ownership so workers can only act on their own applications and operators only act on their own venue applications.
+- 2026-05-03: Made Alembic resolve relative SQLite URLs against the repo root and changed the config path so migrations can run safely from the repo root.
+- 2026-05-03: Extended route ownership checks across bookings, shifts, worker profiles/earnings, and message threads, with regression tests for cross-actor access denial.
+- 2026-05-03: Documented PostgreSQL as the production database target while keeping SQLite for local development and POC demos.
+- 2026-05-04: Switched the local DB default to Docker-backed Postgres, added `psycopg[binary]`, Postgres URL normalization, Docker Compose, `.env.sqlite.example`, and Postgres setup docs.

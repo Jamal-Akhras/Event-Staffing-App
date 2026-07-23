@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event Staffing — Design/UX Mockups</title>
+<style>
+  :root{
+    --ink-900:#0f1720; --ink-700:#1f2a37; --ink-600:#374250; --ink-500:#4b5563; --ink-400:#6b7682;
+    --paper-0:#fefcf9; --paper-1:#fbf7f1; --paper-2:#efe7d9; --paper-3:#fff8e9;
+    --ocean-700:#0a4a2f; --ocean-500:#0e5a3a; --ocean-300:#2f8f5f;
+    --sun-500:#f5a524; --sun-100:#fde9c4;
+    --success:#0f9d6b; --warning:#b9770a; --danger:#c0392b;
+    --border-soft:rgba(15,23,32,.10); --border-strong:rgba(15,23,32,.16);
+    --r-sm:8px; --r-md:12px; --r-lg:16px;
+    --shadow:0 8px 24px rgba(25,31,40,.06);
+    font-family:"Space Grotesk","Manrope","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#e9e2d6;color:var(--ink-900);padding:32px 20px 64px;line-height:1.5}
+  .wrap{max-width:1080px;margin:0 auto}
+  .lead{max-width:760px;margin:0 auto 28px}
+  .lead h1{font-size:1.7rem;margin:0 0 6px;letter-spacing:-.01em}
+  .lead p{margin:0;color:var(--ink-600)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0 0;font-size:.82rem;color:var(--ink-600)}
+  .legend b{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px}
+  .block{background:var(--paper-1);border:1px solid var(--border-soft);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:22px;margin:22px 0}
+  .block > h2{margin:0 0 4px;font-size:1.15rem}
+  .block > .sub{margin:0 0 18px;color:var(--ink-500);font-size:.9rem}
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:880px){.ba{grid-template-columns:1fr}}
+  .pane{border:1px solid var(--border-soft);border-radius:var(--r-md);overflow:hidden;background:var(--paper-0)}
+  .pane-tag{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;color:#fff}
+  .pane-tag.before{background:#8a8276}
+  .pane-tag.after{background:var(--ocean-500)}
+  .pane-body{padding:16px}
+  .note{font-size:.82rem;color:var(--ink-600);margin:10px 2px 0;padding-left:16px;position:relative}
+  .note::before{content:"";position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:50%;background:var(--sun-500)}
+
+  /* shared mini-ui */
+  .row{display:flex;align-items:center;gap:10px}
+  .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;border-radius:var(--r-md);padding:9px 14px;font:inherit;font-size:.85rem;font-weight:600;cursor:default}
+  .btn.primary{background:var(--ocean-500);color:#fffaf2}
+  .btn.ghost{background:transparent;border-color:var(--border-soft);color:var(--ink-700)}
+  .pill{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 10px;border-radius:999px;font-size:.68rem;font-weight:700}
+  svg.ic{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+  /* ---- web shell ---- */
+  .shell{display:grid;grid-template-columns:150px 1fr;min-height:300px}
+  .side{background:var(--paper-2);padding:14px 10px;border-right:1px solid var(--border-soft)}
+  .brand{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+  .mark{width:28px;height:28px;border-radius:8px;background:var(--ocean-500);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem}
+  .brand b{font-size:.82rem}
+  .nav a{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;color:var(--ink-600);font-size:.78rem;text-decoration:none;font-weight:600}
+  .nav a.on{background:var(--paper-0);color:var(--ocean-700)}
+  .nav svg.ic{width:15px;height:15px}
+  .main{padding:16px}
+  .h{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+  .h h3{margin:0;font-size:1.15rem;letter-spacing:-.01em}
+  .h p{margin:2px 0 0;color:var(--ink-500);font-size:.78rem}
+  .mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .m{background:var(--paper-0);border:1px solid var(--border-soft);border-radius:var(--r-md);padding:12px}
+  .m .lab{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--ink-500);font-weight:600}
+  .m .val{font-size:1.7rem;font-weight:800;margin-top:4px;letter-spacing:-.02em}
+  .m.warn{border-color:rgba(185,119,10,.4)}
+  .m.warn .lab{color:var(--warning)}
+  .m.ok .lab{color:var(--success)}
+  .hero{display:flex;justify-content:space-between;align-items:center;gap:14px;background:var(--paper-3);border:1px solid rgba(245,165,36,.4);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px}
+  .hero b{font-size:.95rem}
+  .hero p{margin:2px 0 0;color:var(--ink-600);font-size:.8rem}
+  .caps{font-size:.62rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-400)}
+
+  /* before versions (intentionally over-styled / low contrast) */
+  .b-side{background:#efe7d9;padding:14px 10px}
+  .b-nav a{display:block;padding:7px 9px;border-radius:8px;color:#a9a293;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;font-weight:800;text-decoration:none}
+  .b-nav a.on{background:#fff;color:#0f1720}
+  .b-m .lab{font-size:.66rem;text-transform:uppercase;letter-spacing:.14em;color:#b3ada0;font-weight:800}
+  .b-m .val{font-size:1.9rem;font-weight:900}
+  .b-dupe{font-size:.7rem;color:#b3ada0;text-transform:uppercase;letter-spacing:.1em;font-weight:800;margin:8px 0 0}
+
+  /* ---- phone ---- */
+  .phones{display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
+  .phone{width:268px;background:#0f1720;border-radius:30px;padding:9px}
+  .screen{background:var(--paper-0);border-radius:23px;overflow:hidden}
+  .pbar{height:26px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:.62rem;color:var(--ink-400);font-weight:700}
+  .ptag{font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;color:#fff;text-align:center}
+  .ptag.before{background:#8a8276}.ptag.after{background:var(--ocean-500)}
+  .card{margin:12px;border:1px solid var(--border-soft);border-radius:14px;background:#fff;padding:13px}
+  .card .role{font-size:1rem;font-weight:800}
+  .card .loc{font-size:.78rem;color:var(--ink-500)}
+  .card .pay{font-size:1.5rem;font-weight:800;color:var(--ocean-500);letter-spacing:-.02em;margin-top:8px}
+  .card .est{font-size:.72rem;color:var(--ink-500)}
+  .track{height:5px;border-radius:99px;background:var(--border-soft);margin:11px 0 5px;overflow:hidden}
+  .track i{display:block;height:100%;background:var(--ocean-500);border-radius:99px}
+  .spots{font-size:.72rem;color:var(--ink-600)}
+  .acts{display:flex;gap:8px;margin-top:12px}
+  .acts .btn{flex:1;justify-content:center;font-size:.8rem;padding:11px 0}
+  .swipe{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--ink-400);font-size:.72rem;margin-top:10px}
+  .tabbar{display:flex;border-top:1px solid var(--border-soft);background:#fff}
+  .tab{flex:1;text-align:center;padding:8px 0 6px;color:var(--ink-400);font-size:.6rem;font-weight:700}
+  .tab.on{color:var(--ocean-500)}
+  .tab svg.ic{width:18px;height:18px;margin:0 auto 2px;display:block}
+
+  /* before phone (3 cramped buttons, cool palette) */
+  .b-screen{background:#fff}
+  .b-card{margin:12px;border:1px solid #e1e6ec;border-radius:14px;background:#fff;padding:13px}
+  .b-acts{display:flex;gap:6px;margin-top:12px}
+  .b-acts .bb{flex:1;text-align:center;padding:9px 0;border-radius:8px;font-size:.74rem;font-weight:800}
+  .b-acts .pass{flex:.7;background:#f4f0ea;color:#5f6c78}
+  .b-acts .det{flex:.9;border:1px solid #e1e6ec;color:#0e5a3a}
+  .b-acts .ap{flex:1.4;background:#0e5a3a;color:#f7efe8}
+
+  /* ---- auth ---- */
+  .auth{display:grid;grid-template-columns:1fr 1fr;min-height:240px;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--border-soft)}
+  .auth .l{padding:20px;color:#fff;display:flex;flex-direction:column;justify-content:space-between}
+  .auth .l.before{background:#681d96}
+  .auth .l.after{background:var(--ocean-700)}
+  .auth .l .mk{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800}
+  .auth .l.before .mk{background:#d97706;color:#fff}
+  .auth .l.after .mk{background:var(--sun-500);color:#3a2a00}
+  .auth .l h4{margin:14px 0 8px;font-size:1.05rem;line-height:1.3}
+  .auth .l .feat{font-size:.74rem;color:rgba(255,255,255,.8);margin:3px 0}
+  .auth .r{background:var(--paper-0);padding:20px;display:flex;flex-direction:column;justify-content:center;gap:9px}
+  .auth .r input{border:1px solid var(--border-strong);border-radius:9px;padding:9px 11px;font:inherit;font-size:.82rem;background:#fff}
+  .auth .r .ttl{font-weight:800;font-size:1rem}
+  .swatchset{display:flex;gap:6px;margin-top:6px}
+  .sw{width:22px;height:22px;border-radius:6px;border:1px solid var(--border-soft)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="lead">
+    <h1>Design &amp; UX mockups — proposed direction</h1>
+    <p>Before / after for the three key screens, illustrating the review's main moves: one unified brand, AA-contrast labels, icons on web, calmer typography (less ALL-CAPS), a de-duplicated dashboard, and a clearer mobile action hierarchy. "Before" panes approximate the current build; "after" panes show the recommendation. Colours are the app's own palette.</p>
+    <div class="legend">
+      <span><b style="background:#0e5a3a"></b>Ocean (primary)</span>
+      <span><b style="background:#f5a524"></b>Sun (warning only)</span>
+      <span><b style="background:#fbf7f1"></b>Paper (surface)</span>
+      <span><b style="background:#0f1720"></b>Ink (text)</span>
+    </div>
+  </div>
+
+  <!-- AUTH -->
+  <div class="block">
+    <h2>1 · Sign in — unify the brand (D1)</h2>
+    <p class="sub">Today the first screen is purple while the whole app behind it is green/cream. The fix: one identity, ocean-green, shared logo, trust panel preserved.</p>
+    <div class="ba">
+      <div class="pane">
+        <div class="pane-tag before">Before — purple auth, different from the app</div>
+        <div class="pane-body">
+          <div class="auth">
+            <div class="l before">
+              <div class="row"><div class="mk">E</div><div style="font-size:.8rem;font-weight:700">Event Staffing</div></div>
+              <div><h4>Reliable staff,<br>every shift.</h4><div class="feat">• Vetted workers</div><div class="feat">• Reliability scores</div></div>
+              <div style="font-size:.62rem;color:rgba(255,255,255,.45)">© 2026</div>
+            </div>
+            <div class="r">
+              <div class="ttl">Welcome back</div>
+              <input placeholder="Email" /><input placeholder="Password" type="password" />
+              <div class="btn" style="background:#681d96;color:#fff;justify-content:center">Sign in</div>
+            </div>
+          </div>
+          <div class="swatchset"><span class="sw" style="background:#681d96"></span><span class="sw" style="background:#9333ea"></span><span class="sw" style="background:#d97706"></span></div>
+          <p class="note">Purple + amber here, green + cream everywhere else. No shared logo.</p>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="pane-tag after">After — one brand, end to end</div>
+        <div class="pane-body">
+          <div class="auth">
+            <div class="l after">
+              <div class="row"><div class="mk">V</div><div style="font-size:.8rem;font-weight:700">Venue OS</div></div>
+              <div><h4>Reliable staff,<br>every shift.</h4><div class="feat">• Vetted workers</div><div class="feat">• Reliability scores</div></div>
+              <div style="font-size:.62rem;color:rgba(255,255,255,.5)">© 2026</div>
+            </div>
+            <div class="r">
+              <div class="ttl">Welcome back</div>
+              <input placeholder="Email" /><input placeholder="Password" type="password" />
+              <div class="btn primary" style="justify-content:center">Sign in</div>
+            </div>
+          </div>
+          <div class="swatchset"><span class="sw" style="background:#0e5a3a"></span><span class="sw" style="background:#2f8f5f"></span><span class="sw" style="background:#f5a524"></span></div>
+          <p class="note">Same ocean/sun/paper palette and logo the user sees inside the app.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="block">
+    <h2>2 · Operator dashboard — calmer, scannable, no echoes (D6–D8)</h2>
+    <p class="sub">The current dashboard repeats the "needs attention" count three times and uses no icons with heavy ALL-CAPS labels. The fix: one attention hero, icons per metric, sentence-case labels, AA-contrast text, color reserved for real signal.</p>
+    <div class="ba">
+      <div class="pane">
+        <div class="pane-tag before">Before</div>
+        <div class="pane-body">
+          <div class="pane" style="border:none">
+            <div class="shell">
+              <div class="b-side">
+                <div class="brand"><div class="mark" style="background:#0e5a3a">V</div><b style="font-size:.74rem">Venue OS</b></div>
+                <div class="b-nav">
+                  <a class="on">Overview</a><a>Shifts</a><a>Applications</a><a>Schedule</a><a>Workers</a>
+                </div>
+              </div>
+              <div class="main">
+                <div class="h"><div><h3>Overview</h3><p class="b-dupe" style="margin-top:4px">Thursday · 6 items need attention</p></div></div>
+                <div class="hero" style="background:linear-gradient(135deg,#fff5dc,#fff9ec)"><div><b>6 pending applications</b><p>4 open seats across active shifts.</p></div><span class="btn" style="background:#0e5a3a;color:#fff">Review now</span></div>
+                <div class="mgrid b-m" style="grid-template-columns:repeat(4,1fr)">
+                  <div class="m"><div class="lab">Open Shifts</div><div class="val">7</div></div>
+                  <div class="m"><div class="lab">Pending</div><div class="val">6</div></div>
+                  <div class="m"><div class="lab">Filled</div><div class="val">82%</div></div>
+                  <div class="m"><div class="lab">No-shows</div><div class="val">1</div></div>
+                </div>
+                <p class="b-dupe">Attention queue — 6 pending applications · 4 open seats</p>
+              </div>
+            </div>
+          </div>
+          <p class="note">Count appears 3×: subtitle, banner, queue. Caps labels in low-contrast gray. No icons.</p>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="pane-tag after">After</div>
+        <div class="pane-body">
+          <div class="pane" style="border:none">
+            <div class="shell">
+              <div class="side">
+                <div class="brand"><div class="mark">V</div><b>Venue OS</b></div>
+                <div class="nav">
+                  <a class="on"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>Overview</a>
+                  <a><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>Shifts</a>
+                  <a><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Applications</a>
+                  <a><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Schedule</a>
+                  <a><svg class="ic" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0"/><path d="M16 5a3 3 0 010 6"/></svg>Workers</a>
+                </div>
+              </div>
+              <div class="main">
+                <div class="h"><div><h3>Overview</h3><p>Thursday, 25 June</p></div><span class="btn ghost"><svg class="ic" viewBox="0 0 24 24"><path d="M4 12a8 8 0 018-8 8 8 0 016 3l2-2"/><path d="M20 4v5h-5"/></svg>Refresh</span></div>
+                <div class="hero"><div class="row" style="gap:12px"><svg class="ic" viewBox="0 0 24 24" style="width:26px;height:26px;color:var(--warning)"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.8 1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.4 3.8a2 2 0 00-3.4 0z"/></svg><div><b>6 applications need review</b><p>4 open seats across active shifts before the next service window.</p></div></div><span class="btn primary">Review now</span></div>
+                <div class="mgrid">
+                  <div class="m"><div class="lab"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="16" rx="2"/></svg>Open shifts</div><div class="val">7</div></div>
+                  <div class="m warn"><div class="lab"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 8v4M12 16h.01"/><circle cx="12" cy="12" r="9"/></svg>Pending</div><div class="val">6</div></div>
+                  <div class="m ok"><div class="lab"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M20 6 9 17l-5-5"/></svg>Filled</div><div class="val">82%</div></div>
+                  <div class="m"><div class="lab"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>No-shows</div><div class="val">1</div></div>
+                </div>
+                <p class="caps" style="margin:14px 0 0">Coverage · next 7 days</p>
+              </div>
+            </div>
+          </div>
+          <p class="note">One attention hero (icon + text + CTA). Icons + sentence case. Amber = warning only; check-green = healthy.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE -->
+  <div class="block">
+    <h2>3 · Mobile browse — one clear action, bigger targets (D5, D9, D1)</h2>
+    <p class="sub">Three cramped sub-44px buttons put "Pass" next to "Quick apply." The fix: Quick apply becomes the single prominent button, Pass moves to a swipe/secondary affordance, targets grow, and the surface matches the web's warm paper.</p>
+    <div class="phones">
+      <div>
+        <div class="ptag before" style="border-radius:8px 8px 0 0">Before</div>
+        <div class="phone"><div class="screen b-screen">
+          <div class="pbar">9:41</div>
+          <div style="padding:10px 12px 0;font-size:1rem;font-weight:800">Find shifts</div>
+          <div class="b-card">
+            <div class="row" style="justify-content:space-between"><div><div style="font-size:.98rem;font-weight:800">Bartender</div><div style="font-size:.76rem;color:#5f6c78">The Ned, EC2</div></div><span class="pill" style="background:#eafaf3;color:#0f9d6b">OPEN</span></div>
+            <div style="font-size:1.4rem;font-weight:800;color:#0e5a3a;margin-top:7px">£16.50/hr</div>
+            <div style="font-size:.7rem;color:#5f6c78">£132 est · 8h</div>
+            <div class="track" style="background:#e1e6ec"><i style="width:60%;background:#0e5a3a"></i></div>
+            <div class="spots" style="color:#8b98a5">2 spots left</div>
+            <div class="b-acts"><div class="bb pass">Pass</div><div class="bb det">Details</div><div class="bb ap">Quick apply</div></div>
+          </div>
+          <div class="tabbar"><div class="tab on">Browse</div><div class="tab">Shifts</div><div class="tab">Earnings</div><div class="tab">Profile</div></div>
+        </div></div>
+        <p class="note" style="width:248px">Pass + Apply adjacent, ~40px tall. Cooler white than web.</p>
+      </div>
+
+      <div>
+        <div class="ptag after" style="border-radius:8px 8px 0 0">After</div>
+        <div class="phone"><div class="screen">
+          <div class="pbar">9:41</div>
+          <div style="padding:10px 12px 0;font-size:1rem;font-weight:800">Find shifts</div>
+          <div class="card">
+            <div class="row" style="justify-content:space-between"><div><div class="role">Bartender</div><div class="loc">The Ned, EC2</div></div><span class="pill" style="background:#eafaf3;color:#0f9d6b"><svg class="ic" viewBox="0 0 24 24" style="width:12px;height:12px;stroke:#0f9d6b"><circle cx="12" cy="12" r="9"/></svg>Open</span></div>
+            <div class="pay">£16.50/hr</div>
+            <div class="est">£132 est · 8h shift</div>
+            <div class="track"><i style="width:60%"></i></div>
+            <div class="spots">2 spots left</div>
+            <div class="acts"><div class="btn primary" style="flex:1"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>Quick apply</div><div class="btn ghost" style="flex:none;padding:11px 13px">Details</div></div>
+            <div class="swipe"><svg class="ic" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M15 6l-6 6 6 6"/></svg>Swipe left to pass</div>
+          </div>
+          <div class="tabbar">
+            <div class="tab on"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>Browse</div>
+            <div class="tab"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Shifts</div>
+            <div class="tab"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M16 12h.01"/></svg>Earnings</div>
+            <div class="tab"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0114 0"/></svg>Profile</div>
+          </div>
+        </div></div>
+        <p class="note" style="width:248px">One full-width Apply (≥44px), Pass becomes a swipe, warm paper surface.</p>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--ink-500);font-size:.8rem;margin-top:26px">Mockups are static illustrations of direction, not production code. Full rationale in <code>DESIGN_UX_REVIEW_2026-06-25.md</code>.</p>
+</div>
+</body>
+</html>
