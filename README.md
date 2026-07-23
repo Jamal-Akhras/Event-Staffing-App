@@ -1,40 +1,39 @@
+# Event Staffing Platform
 
-# Event Staffing Platform - MVP
+[![ci](https://github.com/Jamal-Akhras/Event-Staffing-App/actions/workflows/ci.yml/badge.svg)](https://github.com/Jamal-Akhras/Event-Staffing-App/actions/workflows/ci.yml)
 
-Reliability-first, operationally focused event staffing platform.
+A reliability-first event staffing platform: venue managers post shifts, workers apply, and the system tracks bookings, reliability scores, and no-shows through a domain state machine. FastAPI and PostgreSQL backend, a React web dashboard, and an Expo mobile worker app.
 
-This repository is designed to be:
-- Simple (KISS)
-- Minimal (YAGNI)
-- Correct and maintainable (SOLID)
+![The venue-manager dashboard: coverage KPIs, a seven-day open-seat strip, next open shifts, and common workflows](docs/images/dashboard.png)
 
-Current status:
-- Domain state machine and booking aggregate implemented
-- FastAPI booking lifecycle endpoints with tests
-- OpenAPI response schemas for booking endpoints
-- React web shell with API health status
-- Persistence layer stubs for repository + models
-- SQLAlchemy repository adapter and shared API schemas
-- SQLAlchemy repositories for shifts, applications, and worker profiles
-- Minimal booking UI for create/load/transition
-- Booking list endpoint and recent bookings UI
-- Worker applications and operator approvals
-- Shift posting/listing and worker browsing
-- Worker profile editing and operator public views
-- Mobile bottom nav respects safe-area
-- Mobile shifts include applications tab
-- API schemas cleaned up
-- Expo worker app scaffold with minimal status screen
-- Worker mobile app polls bookings every 15 seconds
-- Root .gitignore added for repo hygiene
-- CORS allowlist for local Vite dev
-- Web UI refreshed with premium styling and updated layout
-- Reliability scoring based on booking outcomes
-- System no-show sweep endpoint and tests
-- JWT-based authentication system (registration, login)
-- Multi-worker shift capacity tracking (operators specify workers_needed per shift)
-- **Web Dashboard Restructure (Complete)**: React Router multi-page navigation with 7 dedicated pages (Dashboard, Shifts, Applications, Workers, Schedule, Analytics, Settings), sidebar navigation, EmptyState/StatusBadge components, venue manager terminology
-- Worker Browse feed persists passed shifts per worker and supports undo
+*The React web dashboard (venue-manager view). The mobile worker app and the other six pages — Shifts, Applications, Workers, Schedule, Analytics, Settings — share the same audited API.*
+
+## Architecture
+
+- **Hexagonal / ports and adapters.** Domain logic — the booking aggregate and shift state machine — is isolated behind repository ports. Adapters are swappable: in-memory for fast tests, SQLAlchemy over PostgreSQL for production.
+- **The fakes stay honest.** The CI backend job runs the full test suite twice: once against the in-memory repository and once against a live PostgreSQL service container with Alembic migrations applied. A fake repository is only safe if something continuously proves it equivalent to the real adapter.
+- **Correct under concurrency.** Multi-worker shift capacity under concurrent approvals is handled with row locks inside a transaction, so a shift can never be oversubscribed by a race.
+- **Production guardrails.** Startup refuses to boot with a default or short JWT secret, or with dev-mode enabled outside a development environment.
+
+## What is built
+
+- Domain state machine and booking aggregate; FastAPI lifecycle endpoints with OpenAPI schemas.
+- JWT authentication with registration, login and token revocation; operator invite gating; email verification.
+- Shifts, applications, operator approvals, worker profiles, reliability scoring, and an automated no-show sweep.
+- Multi-worker shift capacity, notifications, ratings, messaging, and shift templates.
+- React web dashboard across seven pages (Dashboard, Shifts, Applications, Workers, Schedule, Analytics, Settings).
+- Expo mobile worker app with a browse feed, shifts and applications, and background polling.
+- Alembic migrations through 019, Docker Compose (api + worker + postgres), and Sentry observability.
+
+## Security
+
+The codebase went through an internal pre-production security audit (`docs/AUDIT_2026-06-25.md`). Its high-priority findings — session handling, an open operator-registration surface, SSRF and path safety, and upload access controls — were fixed in dedicated, tested workstreams: invite-code gating, email verification, and JWT revocation. The audit is preserved as written, with a dated status note recording what has since been resolved.
+
+## Testing and CI
+
+GitHub Actions runs three jobs on every push and pull request: backend (PostgreSQL service, migrations, then pytest), web (`tsc --noEmit` and `vite build`), and mobile (`tsc --noEmit`). The backend job runs across both the in-memory and PostgreSQL data paths.
+
+## Running and configuration
 
 API config:
 - The API loads root `.env` through `python-dotenv`.
@@ -133,4 +132,5 @@ Planned Mobile App Improvements:
 - See `docs/40-future/ui_restructure_plan.md` for full implementation plan
 
 See docs/ for authoritative specifications.
+
 
