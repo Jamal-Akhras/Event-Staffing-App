@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { COLORS } from "../theme/colors";
 import { RADIUS, SPACE } from "../theme/space";
@@ -6,9 +6,11 @@ import { RADIUS, SPACE } from "../theme/space";
 type EmptyStateProps = {
   title: string;
   message: string;
+  actionLabel?: string;
+  onAction?: () => void;
 };
 
-export function EmptyState({ title, message }: EmptyStateProps) {
+export function EmptyState({ title, message, actionLabel, onAction }: EmptyStateProps) {
   return (
     <View style={styles.card}>
       <View style={styles.mark}>
@@ -16,6 +18,11 @@ export function EmptyState({ title, message }: EmptyStateProps) {
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
+      {actionLabel && onAction && (
+        <Pressable style={styles.actionBtn} onPress={onAction} accessibilityRole="button">
+          <Text style={styles.actionText}>{actionLabel}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -63,4 +70,12 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     textAlign: "center",
   },
+  actionBtn: {
+    marginTop: SPACE.s3,
+    paddingHorizontal: SPACE.s4,
+    paddingVertical: 10,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.primary,
+  },
+  actionText: { color: COLORS.onPrimary, fontWeight: "800", fontSize: 13 },
 });

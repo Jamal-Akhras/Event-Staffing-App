@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
 
 
@@ -13,7 +14,7 @@ class ShiftTemplate(BaseModel):
     role: str
     location: str
     duration_hours: float
-    pay_rate: float
+    pay_rate: Decimal
     workers_needed: int
     notes: str | None
     created_at: datetime

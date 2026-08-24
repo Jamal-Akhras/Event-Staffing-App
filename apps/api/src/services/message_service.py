@@ -9,6 +9,7 @@ from apps.api.src.repositories.message_repository import MessageRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.schemas import MessageSendRequest
 from apps.api.src.services.errors import ForbiddenError, NotFoundError, ValidationError
+from apps.api.src.services.outbox_publisher import OutboxPublisher
 
 ActorValue = str
 
@@ -20,11 +21,13 @@ class MessageService:
         shift_repo: ShiftRepository,
         application_repo: ApplicationRepository,
         booking_repo: BookingRepository,
+        outbox: OutboxPublisher,
     ) -> None:
         self._messages = message_repo
         self._shifts = shift_repo
         self._applications = application_repo
         self._bookings = booking_repo
+        self._outbox = outbox
 
     def send_message(
         self,
@@ -50,7 +53,9 @@ class MessageService:
             read_at=None,
             created_at=now,
         )
-        return self._messages.save(message)
+        saved = self._messages.save(message)
+        self._publish_message(saved, shift, actor_role, request.application_id, request.booking_id)
+        return saved
 
     def list_messages(
         self,
@@ -59,14 +64,15 @@ class MessageService:
         actor_user_id: str,
         application_id: str | None = None,
         booking_id: str | None = None,
+        limit: int = 100,
     ) -> list[Message]:
         shift = self._get_shift(shift_id)
         self._require_thread_access(actor_role, actor_user_id, shift, application_id, booking_id)
         if booking_id:
-            return self._messages.list_by_booking(booking_id)
+            return self._messages.list_by_booking(booking_id, limit)
         if application_id:
-            return self._messages.list_by_application(application_id)
-        return self._messages.list_by_shift(shift_id)
+            return self._messages.list_by_application(application_id, limit)
+        return self._messages.list_by_shift(shift_id, limit)
 
     def mark_as_read(self, message_id: str, actor_role: ActorValue, actor_user_id: str) -> None:
         message = self._messages.get(message_id)
@@ -122,3 +128,36 @@ class MessageService:
         if booking is None or booking.shift_id != shift_id:
             raise NotFoundError("Booking not found.")
         return booking.worker_id
+
+    def _publish_message(
+        self,
+        message: Message,
+        shift: Shift,
+        actor_role: ActorValue,
+        application_id: str | None,
+        booking_id: str | None,
+    ) -> None:
+        if actor_role == "worker":
+            if not shift.account_id:
+                return
+            recipient_kind, recipient_id = "venue", shift.account_id
+        elif application_id:
+            recipient_kind = "worker"
+            recipient_id = self._application_worker_id(application_id, shift.shift_id)
+        elif booking_id:
+            recipient_kind = "worker"
+            recipient_id = self._booking_worker_id(booking_id, shift.shift_id)
+        else:
+            raise ValidationError("Message recipient could not be resolved.")
+        self._outbox.publish_notification(
+            event_type="message.created",
+            aggregate_type="message",
+            aggregate_id=message.message_id,
+            recipient_kind=recipient_kind,
+            recipient_id=recipient_id,
+            category="messages",
+            title="New message",
+            body=message.content,
+            action_kind="messages" if application_id else "booking",
+            action_entity_id=application_id or booking_id,
+        )

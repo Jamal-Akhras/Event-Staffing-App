@@ -18,7 +18,7 @@ class SqlAlchemyApplicationMessageHistoryRepository:
             edited_at=history.edited_at,
         )
         self._session.add(model)
-        self._session.commit()
+        self._session.flush()
         return history
 
     def list_by_application(self, application_id: str) -> list[ApplicationMessageHistory]:

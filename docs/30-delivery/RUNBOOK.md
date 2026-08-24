@@ -37,6 +37,7 @@ Targets graduate to contractual SLAs once a customer signs a paid contract. Numb
    - `JWT_SECRET_KEY` is unique and at least 32 characters
    - `DATABASE_URL` points to managed Postgres
    - `CORS_ORIGINS` includes only approved web origins
+   - `STORAGE_BACKEND=s3` and all `OBJECT_STORAGE_*` settings point to the production bucket
    - `SENTRY_DSN` and `VITE_SENTRY_DSN` set to the production projects
 2. Build the image from the repo root Dockerfile.
 3. Run database migrations before serving traffic:
@@ -59,7 +60,7 @@ Targets graduate to contractual SLAs once a customer signs a paid contract. Numb
 ## Backups
 
 - Database: managed Postgres automated daily backups retained for [RETENTION PERIOD].
-- Uploads: persist `/app/apps/api/uploads` to durable object storage or a mounted volume backed up daily.
+- Uploads: S3-compatible object storage with bucket versioning enabled and lifecycle rules reviewed quarterly.
 - Backup owner: [BACKUP OWNER].
 - Restore drill: run at least quarterly in staging using the latest backup snapshot.
 
@@ -74,7 +75,7 @@ Single-region MVP. Multi-region failover is on the roadmap, not implemented.
   2. Restore the most recent automated backup snapshot.
   3. Apply pending Alembic migrations against the restored DB.
   4. Re-deploy the API and worker images pointing at the new `DATABASE_URL`.
-  5. Re-upload the latest backed-up `uploads/` snapshot to the new storage bucket.
+  5. Point `OBJECT_STORAGE_*` settings at the existing replicated bucket or restore its latest versioned snapshot.
   6. Update DNS / load-balancer to the new region.
 - Annual DR rehearsal: schedule with [CLOUD OWNER].
 
@@ -106,6 +107,22 @@ Single-region MVP. Multi-region failover is on the roadmap, not implemented.
 - Database health: managed Postgres dashboard or `pg_isready`.
 - Sentry: triage by project. Inbox → assign → fix or suppress with reason.
 - Alert triggers: API health failures, worker crash loop, migration failure, database connection errors, elevated 5xx responses, failed login spikes.
+
+### Transactional outbox
+
+The worker claims outbox events and deliveries with five-minute leases. Delivery is at-least-once; in-app notifications are deduplicated by delivery ID. Inspect backlog and dead letters with:
+
+```sql
+SELECT count(*) AS pending_events, min(occurred_at) AS oldest_event
+FROM outbox_events
+WHERE processed_at IS NULL AND dead_lettered_at IS NULL;
+
+SELECT status, count(*)
+FROM notification_deliveries
+GROUP BY status;
+```
+
+Alert when the oldest available event is more than five minutes old or any delivery reaches `dead_letter`. Fix the provider/configuration failure before retrying. SMTP may duplicate a message if the worker crashes after the provider accepts it but before the delivery row is marked; in-app delivery remains idempotent.
 
 ## Security incident — credential or secret leak
 

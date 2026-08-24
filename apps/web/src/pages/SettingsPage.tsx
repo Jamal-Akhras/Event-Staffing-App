@@ -2,39 +2,28 @@ import { useEffect, useRef, useState } from "react";
 
 import { ErrorCard } from "../components/ErrorCard";
 import { LocationAutocomplete } from "../components/LocationAutocomplete";
+import { MarketSelect } from "../components/MarketSelect";
 import { SkeletonCard } from "../components/SkeletonCard";
 import { useToast } from "../components/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { API_BASE, fetchJson, putJson, uploadFile } from "../lib/api";
+import { useMarkets } from "../lib/useMarkets";
+import { NotificationsCard } from "./settings/NotificationsCard";
 import "./SettingsPage.css";
 
-type AccountData = {
-  account_id: string;
+type VenueData = {
+  venue_id?: string;
   name: string;
   country: string;
   currency: string;
+  market_id: string | null;
   venue_type: string | null;
   contact_email: string | null;
   contact_phone: string | null;
   default_location: string | null;
   avatar_url: string | null;
   photos: string[];
-  notification_preferences: NotifPrefs;
 };
-
-type NotifPrefs = {
-  new_applications: boolean;
-  shift_reminders: boolean;
-  no_show_alerts: boolean;
-};
-
-const DEFAULT_NOTIF_PREFS: NotifPrefs = { new_applications: true, shift_reminders: true, no_show_alerts: true };
-
-const NOTIF_OPTIONS = [
-  ["new_applications", "New Applications", "When workers apply to your shifts"],
-  ["shift_reminders", "Shift Reminders", "Upcoming shifts requiring attention"],
-  ["no_show_alerts", "No-Show Alerts", "When workers don't check in on time"],
-] as const;
 
 type SectionKey = "profile" | "contact" | "photos" | "notifications";
 
@@ -46,14 +35,15 @@ export function SettingsPage() {
   });
   const toggle = (k: SectionKey) => setExpanded((prev) => ({ ...prev, [k]: !prev[k] }));
 
-  const [account, setAccount] = useState<AccountData | null>(null);
+  const { markets, loading: marketsLoading, error: marketsError, retry: retryMarkets } = useMarkets();
+  const [account, setAccount] = useState<VenueData | null>(null);
   const [name, setName] = useState("");
   const [venueType, setVenueType] = useState("");
+  const [marketId, setMarketId] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [defaultLocation, setDefaultLocation] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
-  const [notifs, setNotifs] = useState<NotifPrefs>(DEFAULT_NOTIF_PREFS);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,16 +57,16 @@ export function SettingsPage() {
       return;
     }
     setLoading(true);
-    fetchJson<AccountData>("/accounts/me")
+    fetchJson<VenueData>("/venues/me")
       .then((data) => {
         setAccount(data);
         setName(data.name ?? "");
         setVenueType(data.venue_type ?? "");
+        setMarketId(data.market_id ?? "");
         setContactEmail(data.contact_email ?? "");
         setContactPhone(data.contact_phone ?? "");
         setDefaultLocation(data.default_location ?? "");
         setPhotos(data.photos ?? []);
-        setNotifs(data.notification_preferences ?? DEFAULT_NOTIF_PREFS);
       })
       .catch((err: Error) => {
         toast({ type: "error", message: err.message });
@@ -88,17 +78,17 @@ export function SettingsPage() {
   const save = async () => {
     setSaveStatus("saving");
     try {
-      const updated = await putJson<AccountData>("/accounts/me", {
+      const updated = await putJson<VenueData>("/venues/me", {
         name: name || undefined,
         venue_type: venueType || undefined,
+        market_id: marketId || undefined,
         contact_email: contactEmail || undefined,
         contact_phone: contactPhone || undefined,
         default_location: defaultLocation || undefined,
         photos,
-        notification_preferences: notifs,
       });
       setAccount(updated);
-      setNotifs(updated.notification_preferences ?? DEFAULT_NOTIF_PREFS);
+      setMarketId(updated.market_id ?? "");
       setSaveStatus("saved");
       toast({ type: "success", message: "Settings saved." });
       setTimeout(() => setSaveStatus("idle"), 2500);
@@ -142,7 +132,9 @@ export function SettingsPage() {
 
   const removePhoto = (url: string) => setPhotos((prev) => prev.filter((p) => p !== url));
   const initials = name ? name.slice(0, 2).toUpperCase() : "VN";
-  const avatarSrc = account?.avatar_url ? `${API_BASE}${account.avatar_url}` : null;
+  const avatarSrc = account?.avatar_url
+    ? (account.avatar_url.startsWith("/uploads") ? `${API_BASE}${account.avatar_url}` : account.avatar_url)
+    : null;
   const initialLoading = loading && !account && !loadError;
 
   return (
@@ -194,6 +186,18 @@ export function SettingsPage() {
                       <option>Restaurant & Bar</option><option>Hotel</option><option>Event Venue</option>
                       <option>Catering</option><option>Conference Center</option><option>Other</option>
                     </select>
+                  </label>
+                  <label className="settings-label">
+                    <span>City <i className="info-icon">i</i></span>
+                    <MarketSelect
+                      markets={markets}
+                      loading={marketsLoading}
+                      error={marketsError}
+                      value={marketId}
+                      onChange={setMarketId}
+                      onRetry={retryMarkets}
+                      country={account?.country}
+                    />
                   </label>
                   <label className="settings-label"><span>Default Location <i className="info-icon">i</i></span><LocationAutocomplete value={defaultLocation} onChange={setDefaultLocation} placeholder="e.g. 12 King St, London" /></label>
                 </div>
@@ -249,40 +253,10 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <div className="card settings-accordion-card">
-            <button className="settings-card-header" onClick={() => toggle("notifications")} aria-expanded={expanded.notifications}>
-              <div>
-                <h2 className="settings-section-title">Notifications</h2>
-                <p className="settings-section-desc">Choose which activity triggers an alert. Email delivery activates with our next release.</p>
-              </div>
-              <span className={`settings-chevron${expanded.notifications ? " open" : ""}`} />
-            </button>
-            <div className={`settings-card-body${expanded.notifications ? " open" : ""}`}>
-              <div className="settings-card-inner">
-                <p className="notif-subheader">Notification Preferences</p>
-                <div className="notif-pending-note" role="note">
-                  Your choices are saved now and will be honoured automatically once email delivery is enabled.
-                </div>
-                <div className="notif-list">
-                  {NOTIF_OPTIONS.map(([key, label, desc], i) => (
-                    <>
-                      {i > 0 && <hr key={`sep-${key}`} className="notif-sep" />}
-                      <label key={key} className="toggle-row">
-                        <div className="toggle-label">
-                          <strong>{label}</strong>
-                          <span>{desc}</span>
-                        </div>
-                        <div className="toggle-switch">
-                          <input type="checkbox" checked={notifs[key]} onChange={() => setNotifs({ ...notifs, [key]: !notifs[key] })} />
-                          <span className="toggle-slider" />
-                        </div>
-                      </label>
-                    </>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <NotificationsCard
+            expanded={expanded.notifications}
+            onToggleExpanded={() => toggle("notifications")}
+          />
 
         </div>
       </div>}

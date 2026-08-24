@@ -63,7 +63,8 @@ def main() -> int:
     print("\n== operator register + login ==")
     operator_email = f"smoke-op-{uuid4().hex[:6]}@example.com"
     s, body = probe("register operator", "POST", "/auth/register/operator", body={
-        "email": operator_email, "password": "smoke-pass-12", "venue_name": "Smoke Venue", "country": "GB",
+        "email": operator_email, "password": "smoke-pass-12", "venue_name": "Smoke Venue",
+        "country": "GB", "market_id": "bath-gb",
     })
     operator_token = body.get("access_token") if isinstance(body, dict) else None
     operator_account = body.get("account_id") if isinstance(body, dict) else None

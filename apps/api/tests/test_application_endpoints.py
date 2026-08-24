@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -7,6 +7,7 @@ from apps.api.src.deps import (
     get_application_decision_repo,
     get_application_repo,
     get_booking_repo,
+    get_notification_repo,
     get_shift_repo,
 )
 from apps.api.src.repositories.in_memory_application_decision_repository import (
@@ -14,6 +15,7 @@ from apps.api.src.repositories.in_memory_application_decision_repository import 
 )
 from apps.api.src.repositories.in_memory_application_repository import InMemoryApplicationRepository
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
+from apps.api.src.repositories.in_memory_notification_repository import InMemoryNotificationRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 
 
@@ -32,12 +34,13 @@ def _client() -> TestClient:
     main.app.dependency_overrides[get_booking_repo] = lambda: booking_repo
     main.app.dependency_overrides[get_shift_repo] = lambda: shift_repo
     main.app.dependency_overrides[get_application_decision_repo] = lambda: decision_repo
+    main.app.dependency_overrides[get_notification_repo] = InMemoryNotificationRepository
     return TestClient(main.app)
 
 
 def test_application_approve_creates_booking():
     client = _client()
-    now = datetime(2030, 1, 1, 9, 0, 0)
+    now = datetime(2030, 1, 1, 9, 0, 0, tzinfo=UTC)
     start = now + timedelta(hours=2)
     end = start + timedelta(hours=4)
 
@@ -88,7 +91,7 @@ def test_application_approve_creates_booking():
 
 def test_worker_cannot_create_application_for_another_worker():
     client = _client()
-    now = datetime(2030, 1, 1, 9, 0, 0)
+    now = datetime(2030, 1, 1, 9, 0, 0, tzinfo=UTC)
     start = now + timedelta(hours=2)
     end = start + timedelta(hours=4)
 

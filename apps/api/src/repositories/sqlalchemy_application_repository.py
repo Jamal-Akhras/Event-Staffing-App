@@ -20,15 +20,15 @@ class SqlAlchemyApplicationRepository:
         return _to_domain(model)
 
     def save(self, application: Application) -> Application:
-        model = self._session.get(ApplicationModel, application.application_id)
-        if model is None:
-            model = ApplicationModel(application_id=application.application_id)
-            self._session.add(model)
-        _apply_domain(model, application)
         try:
-            self._session.commit()
+            with self._session.begin_nested():
+                model = self._session.get(ApplicationModel, application.application_id)
+                if model is None:
+                    model = ApplicationModel(application_id=application.application_id)
+                    self._session.add(model)
+                _apply_domain(model, application)
+                self._session.flush()
         except IntegrityError as exc:
-            self._session.rollback()
             raise DuplicateApplicationError("Worker has already applied to this shift.") from exc
         return application
 
@@ -101,6 +101,13 @@ class SqlAlchemyApplicationRepository:
             return None
         return _to_domain(model)
 
+    def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Application]:
+        query = self._session.query(ApplicationModel).filter(ApplicationModel.shift_id == shift_id)
+        if for_update:
+            query = query.with_for_update()
+        rows = query.order_by(desc(ApplicationModel.created_at)).all()
+        return [_to_domain(row) for row in rows]
+
     def _list(
         self,
         limit: int,
@@ -139,6 +146,8 @@ def _to_domain(model: ApplicationModel) -> Application:
         status=model.status,
         created_at=model.created_at,
         decided_at=model.decided_at,
+        withdrawn_at=getattr(model, "withdrawn_at", None),
+        withdrawal_reason=getattr(model, "withdrawal_reason", None),
     )
 
 
@@ -153,3 +162,5 @@ def _apply_domain(model: ApplicationModel, application: Application) -> None:
     model.status = application.status
     model.created_at = application.created_at
     model.decided_at = application.decided_at
+    model.withdrawn_at = application.withdrawn_at
+    model.withdrawal_reason = application.withdrawal_reason

@@ -1,0 +1,3 @@
+﻿apps\api\alembic\versions\025_transactional_outbox.py
+apps\api\tests\test_postgres_transactions.py
+context\_generated\MAPPING_RELATED_FILES.txt

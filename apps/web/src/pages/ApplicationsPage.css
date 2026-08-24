@@ -2,6 +2,23 @@
   min-height: 390px;
 }
 
+.completed-shift-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.completed-shift-card .booking-id {
+  margin: 0;
+}
+
+.completed-shift-stars {
+  color: #f59e0b;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
 @media (max-width: 768px) {
   .applications-skeleton-card {
     min-height: 260px;

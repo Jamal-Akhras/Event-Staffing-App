@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
@@ -15,7 +15,7 @@ def test_sweep_no_shows_updates_booking_and_reliability():
     booking_repo = InMemoryBookingRepository()
     worker_repo = InMemoryWorkerProfileRepository()
     shift_repo = InMemoryShiftRepository()
-    now = datetime(2030, 1, 1, 12, 0, 0)
+    now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     start_time = now - timedelta(hours=1)
 
     booking = Booking(

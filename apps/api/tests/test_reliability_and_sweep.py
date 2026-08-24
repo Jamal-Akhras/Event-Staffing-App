@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
@@ -8,6 +9,7 @@ from apps.api.src.repositories.in_memory_booking_repository import InMemoryBooki
 from apps.api.src.repositories.in_memory_worker_profile_repository import (
     InMemoryWorkerProfileRepository,
 )
+from packages.domain.src.booking import Booking
 
 OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-1"}
 SYSTEM_HEADERS = {"X-Actor-Role": "system", "X-Actor-Id": "system"}
@@ -52,25 +54,25 @@ def _create_booking(
 ) -> str:
     start = now + timedelta(minutes=start_offset_minutes)
     end = start + timedelta(hours=4)
-    response = client.post(
-        "/bookings",
-        json={
-            "shift_id": "shift-1",
-            "worker_id": worker_id,
-            "operator_id": "operator-1",
-            "start_time": start.isoformat(),
-            "end_time": end.isoformat(),
-            "now": now.isoformat(),
-        },
-        headers=OPERATOR_HEADERS,
+    booking_id = str(uuid4())
+    repo = main.app.dependency_overrides[get_booking_repo]()
+    repo.save(
+        Booking(
+            booking_id=booking_id,
+            shift_id="shift-1",
+            worker_id=worker_id,
+            operator_id="operator-1",
+            start_time=start,
+            end_time=end,
+            created_at=now,
+        )
     )
-    assert response.status_code == 200
-    return response.json()["booking_id"]
+    return booking_id
 
 
 def test_reliability_updates_from_outcomes():
     client = _client()
-    base = datetime(2030, 1, 1, 12, 0, 0)
+    base = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     worker_id = "worker-1"
     _create_profile(client, worker_id, base)
 
@@ -113,25 +115,25 @@ def test_reliability_updates_from_outcomes():
 
 def test_no_show_sweep_marks_expired_bookings():
     client = _client()
-    base = datetime(2030, 1, 1, 12, 0, 0)
+    base = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     worker_id = "worker-2"
     _create_profile(client, worker_id, base)
 
     start = base - timedelta(hours=1)
     end = start + timedelta(hours=4)
-    booking = client.post(
-        "/bookings",
-        json={
-            "shift_id": "shift-2",
-            "worker_id": worker_id,
-            "operator_id": "operator-1",
-            "start_time": start.isoformat(),
-            "end_time": end.isoformat(),
-            "now": (base - timedelta(hours=2)).isoformat(),
-        },
-        headers=OPERATOR_HEADERS,
+    booking_id = str(uuid4())
+    repo = main.app.dependency_overrides[get_booking_repo]()
+    repo.save(
+        Booking(
+            booking_id=booking_id,
+            shift_id="shift-2",
+            worker_id=worker_id,
+            operator_id="operator-1",
+            start_time=start,
+            end_time=end,
+            created_at=base - timedelta(hours=2),
+        )
     )
-    booking_id = booking.json()["booking_id"]
     client.post(
         f"/bookings/{booking_id}/confirm",
         json={"now": (base - timedelta(hours=1, minutes=50)).isoformat()},

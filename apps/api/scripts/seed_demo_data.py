@@ -53,7 +53,7 @@ HISTORY_IDS = ["demo-history-1"]
 
 def main() -> None:
     Base.metadata.create_all(bind=engine)
-    now = datetime.now(UTC).replace(tzinfo=None, microsecond=0)
+    now = datetime.now(UTC).replace(microsecond=0)
     with SessionLocal() as session:
         delete_demo_data(session)
         seed_workers(session, now)

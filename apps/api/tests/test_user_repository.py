@@ -1,6 +1,6 @@
 """Tests for User repository implementations."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from apps.api.src.models.user import User
@@ -10,7 +10,7 @@ from apps.api.src.repositories.in_memory_user_repository import InMemoryUserRepo
 def test_in_memory_user_repository_save_and_get():
     """Test saving and retrieving a user."""
     repo = InMemoryUserRepository()
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     user = User(
         user_id="user-1",
@@ -37,7 +37,7 @@ def test_in_memory_user_repository_save_and_get():
 def test_in_memory_user_repository_get_by_email():
     """Test retrieving a user by email address."""
     repo = InMemoryUserRepository()
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     user = User(
         user_id="user-1",
@@ -61,7 +61,7 @@ def test_in_memory_user_repository_get_by_email():
 def test_in_memory_user_repository_get_by_email_case_insensitive():
     """Test that email lookup is case-insensitive."""
     repo = InMemoryUserRepository()
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     user = User(
         user_id="user-1",
@@ -95,7 +95,7 @@ def test_in_memory_user_repository_get_nonexistent():
 def test_in_memory_user_repository_update():
     """Test updating an existing user."""
     repo = InMemoryUserRepository()
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     user = User(
         user_id="user-1",
@@ -119,7 +119,7 @@ def test_in_memory_user_repository_update():
         worker_profile_id="worker-1",
         is_active=False,
         created_at=now,
-        updated_at=datetime.utcnow(),
+        updated_at=datetime.now(UTC),
     )
     repo.save(updated_user)
 
@@ -131,7 +131,7 @@ def test_in_memory_user_repository_update():
 def test_in_memory_user_repository_clear():
     """Test clearing all users from the repository."""
     repo = InMemoryUserRepository()
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     for i in range(3):
         user = User(

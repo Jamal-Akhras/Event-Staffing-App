@@ -1,8 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
 from apps.api.src import main
+from apps.api.src.auth import ActorContext, ActorRole, get_actor_context
 from apps.api.src.deps import get_application_repo, get_booking_repo, get_message_repo, get_shift_repo
 from apps.api.src.models.application import Application
 from apps.api.src.models.shift import Shift
@@ -18,7 +19,7 @@ OTHER_WORKER_HEADERS = {"X-Actor-Role": "worker", "X-Actor-Id": "worker-2"}
 
 
 def _client() -> TestClient:
-    now = datetime(2030, 1, 1, 9, 0, 0)
+    now = datetime(2030, 1, 1, 9, 0, 0, tzinfo=UTC)
     booking_repo = InMemoryBookingRepository()
     shift_repo = InMemoryShiftRepository(booking_repo)
     application_repo = InMemoryApplicationRepository()
@@ -104,3 +105,23 @@ def test_message_threads_are_limited_to_participants():
         headers=OPERATOR_HEADERS,
     )
     assert owner.status_code == 200
+
+
+def test_linked_worker_account_uses_profile_id_for_message_access():
+    client = _client()
+    main.app.dependency_overrides[get_actor_context] = lambda: ActorContext(
+        user_id="login-user-1",
+        role=ActorRole.WORKER,
+        worker_profile_id="worker-1",
+    )
+
+    try:
+        response = client.post(
+            "/shifts/shift-1/messages",
+            json={"application_id": "app-1", "content": "I can make this shift."},
+        )
+    finally:
+        main.app.dependency_overrides.pop(get_actor_context, None)
+
+    assert response.status_code == 200
+    assert response.json()["sender_id"] == "worker-1"

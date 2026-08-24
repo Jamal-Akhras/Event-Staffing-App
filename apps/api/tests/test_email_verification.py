@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from fastapi import HTTPException
@@ -96,7 +96,7 @@ def test_resend_verification_unknown_email_is_opaque():
 
 
 def _operator_user(email_verified: bool) -> User:
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     return User(
         user_id="op-1",
         email="op@example.com",

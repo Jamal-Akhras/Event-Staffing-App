@@ -60,6 +60,8 @@ type ApplicationReviewCardProps = {
   onMessage: () => void;
   onViewProfile: () => void;
   onToggleHistory: () => void;
+  bookingState?: string;
+  onCancelBooking?: () => void;
 };
 
 export function ApplicationReviewCard({
@@ -73,6 +75,8 @@ export function ApplicationReviewCard({
   onMessage,
   onViewProfile,
   onToggleHistory,
+  bookingState,
+  onCancelBooking,
 }: ApplicationReviewCardProps) {
   const workerName = worker?.display_name ?? application.worker_id;
   const shiftTitle = shift ? `${shift.role} at ${shift.location}` : application.shift_id;
@@ -152,6 +156,11 @@ export function ApplicationReviewCard({
               Reject
             </button>
           </>
+        )}
+        {application.status === "approved" && bookingState === "confirmed" && onCancelBooking && (
+          <button className="btn danger" type="button" onClick={onCancelBooking}>
+            Cancel booking
+          </button>
         )}
         <button className="btn ghost" type="button" onClick={onMessage}>
           Message

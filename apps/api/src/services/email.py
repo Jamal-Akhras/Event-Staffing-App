@@ -62,9 +62,12 @@ class SmtpSettings:
         from_address = get_env("SMTP_FROM")
         if not from_address:
             raise RuntimeError("SMTP_FROM must be set to use the SMTP email transport.")
+        port = int(get_env("SMTP_PORT", "587"))
+        if port < 1 or port > 65535:
+            raise RuntimeError("SMTP_PORT must be between 1 and 65535.")
         return cls(
             host=host,
-            port=int(get_env("SMTP_PORT", "587")),
+            port=port,
             username=get_env("SMTP_USER"),
             password=get_env("SMTP_PASSWORD"),
             from_address=from_address,
@@ -94,9 +97,13 @@ def _select_transport() -> EmailTransport:
     if transport_name == "smtp":
         return SmtpEmailTransport(SmtpSettings.from_env())
     if transport_name == "logging":
+        if not is_development():
+            raise RuntimeError("EMAIL_TRANSPORT=logging is development-only.")
         return LoggingEmailTransport()
-    if not is_development() and get_env("SMTP_HOST"):
-        return SmtpEmailTransport(SmtpSettings.from_env())
+    if transport_name:
+        raise RuntimeError("EMAIL_TRANSPORT must be 'smtp' outside development or 'logging' in development.")
+    if not is_development():
+        raise RuntimeError("EMAIL_TRANSPORT must be set to 'smtp' outside development.")
     return LoggingEmailTransport()
 
 

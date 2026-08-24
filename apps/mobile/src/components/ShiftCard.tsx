@@ -18,7 +18,7 @@ export function ShiftCard({ shift, onPress, compact = false }: ShiftCardProps) {
     Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60)),
     0
   );
-  const totalPay = shift.pay_rate * duration;
+  const totalPay = Number(shift.pay_rate) * duration;
   const filled = shift.workers_filled ?? 0;
   const needed = shift.workers_needed ?? 1;
   const remaining = Math.max(needed - filled, 0);

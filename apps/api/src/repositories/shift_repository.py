@@ -9,6 +9,9 @@ class ShiftRepository(Protocol):
     def get(self, shift_id: str) -> Shift | None:
         raise NotImplementedError
 
+    def get_for_update(self, shift_id: str) -> Shift | None:
+        raise NotImplementedError
+
     def save(self, shift: Shift) -> Shift:
         raise NotImplementedError
 

@@ -71,11 +71,6 @@ export function ProfileFormFields({
         onChangeText={(role) => onChange({ ...form, role })}
       />
       <ProfileField
-        placeholder="City"
-        value={form.city}
-        onChangeText={(city) => onChange({ ...form, city })}
-      />
-      <ProfileField
         placeholder="Experience years"
         value={form.experience_years}
         keyboardType="numeric"

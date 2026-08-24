@@ -12,6 +12,11 @@ export type Shift = {
   workers_needed: number;
   workers_filled: number;
   currency?: string;
+  updated_at?: string | null;
+  closed_at?: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+  cancelled_by_user_id?: string | null;
 };
 
 export type Application = {
@@ -42,4 +47,6 @@ export type Booking = {
   state: string;
   created_at: string;
   no_show_at?: string | null;
+  cancellation_reason?: string | null;
+  cancelled_by_user_id?: string | null;
 };

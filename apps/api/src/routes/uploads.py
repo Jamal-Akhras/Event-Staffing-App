@@ -1,96 +1,124 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from pathlib import Path
-from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
-from apps.api.src.auth.dependencies import ActorContext, ActorRole, get_actor_context, require_role
+from apps.api.src.auth.dependencies import ActorContext, ActorRole, get_actor_context, require_role, require_verified_actor
 from apps.api.src.deps import get_account_repo, get_worker_profile_repo
-from apps.api.src.models.worker_profile import WorkerProfile
+from apps.api.src.rate_limit import actor_or_ip, limiter
+from apps.api.src.repository_dependencies import get_request_unit_of_work
 from apps.api.src.repositories.account_repository import AccountRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
 from apps.api.src.schemas_uploads import UploadResponse
-from apps.api.src.services.upload_validation import read_capped_image, validate_extension
+from apps.api.src.services.stored_upload import (
+    avatar_key,
+    avatar_prefix,
+    store_image,
+    venue_photo_key,
+)
+from apps.api.src.services.upload_validation import image_content_type, read_capped_image, validate_extension
+from apps.api.src.storage.object_storage import ObjectStorage
+from apps.api.src.storage_dependencies import get_object_storage
+from apps.api.src.unit_of_work import RequestUnitOfWork
 
 router = APIRouter(tags=["uploads"])
 
-_UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
-_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _save_file(data: bytes, filename: str) -> str:
-    dest = _UPLOAD_DIR / filename
-    dest.write_bytes(data)
-    return f"/uploads/{filename}"
-
 
 @router.post("/uploads/avatar", response_model=UploadResponse)
+@limiter.limit("10/hour", key_func=actor_or_ip)
 async def upload_worker_avatar(
+    request: Request,
     file: UploadFile = File(...),
     actor: ActorContext = Depends(get_actor_context),
     repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
+    storage: ObjectStorage = Depends(get_object_storage),
+    unit_of_work: RequestUnitOfWork = Depends(get_request_unit_of_work),
 ) -> UploadResponse:
+    require_verified_actor(actor, "uploading images")
     require_role(actor.role, {ActorRole.WORKER})
-    ext = validate_extension(file.filename)
-    data = await read_capped_image(file)
-
     worker_id = actor.worker_profile_id or actor.user_id
-    filename = f"avatar_{worker_id}{ext}"
-    url = _save_file(data, filename)
-
     existing = repo.get(worker_id)
-    if existing is not None:
-        updated = replace(existing, avatar_url=url)
-        repo.save(updated)
+    if existing is None:
+        raise HTTPException(404, "Worker profile not found.")
 
-    return UploadResponse(url=url, filename=filename)
+    extension = validate_extension(file.filename)
+    data = await read_capped_image(file)
+    stored = await store_image(
+        storage,
+        unit_of_work,
+        avatar_key("workers", worker_id, extension),
+        data,
+        image_content_type(data, extension),
+        existing.avatar_url,
+        avatar_prefix("workers", worker_id),
+    )
+    repo.save(replace(existing, avatar_url=stored.url))
+
+    return UploadResponse(url=stored.url, filename=stored.key.rsplit("/", 1)[-1])
 
 
 @router.post("/uploads/venue-photo", response_model=UploadResponse)
+@limiter.limit("20/hour", key_func=actor_or_ip)
 async def upload_venue_photo(
+    request: Request,
     file: UploadFile = File(...),
     actor: ActorContext = Depends(get_actor_context),
     account_repo: AccountRepository = Depends(get_account_repo),
+    storage: ObjectStorage = Depends(get_object_storage),
+    unit_of_work: RequestUnitOfWork = Depends(get_request_unit_of_work),
 ) -> UploadResponse:
+    require_verified_actor(actor, "uploading images")
     require_role(actor.role, {ActorRole.OPERATOR})
     if not actor.account_id:
         raise HTTPException(400, "No account associated with this operator.")
-
-    ext = validate_extension(file.filename)
-    data = await read_capped_image(file)
-
-    filename = f"venue_{actor.account_id}_{uuid4().hex[:8]}{ext}"
-    url = _save_file(data, filename)
-
     account = account_repo.get(actor.account_id)
-    if account is not None:
-        updated = replace(account, photos=[*account.photos, url])
-        account_repo.save(updated)
+    if account is None:
+        raise HTTPException(404, "Venue not found.")
 
-    return UploadResponse(url=url, filename=filename)
+    extension = validate_extension(file.filename)
+    data = await read_capped_image(file)
+    stored = await store_image(
+        storage,
+        unit_of_work,
+        venue_photo_key(actor.account_id, extension),
+        data,
+        image_content_type(data, extension),
+    )
+    account_repo.save(replace(account, photos=[*account.photos, stored.url]))
+
+    return UploadResponse(url=stored.url, filename=stored.key.rsplit("/", 1)[-1])
 
 
 @router.post("/uploads/venue-avatar", response_model=UploadResponse)
+@limiter.limit("10/hour", key_func=actor_or_ip)
 async def upload_venue_avatar(
+    request: Request,
     file: UploadFile = File(...),
     actor: ActorContext = Depends(get_actor_context),
     account_repo: AccountRepository = Depends(get_account_repo),
+    storage: ObjectStorage = Depends(get_object_storage),
+    unit_of_work: RequestUnitOfWork = Depends(get_request_unit_of_work),
 ) -> UploadResponse:
+    require_verified_actor(actor, "uploading images")
     require_role(actor.role, {ActorRole.OPERATOR})
     if not actor.account_id:
         raise HTTPException(400, "No account associated with this operator.")
-
-    ext = validate_extension(file.filename)
-    data = await read_capped_image(file)
-
-    filename = f"avatar_venue_{actor.account_id}{ext}"
-    url = _save_file(data, filename)
-
     account = account_repo.get(actor.account_id)
-    if account is not None:
-        updated = replace(account, avatar_url=url)
-        account_repo.save(updated)
+    if account is None:
+        raise HTTPException(404, "Venue not found.")
 
-    return UploadResponse(url=url, filename=filename)
+    extension = validate_extension(file.filename)
+    data = await read_capped_image(file)
+    stored = await store_image(
+        storage,
+        unit_of_work,
+        avatar_key("venues", actor.account_id, extension),
+        data,
+        image_content_type(data, extension),
+        account.avatar_url,
+        avatar_prefix("venues", actor.account_id),
+    )
+    account_repo.save(replace(account, avatar_url=stored.url))
+
+    return UploadResponse(url=stored.url, filename=stored.key.rsplit("/", 1)[-1])

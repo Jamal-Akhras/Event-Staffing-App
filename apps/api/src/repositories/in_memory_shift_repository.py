@@ -14,6 +14,9 @@ class InMemoryShiftRepository:
     def get(self, shift_id: str) -> Shift | None:
         return self._shifts.get(shift_id)
 
+    def get_for_update(self, shift_id: str) -> Shift | None:
+        return self.get(shift_id)
+
     def save(self, shift: Shift) -> Shift:
         self._shifts[shift.shift_id] = shift
         return shift

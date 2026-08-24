@@ -56,3 +56,6 @@ class ApplicationRepository(Protocol):
 
     def find_by_worker_and_shift(self, worker_id: str, shift_id: str) -> Application | None:
         raise NotImplementedError
+
+    def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Application]:
+        raise NotImplementedError

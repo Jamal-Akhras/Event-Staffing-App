@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from apps.api.src.models.application import Application
 from apps.api.src.repositories.in_memory_application_decision_repository import (
@@ -11,8 +11,11 @@ from apps.api.src.repositories.in_memory_application_message_history_repository 
 )
 from apps.api.src.repositories.in_memory_application_repository import InMemoryApplicationRepository
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
+from apps.api.src.repositories.in_memory_notification_repository import InMemoryNotificationRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 from apps.api.src.services.application_service import ApplicationService
+from apps.api.src.services.email import LoggingEmailTransport
+from apps.api.src.services.outbox_publisher import InMemoryOutboxPublisher
 
 
 def test_list_applications_by_worker_filters_before_limit():
@@ -24,8 +27,9 @@ def test_list_applications_by_worker_filters_before_limit():
         shift_repo,
         InMemoryApplicationDecisionRepository(application_repo, booking_repo, shift_repo),
         InMemoryApplicationMessageHistoryRepository(),
+        InMemoryOutboxPublisher(InMemoryNotificationRepository(), LoggingEmailTransport()),
     )
-    now = datetime(2030, 1, 1, 12, 0, 0)
+    now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     application_repo.save(_application("target-app", "target-worker", "target-shift", now))
     for index in range(60):
         application_repo.save(

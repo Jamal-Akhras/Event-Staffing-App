@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from dataclasses import replace
 
 from apps.api.src.helpers import _now_or
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
-from apps.api.src.schemas import BookingCreateRequest, BookingTransitionRequest
+from apps.api.src.schemas import BookingTransitionRequest
+from apps.api.src.schemas_recovery import PaymentRecordRequest
 from apps.api.src.services.booking_ops import _decrement_workers_filled, refresh_reliability, sweep_no_shows
 from apps.api.src.services.errors import NotFoundError, ValidationError
+from apps.api.src.services.recovery_notifications import notify_worker
+from apps.api.src.services.outbox_publisher import OutboxPublisher
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
 from packages.domain.src.booking_state_machine import TransitionError
@@ -26,29 +29,22 @@ class BookingLifecycleService:
         booking_repo: BookingRepository,
         worker_repo: WorkerProfileRepository,
         shift_repo: ShiftRepository,
+        outbox: OutboxPublisher,
     ) -> None:
         self._bookings = booking_repo
         self._workers = worker_repo
         self._shifts = shift_repo
-
-    def create_booking(self, request: BookingCreateRequest) -> Booking:
-        return self._bookings.save(
-            Booking(
-                booking_id=str(uuid4()),
-                shift_id=request.shift_id,
-                worker_id=request.worker_id,
-                operator_id=request.operator_id,
-                start_time=request.start_time,
-                end_time=request.end_time,
-                created_at=_now_or(request.now),
-            )
-        )
+        self._outbox = outbox
 
     def get_booking(self, booking_id: str) -> Booking:
         booking = self._bookings.get(booking_id)
         if booking is None:
             raise NotFoundError("Booking not found.")
         return booking
+
+    def booking_belongs_to_venue(self, booking: Booking, venue_id: str | None) -> bool:
+        shift = self._shifts.get(booking.shift_id)
+        return shift is not None and venue_id is not None and shift.account_id == venue_id
 
     def list_bookings(
         self,
@@ -69,8 +65,13 @@ class BookingLifecycleService:
         self,
         booking_id: str,
         target: BookingState,
-        request: BookingTransitionRequest,
+        request: BookingTransitionRequest | PaymentRecordRequest,
         refresh_worker_reliability: bool = False,
+        cancellation_reason: str | None = None,
+        cancelled_by_user_id: str | None = None,
+        payment_method: str | None = None,
+        payment_reference: str | None = None,
+        payment_recorded_by_user_id: str | None = None,
     ) -> Booking:
         now = _now_or(request.now)
         booking = self.get_booking(booking_id)
@@ -78,12 +79,69 @@ class BookingLifecycleService:
             booking = booking.transition_to(target, now)
         except TransitionError as exc:
             raise ValidationError(str(exc)) from exc
+        if target in {BookingState.CANCELLED_BY_WORKER, BookingState.CANCELLED_BY_OPERATOR}:
+            if not cancellation_reason or not cancelled_by_user_id:
+                raise ValidationError("A cancellation reason and authenticated actor are required.")
+            booking = replace(
+                booking,
+                cancellation_reason=cancellation_reason.strip(),
+                cancelled_by_user_id=cancelled_by_user_id,
+            )
+        if target == BookingState.PAID:
+            if not payment_method or not payment_recorded_by_user_id:
+                raise ValidationError("Payment method and authenticated recorder are required.")
+            booking = replace(
+                booking,
+                payment_method=payment_method,
+                payment_reference=payment_reference,
+                payment_recorded_by_user_id=payment_recorded_by_user_id,
+            )
         booking = self._bookings.save(booking)
         if target in _CANCELLATION_STATES:
-            _decrement_workers_filled(self._shifts, booking.shift_id)
+            _decrement_workers_filled(self._shifts, booking.shift_id, now)
+        if target == BookingState.CANCELLED_BY_OPERATOR:
+            notify_worker(
+                self._outbox,
+                booking.worker_id,
+                booking.shift_id,
+                "booking_cancelled",
+                "Your booking was cancelled",
+                cancellation_reason or "The venue cancelled this booking.",
+            )
+        if target == BookingState.CANCELLED_BY_WORKER:
+            shift = self._shifts.get(booking.shift_id)
+            if shift and shift.account_id:
+                self._outbox.publish_notification(
+                    event_type="booking.cancelled_by_worker",
+                    aggregate_type="booking",
+                    aggregate_id=booking.booking_id,
+                    recipient_kind="venue",
+                    recipient_id=shift.account_id,
+                    category="shift_changes",
+                    title="Worker cancelled booking",
+                    body=cancellation_reason or "A worker cancelled their booking.",
+                    action_kind="booking",
+                    action_entity_id=booking.booking_id,
+                )
         if refresh_worker_reliability:
             refresh_reliability(self._bookings, self._workers, booking.worker_id, now)
         return booking
 
     def sweep_no_shows(self, request: BookingTransitionRequest) -> list[Booking]:
-        return sweep_no_shows(self._bookings, self._workers, self._shifts, _now_or(request.now))
+        updated = sweep_no_shows(self._bookings, self._workers, self._shifts, _now_or(request.now))
+        for booking in updated:
+            shift = self._shifts.get(booking.shift_id)
+            if shift and shift.account_id:
+                self._outbox.publish_notification(
+                    event_type="booking.no_show",
+                    aggregate_type="booking",
+                    aggregate_id=booking.booking_id,
+                    recipient_kind="venue",
+                    recipient_id=shift.account_id,
+                    category="attendance",
+                    title="Worker marked as no-show",
+                    body="A booked worker missed their shift check-in window.",
+                    action_kind="booking",
+                    action_entity_id=booking.booking_id,
+                )
+        return updated

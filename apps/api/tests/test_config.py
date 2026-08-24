@@ -1,4 +1,13 @@
-from apps.api.src.config import PROJECT_ROOT, get_cors_origins, normalize_database_url, resolve_sqlite_file_url
+import pytest
+
+from apps.api.src.config import (
+    PROJECT_ROOT,
+    get_cors_origins,
+    get_database_url,
+    normalize_database_url,
+    resolve_sqlite_file_url,
+    use_in_memory_repositories,
+)
 
 
 def test_resolve_sqlite_file_url_anchors_relative_paths_to_project_root():
@@ -40,9 +49,45 @@ def test_get_cors_origins_parses_comma_separated_env(monkeypatch):
 
 
 def test_get_cors_origins_falls_back_to_default_when_blank(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.setenv("CORS_ORIGINS", "  ,  ")
 
     assert get_cors_origins() == [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+
+
+def test_production_requires_database_url(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("USE_IN_MEMORY", "false")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        get_database_url()
+    with pytest.raises(RuntimeError, match="DATABASE_URL"):
+        use_in_memory_repositories()
+
+
+def test_production_rejects_sqlite_database(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///./production.db")
+
+    with pytest.raises(RuntimeError, match="PostgreSQL"):
+        get_database_url()
+
+
+def test_production_requires_cors_origins(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("CORS_ORIGINS", raising=False)
+
+    with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+        get_cors_origins()
+
+
+def test_production_rejects_insecure_cors_origin(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "http://app.example.com")
+
+    with pytest.raises(RuntimeError, match="HTTPS"):
+        get_cors_origins()

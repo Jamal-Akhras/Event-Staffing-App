@@ -1,6 +1,6 @@
 """Tests for multi-worker shift capacity."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +9,7 @@ from apps.api.src.deps import (
     get_application_decision_repo,
     get_application_repo,
     get_booking_repo,
+    get_notification_repo,
     get_shift_repo,
 )
 from apps.api.src.main import app
@@ -19,6 +20,7 @@ from apps.api.src.repositories.in_memory_application_repository import (
     InMemoryApplicationRepository,
 )
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
+from apps.api.src.repositories.in_memory_notification_repository import InMemoryNotificationRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 
 client = TestClient(app)
@@ -42,6 +44,7 @@ def repos():
     app.dependency_overrides[get_application_repo] = lambda: application_repo
     app.dependency_overrides[get_booking_repo] = lambda: booking_repo
     app.dependency_overrides[get_application_decision_repo] = lambda: decision_repo
+    app.dependency_overrides[get_notification_repo] = InMemoryNotificationRepository
     yield
     app.dependency_overrides.clear()
 
@@ -155,7 +158,7 @@ def create_shift(
     pay_rate: float = 25.0,
     workers_needed: int | None = None,
 ):
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     payload = {
         "operator_id": "op-123",
         "role": role,

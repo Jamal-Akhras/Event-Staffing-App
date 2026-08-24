@@ -5,6 +5,7 @@ export type ProfileForm = {
   display_name: string;
   role: string;
   city: string;
+  market_id: string;
   experience_years: string;
   bio: string;
   languages: string;
@@ -21,6 +22,7 @@ export const emptyProfileForm: ProfileForm = {
   display_name: "",
   role: "",
   city: "",
+  market_id: "",
   experience_years: "0",
   bio: "",
   languages: "",
@@ -38,6 +40,7 @@ export function profileToForm(profile: WorkerProfile): ProfileForm {
     display_name: profile.display_name,
     role: profile.role,
     city: profile.city,
+    market_id: profile.market_id ?? "",
     experience_years: String(profile.experience_years),
     bio: profile.bio ?? "",
     languages: profile.languages.join(", "),
@@ -55,6 +58,7 @@ export function formToPayload(form: ProfileForm) {
     display_name: form.display_name,
     role: form.role,
     city: form.city,
+    market_id: form.market_id || null,
     experience_years: Number(form.experience_years || 0),
     bio: form.bio || null,
     languages: form.languages

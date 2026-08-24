@@ -4,6 +4,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import ShiftTemplateModel, RecurringScheduleModel
+from apps.api.src.money import money
 from apps.api.src.models.shift_template import ShiftTemplate, RecurringSchedule
 
 
@@ -23,7 +24,7 @@ class SqlAlchemyTemplateRepository:
             model = ShiftTemplateModel(template_id=template.template_id)
             self._session.add(model)
         _apply_template_domain(model, template)
-        self._session.commit()
+        self._session.flush()
         return template
 
     def list_templates(self, operator_id: str) -> list[ShiftTemplate]:
@@ -40,7 +41,7 @@ class SqlAlchemyTemplateRepository:
         if model is None:
             return False
         self._session.delete(model)
-        self._session.commit()
+        self._session.flush()
         return True
 
     def get_schedule(self, schedule_id: str) -> RecurringSchedule | None:
@@ -55,7 +56,7 @@ class SqlAlchemyTemplateRepository:
             model = RecurringScheduleModel(schedule_id=schedule.schedule_id)
             self._session.add(model)
         _apply_schedule_domain(model, schedule)
-        self._session.commit()
+        self._session.flush()
         return schedule
 
     def list_schedules(self, operator_id: str) -> list[RecurringSchedule]:
@@ -80,7 +81,7 @@ class SqlAlchemyTemplateRepository:
         if model is None:
             return False
         self._session.delete(model)
-        self._session.commit()
+        self._session.flush()
         return True
 
 
@@ -92,7 +93,7 @@ def _template_to_domain(model: ShiftTemplateModel) -> ShiftTemplate:
         role=model.role,
         location=model.location,
         duration_hours=model.duration_hours,
-        pay_rate=model.pay_rate,
+        pay_rate=money(model.pay_rate),
         workers_needed=model.workers_needed,
         notes=model.notes,
         created_at=model.created_at,
@@ -107,7 +108,7 @@ def _apply_template_domain(model: ShiftTemplateModel, template: ShiftTemplate) -
     model.role = template.role
     model.location = template.location
     model.duration_hours = template.duration_hours
-    model.pay_rate = template.pay_rate
+    model.pay_rate = money(template.pay_rate)
     model.workers_needed = template.workers_needed
     model.notes = template.notes
     model.created_at = template.created_at

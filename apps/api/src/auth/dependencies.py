@@ -9,8 +9,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from apps.api.src.auth.jwt import decode_access_token
 from apps.api.src.config import get_bool_env
 from apps.api.src.models.user import User
+from apps.api.src.repositories.organisation_repository import OrganisationRepository
 from apps.api.src.repositories.user_repository import UserRepository
-from apps.api.src.deps import get_user_repo
+from apps.api.src.deps import get_organisation_repo, get_user_repo
 
 security = HTTPBearer(auto_error=False)
 
@@ -31,6 +32,12 @@ class ActorContext:
     role: ActorRole
     account_id: str | None = None
     worker_profile_id: str | None = None
+    organisation_id: str | None = None
+    email_verified: bool = False
+
+    @property
+    def venue_id(self) -> str | None:
+        return self.account_id
 
 
 async def get_current_user(
@@ -64,6 +71,7 @@ async def get_current_user(
     user = user_repo.get(user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+    _require_current_session(payload, user)
 
     return user
 
@@ -112,6 +120,7 @@ async def get_actor_role(
     user = user_repo.get(user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+    _require_current_session(payload, user)
 
     try:
         return ActorRole(user.role)
@@ -123,8 +132,10 @@ async def get_actor_context(
     x_actor_role: str | None = Header(default=None),
     x_actor_id: str | None = Header(default=None),
     x_account_id: str | None = Header(default=None),
+    x_organisation_id: str | None = Header(default=None),
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     user_repo: UserRepository = Depends(get_user_repo),
+    organisation_repo: OrganisationRepository = Depends(get_organisation_repo),
 ) -> ActorContext:
     if DEV_MODE and x_actor_role:
         try:
@@ -135,7 +146,14 @@ async def get_actor_context(
             raise HTTPException(status_code=401, detail="X-Actor-Id header is required.")
         account_id = x_account_id or (x_actor_id if role == ActorRole.OPERATOR else None)
         worker_profile_id = x_actor_id if role == ActorRole.WORKER else None
-        return ActorContext(user_id=x_actor_id, role=role, account_id=account_id, worker_profile_id=worker_profile_id)
+        return ActorContext(
+            user_id=x_actor_id,
+            role=role,
+            account_id=account_id,
+            worker_profile_id=worker_profile_id,
+            organisation_id=x_organisation_id,
+            email_verified=True,
+        )
 
     if not credentials:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -152,12 +170,47 @@ async def get_actor_context(
     user = user_repo.get(user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
+    _require_current_session(payload, user)
 
     try:
         role = ActorRole(user.role)
     except ValueError:
         raise HTTPException(status_code=403, detail=f"Invalid role: {user.role}")
-    return ActorContext(user_id=user.user_id, role=role, account_id=user.account_id, worker_profile_id=user.worker_profile_id)
+    organisation_id = None
+    if role == ActorRole.OPERATOR:
+        if not user.account_id:
+            raise HTTPException(status_code=403, detail="Operator has no active venue.")
+        venue = organisation_repo.get_venue(user.account_id)
+        if venue is None:
+            raise HTTPException(status_code=403, detail="Operator venue is unavailable.")
+        membership = organisation_repo.get_membership(venue.organisation_id, user.user_id)
+        if membership is None:
+            raise HTTPException(status_code=403, detail="Operator is not a member of this organisation.")
+        organisation_id = venue.organisation_id
+    return ActorContext(
+        user_id=user.user_id,
+        role=role,
+        account_id=user.account_id,
+        worker_profile_id=user.worker_profile_id,
+        organisation_id=organisation_id,
+        email_verified=user.email_verified,
+    )
+
+
+def _require_current_session(payload: dict, user: User) -> None:
+    token_version = payload.get("session_version", 0)
+    if not isinstance(token_version, int) or token_version != user.session_version:
+        raise HTTPException(status_code=401, detail="Session has been revoked")
+
+
+def require_verified_actor(actor: ActorContext, action: str) -> None:
+    if get_bool_env("DEV_MODE", False):
+        return
+    if not actor.email_verified:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Verify your email before {action}.",
+        )
 
 
 def require_role(actor: ActorRole, allowed_roles: set[ActorRole]) -> None:

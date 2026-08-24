@@ -34,9 +34,9 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
 };
 
-export function formatMoney(amount: number, currency = "GBP"): string {
+export function formatMoney(amount: number | string, currency = "GBP"): string {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
-  return `${symbol}${amount.toFixed(2)}`;
+  return `${symbol}${Number(amount).toFixed(2)}`;
 }
 
 export function formatEntryDate(dateStr: string) {

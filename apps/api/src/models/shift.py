@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 
 
 @dataclass(frozen=True)
@@ -12,7 +13,7 @@ class Shift:
     location: str
     start_time: datetime
     end_time: datetime
-    pay_rate: float
+    pay_rate: Decimal
     notes: str | None
     status: str
     created_at: datetime
@@ -22,3 +23,8 @@ class Shift:
     currency: str = "GBP"
     latitude: float | None = None
     longitude: float | None = None
+    updated_at: datetime | None = None
+    closed_at: datetime | None = None
+    cancelled_at: datetime | None = None
+    cancellation_reason: str | None = None
+    cancelled_by_user_id: str | None = None

@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend (pytest + alembic, ${{ matrix.data_path }})
@@ -21,29 +24,32 @@ jobs:
         include:
           - data_path: in-memory
             use_in_memory: "true"
+            require_postgres_tests: "false"
           - data_path: postgres
             use_in_memory: "false"
+            require_postgres_tests: "true"
 
     services:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: event_staffing
+          POSTGRES_DB: event_staffing_test
           POSTGRES_USER: event_staffing
           POSTGRES_PASSWORD: event_staffing_local_password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U event_staffing -d event_staffing"
+          --health-cmd "pg_isready -U event_staffing -d event_staffing_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql+psycopg://event_staffing:event_staffing_local_password@localhost:5432/event_staffing
+      DATABASE_URL: postgresql+psycopg://event_staffing:event_staffing_local_password@localhost:5432/event_staffing_test
       ENVIRONMENT: development
       DEV_MODE: "true"
       USE_IN_MEMORY: ${{ matrix.use_in_memory }}
+      REQUIRE_POSTGRES_TESTS: ${{ matrix.require_postgres_tests }}
       JWT_SECRET_KEY: ci-only-not-a-real-secret-just-for-tests-padding-32
 
     steps:
@@ -58,6 +64,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Verify dependency consistency
+        run: python -m pip check
 
       - name: Run migrations
         run: python -m alembic -c apps/api/alembic.ini upgrade head
@@ -90,6 +99,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
   mobile:
     name: Mobile (tsc)
     runs-on: ubuntu-latest
@@ -111,3 +123,16 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=critical
+
+  container:
+    name: Production container build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production image
+        run: docker build --tag event-staffing-api:${{ github.sha }} .

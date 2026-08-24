@@ -36,6 +36,21 @@ def client_ip(request: Request) -> str:
     return get_remote_address(request)
 
 
+def actor_or_ip(request: Request) -> str:
+    authorization = request.headers.get("Authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() == "bearer" and token:
+        try:
+            from apps.api.src.auth.jwt import decode_access_token
+
+            user_id = decode_access_token(token).get("user_id")
+            if user_id:
+                return f"actor:{user_id}"
+        except Exception:
+            pass
+    return f"ip:{client_ip(request)}"
+
+
 def _build_limiter() -> Limiter:
     if use_in_memory_backends():
         log.warning(

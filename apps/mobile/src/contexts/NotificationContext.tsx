@@ -1,72 +1,147 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
-import { useAuth } from "./AuthContext";
-import { fetchWorker, postWorker } from "../lib/api";
+import {
+  fetchNotificationsPage,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type AppNotification,
+} from "../lib/notifications";
 
-type Notification = {
-  notification_id: string;
-  type: string;
-  title: string;
-  body: string;
-  shift_id: string | null;
-  read: boolean;
-  created_at: string;
-};
+const REFRESH_INTERVAL_MS = 60_000;
+
+export type NotificationStatus = "loading" | "ready" | "error";
 
 type NotificationContextType = {
-  notifications: Notification[];
+  notifications: AppNotification[];
   unreadCount: number;
+  status: NotificationStatus;
+  error: string | null;
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  isRefreshing: boolean;
+  refresh: () => Promise<void>;
+  loadMore: () => Promise<void>;
+  markRead: (notificationId: string) => void;
   markAllRead: () => Promise<void>;
-  refresh: () => void;
 };
 
 const NotificationContext = createContext<NotificationContextType>({
   notifications: [],
   unreadCount: 0,
+  status: "loading",
+  error: null,
+  hasMore: false,
+  isLoadingMore: false,
+  isRefreshing: false,
+  refresh: async () => {},
+  loadMore: async () => {},
+  markRead: () => {},
   markAllRead: async () => {},
-  refresh: () => {},
 });
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const workerId = user?.worker_profile_id ?? null;
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const inFlight = useRef(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [status, setStatus] = useState<NotificationStatus>("loading");
+  const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetch = useCallback(async () => {
-    if (!workerId || inFlight.current) return;
-    inFlight.current = true;
+  const requestSeq = useRef(0);
+  const nextCursorRef = useRef<string | null>(null);
+  const loadingMoreRef = useRef(false);
+
+  const loadFirstPage = useCallback(async (asRefresh: boolean) => {
+    const seq = ++requestSeq.current;
+    loadingMoreRef.current = false;
+    setIsLoadingMore(false);
+    if (asRefresh) setIsRefreshing(true);
     try {
-      const data = await fetchWorker<Notification[]>(`/workers/${workerId}/notifications?limit=30`);
-      setNotifications(data);
-    } catch {
-      // silent — notifications are non-critical
+      const page = await fetchNotificationsPage(null);
+      if (seq !== requestSeq.current) return;
+      setNotifications(appendUnique([], page.items));
+      nextCursorRef.current = page.next_cursor;
+      setHasMore(page.next_cursor !== null);
+      setUnreadCount(page.unread_count);
+      setError(null);
+      setStatus("ready");
+    } catch (err) {
+      if (seq !== requestSeq.current) return;
+      setError((err as Error).message);
+      setStatus((current) => (current === "ready" ? "ready" : "error"));
     } finally {
-      inFlight.current = false;
+      if (seq === requestSeq.current && asRefresh) setIsRefreshing(false);
     }
-  }, [workerId]);
+  }, []);
 
   useEffect(() => {
-    if (!workerId) return;
-    fetch();
-    const interval = setInterval(fetch, 30_000);
+    void loadFirstPage(false);
+    const interval = setInterval(() => void loadFirstPage(false), REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [workerId, fetch]);
+  }, [loadFirstPage]);
 
-  const markAllRead = async () => {
-    if (!workerId) return;
+  const refresh = useCallback(() => loadFirstPage(true), [loadFirstPage]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current || !nextCursorRef.current) return;
+    const seq = requestSeq.current;
+    loadingMoreRef.current = true;
+    setIsLoadingMore(true);
     try {
-      await postWorker(`/workers/${workerId}/notifications/read-all`);
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch {
-      // silent
+      const page = await fetchNotificationsPage(nextCursorRef.current);
+      if (seq !== requestSeq.current) return;
+      setNotifications((current) => appendUnique(current, page.items));
+      nextCursorRef.current = page.next_cursor;
+      setHasMore(page.next_cursor !== null);
+      setUnreadCount(page.unread_count);
+    } catch (err) {
+      if (seq === requestSeq.current) setError((err as Error).message);
+    } finally {
+      loadingMoreRef.current = false;
+      setIsLoadingMore(false);
     }
-  };
+  }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const markRead = useCallback((notificationId: string) => {
+    let wasUnread = false;
+    setNotifications((current) =>
+      current.map((item) => {
+        if (item.notification_id !== notificationId) return item;
+        if (!item.read) wasUnread = true;
+        return { ...item, read: true };
+      })
+    );
+    if (wasUnread) setUnreadCount((count) => Math.max(0, count - 1));
+    markNotificationRead(notificationId).catch(() => undefined);
+  }, []);
+
+  const markAllRead = useCallback(async () => {
+    setNotifications((current) => current.map((item) => ({ ...item, read: true })));
+    setUnreadCount(0);
+    try {
+      await markAllNotificationsRead();
+    } catch {
+      void loadFirstPage(false);
+    }
+  }, [loadFirstPage]);
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAllRead, refresh: fetch }}>
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        status,
+        error,
+        hasMore,
+        isLoadingMore,
+        isRefreshing,
+        refresh,
+        loadMore,
+        markRead,
+        markAllRead,
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );
@@ -74,4 +149,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
 export function useNotifications() {
   return useContext(NotificationContext);
+}
+
+function appendUnique(current: AppNotification[], added: AppNotification[]): AppNotification[] {
+  const seen = new Set(current.map((item) => item.notification_id));
+  const merged = [...current];
+  for (const item of added) {
+    if (seen.has(item.notification_id)) continue;
+    seen.add(item.notification_id);
+    merged.push(item);
+  }
+  return merged;
 }

@@ -27,7 +27,12 @@ class Booking:
     approved_at: datetime | None = None
     paid_at: datetime | None = None
     cancelled_at: datetime | None = None
+    cancellation_reason: str | None = None
+    cancelled_by_user_id: str | None = None
     no_show_at: datetime | None = None
+    payment_method: str | None = None
+    payment_reference: str | None = None
+    payment_recorded_by_user_id: str | None = None
 
     def transition_to(self, target: BookingState, now: datetime) -> "Booking":
         if target == self.state:
@@ -66,6 +71,8 @@ class Booking:
             return replace(self, state=target, cancelled_at=now)
 
         if target == BookingState.CANCELLED_BY_OPERATOR:
+            if now >= self.start_time:
+                raise TransitionError("Venue cancellations must be before start time.")
             return replace(self, state=target, cancelled_at=now)
 
         if target == BookingState.CONFIRMED:

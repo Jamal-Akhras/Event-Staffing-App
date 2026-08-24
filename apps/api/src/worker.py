@@ -6,6 +6,7 @@ from threading import Event
 from types import FrameType
 
 from apps.api.src.observability import init_sentry
+from apps.api.src.db.schema_guard import ensure_schema_current
 from apps.api.src.scheduler import create_scheduler
 
 log = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ log = logging.getLogger(__name__)
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     init_sentry()
+    ensure_schema_current()
     stop_event = Event()
 
     def request_stop(signum: int, frame: FrameType | None) -> None:

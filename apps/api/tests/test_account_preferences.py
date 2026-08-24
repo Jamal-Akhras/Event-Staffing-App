@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -37,7 +37,7 @@ def account_repo() -> FakeAccountRepository:
             name="Pearl Bar",
             country="GB",
             currency="GBP",
-            created_at=datetime(2030, 1, 1, 9, 0, 0),
+            created_at=datetime(2030, 1, 1, 9, 0, 0, tzinfo=UTC),
             venue_type="Restaurant & Bar",
             contact_email="ops@example.com",
             contact_phone="+44 7700 900000",
@@ -142,7 +142,7 @@ def test_account_profile_update_still_preserves_existing_fields():
         headers=OPERATOR_HEADERS,
         json={
             "name": "Pearl Ballroom",
-            "photos": ["/uploads/one.jpg", "/uploads/two.jpg"],
+            "photos": ["/uploads/one.jpg"],
         },
     )
 
@@ -150,5 +150,5 @@ def test_account_profile_update_still_preserves_existing_fields():
     assert response.status_code == 200
     assert data["name"] == "Pearl Ballroom"
     assert data["contact_email"] == "ops@example.com"
-    assert data["photos"] == ["/uploads/one.jpg", "/uploads/two.jpg"]
+    assert data["photos"] == ["/uploads/one.jpg"]
     assert data["notification_preferences"]["no_show_alerts"] is True

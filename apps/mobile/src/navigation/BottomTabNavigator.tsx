@@ -5,17 +5,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../contexts/NotificationContext";
 import { BrowseScreen } from "../screens/BrowseScreen";
 import EarningsScreen from "../screens/EarningsScreen";
+import { NotificationCenterScreen } from "../screens/NotificationCenterScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { ShiftsScreen } from "../screens/ShiftsScreen";
 import { COLORS } from "../theme/colors";
+import type { RootTabParamList } from "./navigationTypes";
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<RootTabParamList>();
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
 const TAB_ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> = {
   Browse: { active: "home", inactive: "home-outline" },
   Shifts: { active: "briefcase", inactive: "briefcase-outline" },
+  Alerts: { active: "notifications", inactive: "notifications-outline" },
   Earnings: { active: "wallet", inactive: "wallet-outline" },
   Profile: { active: "person", inactive: "person-outline" },
 };
@@ -72,9 +75,14 @@ export function BottomTabNavigator() {
       <Tab.Screen
         name="Shifts"
         component={ShiftsScreen}
+        options={{ title: "My Shifts", tabBarLabel: "Shifts" }}
+      />
+      <Tab.Screen
+        name="Alerts"
+        component={NotificationCenterScreen}
         options={{
-          title: "My Shifts",
-          tabBarLabel: "Shifts",
+          title: "Notifications",
+          tabBarLabel: "Alerts",
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />

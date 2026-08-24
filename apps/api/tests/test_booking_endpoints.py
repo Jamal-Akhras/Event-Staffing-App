@@ -1,10 +1,12 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
 from apps.api.src import main
 from apps.api.src.deps import get_booking_repo
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
+from packages.domain.src.booking import Booking
 
 OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-1"}
 OTHER_OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-2"}
@@ -20,7 +22,7 @@ def _client() -> TestClient:
     repo = InMemoryBookingRepository()
     shift_repo = InMemoryShiftRepository(repo)
     repo.attach_shift_repo(shift_repo)
-    now = datetime(2030, 1, 1, 12, 0, 0)
+    now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     shift_repo.save(
         Shift(
             shift_id="shift-1",
@@ -44,25 +46,29 @@ def _client() -> TestClient:
 
 
 def _create_booking(client: TestClient, start_offset_minutes: int = 60) -> tuple[str, datetime]:
-    now = datetime(2030, 1, 1, 12, 0, 0)
+    now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     start = now + timedelta(minutes=start_offset_minutes)
     end = start + timedelta(hours=4)
-    response = client.post(
-        "/bookings",
-        json={
-            "shift_id": "shift-1",
-            "worker_id": "worker-1",
-            "operator_id": "operator-1",
-            "start_time": start.isoformat(),
-            "end_time": end.isoformat(),
-            "now": now.isoformat(),
-        },
-        headers=OPERATOR_HEADERS,
+    booking_id = str(uuid4())
+    repo = main.app.dependency_overrides[get_booking_repo]()
+    repo.save(
+        Booking(
+            booking_id=booking_id,
+            shift_id="shift-1",
+            worker_id="worker-1",
+            operator_id="operator-1",
+            start_time=start,
+            end_time=end,
+            created_at=now,
+        )
     )
-    assert response.status_code == 200
-    payload = response.json()
-    assert "allowed_transitions" in payload
-    return payload["booking_id"], now
+    return booking_id, now
+
+
+def test_direct_booking_creation_is_not_exposed():
+    client = _client()
+    response = client.post("/bookings", json={}, headers=OPERATOR_HEADERS)
+    assert response.status_code == 405
 
 
 def test_booking_lifecycle_happy_path():
@@ -104,11 +110,18 @@ def test_booking_lifecycle_happy_path():
 
     pay = client.post(
         f"/bookings/{booking_id}/pay",
-        json={"now": (now + timedelta(hours=6)).isoformat()},
+        json={
+            "confirmation": "PAYMENT_SENT",
+            "method": "bank_transfer",
+            "reference": "BACS-123",
+            "now": (now + timedelta(hours=6)).isoformat(),
+        },
         headers=OPERATOR_HEADERS,
     )
     assert pay.status_code == 200
     assert pay.json()["state"] == "paid"
+    assert pay.json()["payment_method"] == "bank_transfer"
+    assert pay.json()["payment_reference"] == "BACS-123"
 
 
 def test_invalid_transition_returns_400():

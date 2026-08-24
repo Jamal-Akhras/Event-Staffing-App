@@ -61,6 +61,9 @@ class InMemoryBookingRepository:
     def list_by_state(self, state: BookingState) -> list[Booking]:
         return [booking for booking in self._bookings.values() if booking.state == state]
 
+    def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Booking]:
+        return [booking for booking in self._bookings.values() if booking.shift_id == shift_id]
+
     def clear(self) -> None:
         self._bookings.clear()
 

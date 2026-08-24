@@ -1,16 +1,18 @@
 import { useState, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { LegalLinks } from "../components/LegalLinks";
 import { postPublicJson } from "../lib/api";
 import "./LoginPage.css";
 
-type Step = "email" | "reset" | "done";
+type Step = "email" | "sent" | "reset" | "done";
 
 export function ForgotPasswordPage() {
-  const [step, setStep] = useState<Step>("email");
+  const [searchParams] = useSearchParams();
+  const linkToken = searchParams.get("token") ?? "";
+  const [step, setStep] = useState<Step>(linkToken ? "reset" : "email");
   const [email, setEmail] = useState("");
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(linkToken);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,8 +24,12 @@ export function ForgotPasswordPage() {
     setLoading(true);
     try {
       const data = await postPublicJson<{ reset_token?: string } | undefined>("/auth/forgot-password", { email });
-      if (data?.reset_token) setToken(data.reset_token);
-      setStep("reset");
+      if (data?.reset_token) {
+        setToken(data.reset_token);
+        setStep("reset");
+      } else {
+        setStep("sent");
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -79,6 +85,17 @@ export function ForgotPasswordPage() {
               </Link>
               <LegalLinks className="auth-legal-links" />
             </>
+          ) : step === "sent" ? (
+            <>
+              <h1 className="auth-heading">Check your inbox</h1>
+              <p className="auth-subheading">
+                If that email is registered, we&rsquo;ve sent a password reset link. The link expires in 1 hour.
+              </p>
+              <p className="auth-link-row">
+                <Link to="/login" className="auth-link">← Back to Sign In</Link>
+              </p>
+              <LegalLinks className="auth-legal-links" />
+            </>
           ) : step === "email" ? (
             <>
               <h1 className="auth-heading">Forgot password?</h1>
@@ -109,20 +126,26 @@ export function ForgotPasswordPage() {
           ) : (
             <>
               <h1 className="auth-heading">Reset password</h1>
-              <p className="auth-subheading">Enter the reset token from your email and choose a new password.</p>
+              <p className="auth-subheading">
+                {linkToken
+                  ? "Choose a new password for your account."
+                  : "Enter the reset token from your email and choose a new password."}
+              </p>
               <form onSubmit={handleResetPassword} className="auth-form">
-                <label className="form-label">
-                  Reset token
-                  <textarea
-                    className="form-input"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    required
-                    rows={3}
-                    placeholder="Paste your reset token here"
-                    style={{ resize: "none", fontFamily: "monospace", fontSize: 12 }}
-                  />
-                </label>
+                {!linkToken && (
+                  <label className="form-label">
+                    Reset token
+                    <textarea
+                      className="form-input"
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                      required
+                      rows={3}
+                      placeholder="Paste your reset token here"
+                      style={{ resize: "none", fontFamily: "monospace", fontSize: 12 }}
+                    />
+                  </label>
+                )}
                 <label className="form-label">
                   New password
                   <input

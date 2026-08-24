@@ -7,6 +7,8 @@ type AuthUser = {
   email: string;
   role: string;
   account_id: string | null;
+  organisation_id: string | null;
+  venue_id: string | null;
   currency: string;
 };
 
@@ -47,6 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: string;
       role: string;
       account_id?: string | null;
+      organisation_id?: string | null;
+      venue_id?: string | null;
       currency?: string;
     }>("/auth/login", { email, password });
     const authUser: AuthUser = {
@@ -54,6 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: data.email,
       role: data.role,
       account_id: data.account_id ?? null,
+      organisation_id: data.organisation_id ?? null,
+      venue_id: data.venue_id ?? data.account_id ?? null,
       currency: data.currency ?? "GBP",
     };
     localStorage.setItem(TOKEN_KEY, data.access_token);

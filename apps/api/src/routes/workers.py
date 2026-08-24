@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from apps.api.src.auth import ActorContext, ActorRole, get_actor_context, require_role, require_worker_owner
-from apps.api.src.deps import get_booking_repo, get_shift_repo, get_worker_profile_repo
+from apps.api.src.deps import get_booking_repo, get_market_repo, get_shift_repo, get_worker_profile_repo
+from apps.api.src.datetime_utils import utc_now
 from apps.api.src.helpers import (
     _get_worker_profile,
     _now_or,
@@ -14,7 +16,9 @@ from apps.api.src.helpers import (
     _worker_public_view,
 )
 from apps.api.src.models.worker_profile import WorkerProfile
+from apps.api.src.money import money
 from apps.api.src.repositories.booking_repository import BookingRepository
+from apps.api.src.repositories.market_repository import MarketRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
 from apps.api.src.schemas import (
@@ -70,7 +74,7 @@ def get_worker_earnings(
     worker_bookings = repo.list_by_worker(worker_id, 500)
     shifts_by_id = {shift.shift_id: shift for shift in shift_repo.list_by_worker(worker_id, 500)}
 
-    now = datetime.utcnow()
+    now = utc_now()
     if period == "month":
         cutoff = now - timedelta(days=30)
     elif period == "year":
@@ -90,7 +94,8 @@ def get_worker_earnings(
         shift = shifts_by_id.get(booking.shift_id)
         if shift is None:
             continue
-        hours = round((booking.end_time - booking.start_time).total_seconds() / 3600, 2)
+        hours_value = Decimal(str((booking.end_time - booking.start_time).total_seconds())) / Decimal("3600")
+        hours = round(float(hours_value), 2)
         entries.append(EarningsEntryResponse(
             booking_id=booking.booking_id,
             shift_id=booking.shift_id,
@@ -100,7 +105,7 @@ def get_worker_earnings(
             end_time=booking.end_time,
             hours=hours,
             pay_rate=shift.pay_rate,
-            total=round(hours * shift.pay_rate, 2),
+            total=money(hours_value * shift.pay_rate),
             status="paid" if booking.state in paid_states else "pending",
             currency=shift.currency,
         ))
@@ -109,8 +114,8 @@ def get_worker_earnings(
     summary_currency = entries[0].currency if entries else "GBP"
     return EarningsSummaryResponse(
         period=period,
-        total_paid=round(sum(e.total for e in entries if e.status == "paid"), 2),
-        total_pending=round(sum(e.total for e in entries if e.status == "pending"), 2),
+        total_paid=money(sum((e.total for e in entries if e.status == "paid"), Decimal("0"))),
+        total_pending=money(sum((e.total for e in entries if e.status == "pending"), Decimal("0"))),
         currency=summary_currency,
         entries=entries,
     )
@@ -121,6 +126,7 @@ def update_worker_profile(
     worker_id: str,
     request: WorkerProfileUpdateRequest,
     repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
+    market_repo: MarketRepository = Depends(get_market_repo),
     actor: ActorContext = Depends(get_actor_context),
 ) -> WorkerProfilePrivateResponse:
     require_worker_owner(actor, worker_id)
@@ -129,6 +135,11 @@ def update_worker_profile(
     reliability_score = 0.0 if existing is None else existing.reliability_score
     badges = [] if existing is None else existing.badges
     avatar_url = None if existing is None else existing.avatar_url
+    market_id = request.market_id if request.market_id is not None else (existing.market_id if existing else None)
+    if market_id is not None:
+        market = market_repo.get(market_id)
+        if market is None or not market.is_active:
+            raise HTTPException(status_code=400, detail="Invalid worker market.")
     profile = WorkerProfile(
         worker_id=worker_id,
         display_name=request.display_name,
@@ -148,5 +159,6 @@ def update_worker_profile(
         updated_at=now,
         avatar_url=avatar_url,
         allow_venue_recontact=request.allow_venue_recontact,
+        market_id=market_id,
     )
     return _worker_private_view(_save_worker_profile(repo, profile))

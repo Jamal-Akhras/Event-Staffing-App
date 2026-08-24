@@ -9,6 +9,7 @@ type SelectedBookingPanelProps = {
   error: string | null;
   onCheckIn: () => void;
   onCheckOut: () => void;
+  onCancel: () => void;
 };
 
 export function SelectedBookingPanel({
@@ -16,9 +17,11 @@ export function SelectedBookingPanel({
   error,
   onCheckIn,
   onCheckOut,
+  onCancel,
 }: SelectedBookingPanelProps) {
   const canCheckIn = booking?.allowed_transitions?.includes("checked_in") ?? false;
   const canCheckOut = booking?.allowed_transitions?.includes("checked_out") ?? false;
+  const canCancel = booking?.allowed_transitions?.includes("cancelled_by_worker") ?? false;
 
   return (
     <View style={styles.card}>
@@ -38,6 +41,11 @@ export function SelectedBookingPanel({
         <ActionButton label="Check in" disabled={!canCheckIn} onPress={onCheckIn} />
         <ActionButton label="Check out" disabled={!canCheckOut} onPress={onCheckOut} />
       </View>
+      {canCancel && (
+        <Pressable style={styles.cancelButton} onPress={onCancel}>
+          <Text style={styles.cancelText}>Cancel this booking</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -114,4 +122,12 @@ const styles = StyleSheet.create({
     color: COLORS.onPrimary,
     fontWeight: "900",
   },
+  cancelButton: {
+    alignItems: "center",
+    marginTop: 10,
+    paddingVertical: 11,
+    borderRadius: 14,
+    backgroundColor: "rgba(180, 35, 24, 0.08)",
+  },
+  cancelText: { color: COLORS.error, fontWeight: "900" },
 });

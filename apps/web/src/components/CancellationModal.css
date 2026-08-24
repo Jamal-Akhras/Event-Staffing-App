@@ -1,0 +1,54 @@
+.cancellation-modal {
+  width: min(520px, 100%);
+  padding: 0;
+}
+
+.cancellation-modal h2 {
+  margin: 0;
+}
+
+.cancellation-eyebrow {
+  margin: 0 0 4px;
+  color: #b42318;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cancellation-modal-body {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.cancellation-modal-body > p {
+  margin: 0;
+  color: var(--ink-500);
+  line-height: 1.55;
+}
+
+.cancellation-modal-body label {
+  display: grid;
+  gap: 8px;
+  color: var(--ink-700);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.cancellation-modal-body textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink-900);
+  font: inherit;
+  resize: vertical;
+}
+
+.btn.danger {
+  border-color: #b42318;
+  background: #b42318;
+  color: white;
+}

@@ -65,7 +65,11 @@ def sweep_no_shows(
     return updated
 
 
-def _decrement_workers_filled(shift_repo: ShiftRepository, shift_id: str) -> None:
+def _decrement_workers_filled(
+    shift_repo: ShiftRepository,
+    shift_id: str,
+    now: datetime | None = None,
+) -> None:
     shift = shift_repo.get(shift_id)
     if shift is None or shift.workers_filled <= 0:
         return
@@ -73,4 +77,5 @@ def _decrement_workers_filled(shift_repo: ShiftRepository, shift_id: str) -> Non
         shift,
         workers_filled=shift.workers_filled - 1,
         status="open" if shift.status == "filled" else shift.status,
+        updated_at=now or shift.updated_at,
     ))

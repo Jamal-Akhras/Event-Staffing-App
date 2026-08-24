@@ -34,7 +34,7 @@ class SqlAlchemyWorkerFeedStateRepository:
         model.action = state.action
         model.created_at = state.created_at
         model.updated_at = state.updated_at
-        self._session.commit()
+        self._session.flush()
         return state
 
     def delete(self, worker_id: str, shift_id: str) -> bool:
@@ -42,7 +42,7 @@ class SqlAlchemyWorkerFeedStateRepository:
         if model is None:
             return False
         self._session.delete(model)
-        self._session.commit()
+        self._session.flush()
         return True
 
 

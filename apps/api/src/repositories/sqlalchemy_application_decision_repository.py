@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import ApplicationModel, BookingModel, ShiftModel
+from apps.api.src.money import money
 from apps.api.src.models.application import Application
 from apps.api.src.models.shift import Shift
 from apps.api.src.repositories.application_decision_repository import (
@@ -31,7 +32,7 @@ class SqlAlchemyApplicationDecisionRepository:
         booking_id: str,
     ) -> ApplicationApprovalResult:
         try:
-            with self._session.begin():
+            with self._session.begin_nested():
                 application_model = self._load_application_for_update(application_id)
                 if application_model.status != "applied":
                     raise ApplicationAlreadyDecidedError("Application already decided.")
@@ -51,6 +52,7 @@ class SqlAlchemyApplicationDecisionRepository:
                 ).transition_to(BookingState.CONFIRMED, now)
                 booking_model = _booking_to_model(booking)
                 self._session.add(booking_model)
+                self._session.flush()
 
                 workers_filled = shift_model.workers_filled + 1
                 shift_model.workers_filled = workers_filled
@@ -60,8 +62,8 @@ class SqlAlchemyApplicationDecisionRepository:
                 application_model.status = "approved"
                 application_model.decided_at = now
                 application_model.booking_id = booking.booking_id
+                self._session.flush()
         except IntegrityError as exc:
-            self._session.rollback()
             raise ApplicationDecisionConflictError("Application decision could not be saved.") from exc
 
         return ApplicationApprovalResult(
@@ -71,12 +73,12 @@ class SqlAlchemyApplicationDecisionRepository:
         )
 
     def reject(self, application_id: str, now: datetime) -> Application:
-        with self._session.begin():
-            application_model = self._load_application_for_update(application_id)
-            if application_model.status != "applied":
-                raise ApplicationAlreadyDecidedError("Application already decided.")
-            application_model.status = "rejected"
-            application_model.decided_at = now
+        application_model = self._load_application_for_update(application_id)
+        if application_model.status != "applied":
+            raise ApplicationAlreadyDecidedError("Application already decided.")
+        application_model.status = "rejected"
+        application_model.decided_at = now
+        self._session.flush()
         return _application_to_domain(application_model)
 
     def _load_application_for_update(self, application_id: str) -> ApplicationModel:
@@ -164,7 +166,7 @@ def _shift_to_domain(model: ShiftModel) -> Shift:
         location=model.location,
         start_time=model.start_time,
         end_time=model.end_time,
-        pay_rate=model.pay_rate,
+        pay_rate=money(model.pay_rate),
         notes=model.notes,
         status=model.status,
         created_at=model.created_at,

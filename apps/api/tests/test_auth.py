@@ -1,6 +1,6 @@
 """Tests for authentication endpoints."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -65,7 +65,7 @@ def test_register_worker_success(user_repo):
 def test_register_duplicate_email(user_repo):
     """Test registration with an already registered email."""
     # Create existing user
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     existing_user = User(
         user_id=str(uuid4()),
         email="existing@example.com",
@@ -101,6 +101,7 @@ def test_short_password_rejection():
             "password": "short",
             "venue_name": "Short Venue",
             "country": "GB",
+            "market_id": "bath-gb",
         },
     )
     reset_response = client.post(
@@ -116,7 +117,7 @@ def test_short_password_rejection():
 def test_login_success(user_repo):
     """Test successful login."""
     # Create a user
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     user = User(
         user_id=str(uuid4()),
         email="user@example.com",
@@ -174,7 +175,7 @@ def test_login_invalid_email(user_repo):
 def test_login_invalid_password(user_repo):
     """Test login with incorrect password."""
     # Create a user
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     user = User(
         user_id=str(uuid4()),
         email="user@example.com",
@@ -201,7 +202,7 @@ def test_login_invalid_password(user_repo):
 def test_login_inactive_user(user_repo):
     """Test login with an inactive user account."""
     # Create an inactive user
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     user = User(
         user_id=str(uuid4()),
         email="inactive@example.com",

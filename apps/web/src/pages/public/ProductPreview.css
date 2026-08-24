@@ -1,0 +1,158 @@
+.worker-phone {
+  position: relative;
+  width: 322px;
+  padding: 12px 13px 15px;
+  border: 8px solid #0d1721;
+  border-radius: 38px;
+  background: #fbf7f1;
+  box-shadow: 0 34px 80px rgba(13, 23, 33, 0.26);
+}
+
+.phone-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 12px;
+  color: #0d1721;
+  font-size: 0.62rem;
+}
+
+.phone-topbar span:first-child {
+  width: 58px;
+  height: 17px;
+  border-radius: 999px;
+  background: #0d1721;
+}
+
+.phone-topbar span:last-child { width: 30px; }
+
+.phone-appbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px 16px;
+}
+
+.phone-appbar div { display: grid; gap: 2px; }
+.phone-appbar small { color: var(--ink-500); font-size: 0.64rem; }
+.phone-appbar strong { font-size: 1.05rem; letter-spacing: -0.04em; }
+
+.phone-avatar,
+.roster-avatar {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #dceee4;
+  color: var(--ocean-500);
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.phone-avatar { width: 34px; height: 34px; }
+
+.phone-filter-row {
+  display: flex;
+  gap: 6px;
+  overflow: hidden;
+  padding-bottom: 12px;
+}
+
+.phone-filter-row span {
+  padding: 6px 9px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: white;
+  color: var(--ink-700);
+  font-size: 0.58rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.shift-preview-card {
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 14px 36px rgba(15, 23, 32, 0.1);
+}
+
+.shift-card-cover {
+  position: relative;
+  display: grid;
+  height: 126px;
+  place-items: center;
+  background: linear-gradient(145deg, #183044, #0e5a3a);
+}
+
+.shift-card-cover::after {
+  content: "";
+  position: absolute;
+  right: -32px;
+  bottom: -60px;
+  width: 160px;
+  height: 160px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+}
+
+.shift-cover-mark { color: rgba(255, 255, 255, 0.86); font-size: 2.6rem; font-weight: 800; }
+.shift-live-pill { position: absolute; top: 10px; left: 10px; padding: 5px 8px; border-radius: 999px; background: #fff8e9; color: #795111; font-size: 0.54rem; font-weight: 750; }
+.shift-card-body { padding: 14px; }
+.shift-title-row { display: flex; justify-content: space-between; gap: 8px; }
+.shift-title-row small { color: var(--ink-500); font-size: 0.56rem; }
+.shift-title-row h3 { margin: 2px 0 10px; font-size: 0.88rem; letter-spacing: -0.03em; }
+.shift-title-row > strong { color: var(--ocean-500); font-size: 0.82rem; white-space: nowrap; }
+.shift-title-row > strong small { color: inherit; }
+.shift-meta { display: flex; align-items: center; gap: 6px; margin-top: 7px; color: var(--ink-500); font-size: 0.61rem; }
+.shift-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--border-soft); }
+.shift-card-footer span { color: var(--ink-500); font-size: 0.58rem; font-weight: 650; }
+.shift-card-footer i { display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: var(--success-500); }
+.shift-card-footer button { padding: 7px 10px; border: 0; border-radius: 8px; background: var(--ocean-500); color: white; font-size: 0.57rem; font-weight: 700; }
+.phone-nav { display: flex; justify-content: space-around; margin-top: 16px; color: var(--ink-300); font-size: 0.52rem; }
+.phone-nav b { color: var(--ocean-500); }
+
+.venue-preview {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  width: min(700px, 100%);
+  min-height: 435px;
+  overflow: hidden;
+  border: 7px solid #0d1721;
+  border-radius: 22px;
+  background: #fbf7f1;
+  box-shadow: 0 35px 90px rgba(5, 12, 18, 0.32);
+}
+
+.venue-preview-sidebar { display: flex; align-items: center; flex-direction: column; gap: 22px; padding: 18px 0; background: #0d1721; }
+.venue-mini-logo { display: grid; width: 28px; height: 28px; margin-bottom: 14px; place-items: center; border-radius: 8px; background: var(--ocean-300); color: white; font-size: 0.7rem; font-weight: 800; }
+.venue-preview-sidebar i { width: 18px; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); }
+.venue-preview-sidebar i.active { background: var(--ocean-300); }
+.venue-preview-main { padding: 27px; }
+.venue-preview-head { display: flex; align-items: center; justify-content: space-between; }
+.venue-preview-head div { display: grid; gap: 3px; }
+.venue-preview-head small { color: var(--ink-500); font-size: 0.65rem; }
+.venue-preview-head strong { font-size: 1.25rem; letter-spacing: -0.04em; }
+.venue-preview-head button { padding: 9px 12px; border: 0; border-radius: 8px; background: var(--ocean-500); color: white; font-size: 0.65rem; font-weight: 700; }
+.venue-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 24px 0 18px; }
+.venue-metrics article { display: grid; gap: 6px; padding: 15px; border: 1px solid var(--border-soft); border-radius: 12px; background: white; }
+.venue-metrics small { color: var(--ink-500); font-size: 0.58rem; }
+.venue-metrics strong { font-size: 1.5rem; }
+.venue-metrics span { color: #9a650e; font-size: 0.54rem; font-weight: 700; }
+.venue-roster-card { padding: 17px; border: 1px solid var(--border-soft); border-radius: 13px; background: white; }
+.venue-card-head { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.7rem; }
+.venue-card-head span { color: var(--ocean-500); font-size: 0.58rem; font-weight: 700; }
+.venue-roster-row { display: grid; grid-template-columns: 30px 1fr auto auto; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border-soft); }
+.roster-avatar { width: 30px; height: 30px; }
+.venue-roster-row div { display: grid; gap: 2px; }
+.venue-roster-row div strong { font-size: 0.65rem; }
+.venue-roster-row div small, .venue-roster-row time { color: var(--ink-500); font-size: 0.55rem; }
+.venue-roster-row b { padding: 5px 7px; border-radius: 999px; background: #e5f5ec; color: #047857; font-size: 0.49rem; }
+
+@media (max-width: 650px) {
+  .worker-phone { width: 292px; }
+  .venue-preview { grid-template-columns: 44px 1fr; min-height: 360px; }
+  .venue-preview-main { padding: 18px 14px; }
+  .venue-metrics article { padding: 10px; }
+  .venue-roster-row { grid-template-columns: 28px 1fr auto; }
+  .venue-roster-row b { display: none; }
+}

@@ -63,6 +63,10 @@ export async function postJson<T = void>(path: string, body?: object): Promise<T
   });
 }
 
+export async function fetchPublicJson<T>(path: string): Promise<T> {
+  return requestJson<T>(path, { headers: { "Content-Type": "application/json" } });
+}
+
 export async function postPublicJson<T = void>(path: string, body?: object): Promise<T> {
   return requestJson<T>(path, {
     method: "POST",

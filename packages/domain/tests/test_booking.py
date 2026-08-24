@@ -80,11 +80,11 @@ def test_worker_cancel_requires_before_start():
         booking.transition_to(BookingState.CANCELLED_BY_WORKER, after_start)
 
 
-def test_operator_cancel_allowed_after_start():
+def test_operator_cancel_rejected_after_start():
     booking = _base_booking().transition_to(BookingState.CONFIRMED, datetime(2030, 1, 1, 12, 5, 0))
     after_start = booking.start_time + timedelta(minutes=1)
-    updated = booking.transition_to(BookingState.CANCELLED_BY_OPERATOR, after_start)
-    assert updated.state == BookingState.CANCELLED_BY_OPERATOR
+    with pytest.raises(TransitionError):
+        booking.transition_to(BookingState.CANCELLED_BY_OPERATOR, after_start)
 
 
 def test_paid_requires_approved():

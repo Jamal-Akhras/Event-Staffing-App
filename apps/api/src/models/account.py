@@ -25,3 +25,9 @@ class Account:
     avatar_url: str | None = None
     photos: list[str] = field(default_factory=list)
     notification_preferences: NotificationPreferences = field(default_factory=default_notification_preferences)
+    organisation_id: str | None = None
+    market_id: str | None = None
+
+    @property
+    def venue_id(self) -> str:
+        return self.account_id

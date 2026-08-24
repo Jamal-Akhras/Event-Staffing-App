@@ -6,18 +6,20 @@ import { formatMoney } from "../earnings/earningsTypes";
 import { COLORS } from "../../theme/colors";
 import { RADIUS, SPACE } from "../../theme/space";
 import { TYPE } from "../../theme/type";
-import type { Shift } from "../../types";
+import type { FeedShift } from "../../types";
 import { formatShiftWindow, getShiftStats, getShiftTags } from "./browseUtils";
 
 type BrowseFeedCardProps = {
+  highPayThreshold?: number | null;
   isApplying: boolean;
-  shift: Shift;
+  shift: FeedShift;
   onDetails: () => void;
   onPass: () => void;
   onQuickApply: () => void;
 };
 
 export function BrowseFeedCard({
+  highPayThreshold,
   isApplying,
   shift,
   onDetails,
@@ -25,7 +27,11 @@ export function BrowseFeedCard({
   onQuickApply,
 }: BrowseFeedCardProps) {
   const stats = getShiftStats(shift);
-  const tags = getShiftTags(shift);
+  const tags = getShiftTags(shift, highPayThreshold);
+  const venueName = shift.venue?.name?.trim();
+  const placeLine = venueName && venueName !== shift.location
+    ? `${venueName} · ${shift.location}`
+    : venueName || shift.location;
 
   return (
     <View style={styles.card}>
@@ -37,7 +43,7 @@ export function BrowseFeedCard({
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
             <Text style={styles.role} numberOfLines={1}>{shift.role}</Text>
-            <Text style={styles.location} numberOfLines={1}>{shift.location}</Text>
+            <Text style={styles.location} numberOfLines={1}>{placeLine}</Text>
           </View>
           <StatusBadge status={shift.status} size="small" />
         </View>

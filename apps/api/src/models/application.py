@@ -17,3 +17,5 @@ class Application:
     status: str
     created_at: datetime
     decided_at: datetime | None = None
+    withdrawn_at: datetime | None = None
+    withdrawal_reason: str | None = None

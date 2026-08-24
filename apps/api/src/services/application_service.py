@@ -26,7 +26,9 @@ from apps.api.src.schemas import (
     ApplicationDecisionRequest,
     ApplicationMessageUpdateRequest,
 )
+from apps.api.src.schemas_recovery import CancellationRequest
 from apps.api.src.services.errors import ConflictError, NotFoundError, ValidationError
+from apps.api.src.services.outbox_publisher import OutboxPublisher
 
 
 class ApplicationService:
@@ -36,11 +38,13 @@ class ApplicationService:
         shift_repo: ShiftRepository,
         decision_repo: ApplicationDecisionRepository,
         history_repo: ApplicationMessageHistoryRepository,
+        outbox: OutboxPublisher,
     ) -> None:
         self._applications = application_repo
         self._shifts = shift_repo
         self._decisions = decision_repo
         self._history = history_repo
+        self._outbox = outbox
 
     def create_application(self, request: ApplicationCreateRequest) -> Application:
         shift = self._shifts.get(request.shift_id)
@@ -66,7 +70,21 @@ class ApplicationService:
             created_at=_now_or(request.now),
         )
         try:
-            return self._applications.save(application)
+            saved = self._applications.save(application)
+            if shift.account_id:
+                self._outbox.publish_notification(
+                    event_type="application.created",
+                    aggregate_type="application",
+                    aggregate_id=saved.application_id,
+                    recipient_kind="venue",
+                    recipient_id=shift.account_id,
+                    category="applications",
+                    title="New shift application",
+                    body="A worker applied to your shift.",
+                    action_kind="application",
+                    action_entity_id=saved.application_id,
+                )
+            return saved
         except DuplicateApplicationError as exc:
             raise ValidationError("You have already applied to this shift. You can only apply once per shift.") from exc
 
@@ -96,11 +114,14 @@ class ApplicationService:
             raise ValidationError(str(exc)) from exc
         except ApplicationDecisionConflictError as exc:
             raise ConflictError(str(exc)) from exc
+        self._publish_decision(result.application, "approved")
         return result.application
 
     def reject_application(self, application_id: str, request: ApplicationDecisionRequest) -> Application:
         try:
-            return self._decisions.reject(application_id, _now_or(request.now))
+            application = self._decisions.reject(application_id, _now_or(request.now))
+            self._publish_decision(application, "rejected")
+            return application
         except ApplicationDecisionNotFoundError as exc:
             raise NotFoundError(str(exc)) from exc
         except ApplicationAlreadyDecidedError as exc:
@@ -124,6 +145,38 @@ class ApplicationService:
 
         return self._applications.save(replace(application, message=request.message))
 
+    def withdraw(self, application_id: str, request: CancellationRequest) -> Application:
+        application = self._get_application(application_id)
+        if application.status != "applied":
+            raise ValidationError("Only pending applications can be withdrawn.")
+        now = _now_or(request.now)
+        if now >= application.start_time:
+            raise ValidationError("This shift has already started.")
+        withdrawn = self._applications.save(
+            replace(
+                application,
+                status="withdrawn",
+                decided_at=now,
+                withdrawn_at=now,
+                withdrawal_reason=request.reason.strip(),
+            )
+        )
+        shift = self._shifts.get(withdrawn.shift_id)
+        if shift and shift.account_id:
+            self._outbox.publish_notification(
+                event_type="application.withdrawn",
+                aggregate_type="application",
+                aggregate_id=withdrawn.application_id,
+                recipient_kind="venue",
+                recipient_id=shift.account_id,
+                category="applications",
+                title="Application withdrawn",
+                body="A worker withdrew their shift application.",
+                action_kind="application",
+                action_entity_id=withdrawn.application_id,
+            )
+        return withdrawn
+
     def list_message_history(self, application_id: str) -> list[ApplicationMessageHistory]:
         self._get_application(application_id)
         return self._history.list_by_application(application_id)
@@ -131,8 +184,28 @@ class ApplicationService:
     def get_application(self, application_id: str) -> Application:
         return self._get_application(application_id)
 
+    def application_belongs_to_venue(self, application: Application, venue_id: str | None) -> bool:
+        shift = self._shifts.get(application.shift_id)
+        return shift is not None and venue_id is not None and shift.account_id == venue_id
+
     def _get_application(self, application_id: str) -> Application:
         application = self._applications.get(application_id)
         if application is None:
             raise NotFoundError("Application not found.")
         return application
+
+    def _publish_decision(self, application: Application, decision: str) -> None:
+        date_str = application.start_time.strftime("%a %d %b")
+        title = "Application approved" if decision == "approved" else "Application not selected"
+        self._outbox.publish_notification(
+            event_type=f"application.{decision}",
+            aggregate_type="application",
+            aggregate_id=application.application_id,
+            recipient_kind="worker",
+            recipient_id=application.worker_id,
+            category="applications",
+            title=title,
+            body=f"Your application for {date_str} has been {decision}.",
+            action_kind="application",
+            action_entity_id=application.application_id,
+        )

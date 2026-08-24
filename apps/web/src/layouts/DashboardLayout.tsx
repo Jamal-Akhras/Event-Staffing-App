@@ -3,6 +3,8 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
 import { Icon } from "../components/Icon";
+import { NotificationBell } from "../components/NotificationBell";
+import { PostShiftRatingPrompt } from "../components/PostShiftRatingPrompt";
 import { API_BASE } from "../lib/api";
 import "./DashboardLayout.css";
 
@@ -14,19 +16,19 @@ const NAV_SECTIONS = [
   {
     label: "Main",
     items: [
-      { path: "/", label: "Overview", icon: "overview" },
-      { path: "/shifts", label: "Shifts", icon: "shifts" },
-      { path: "/applications", label: "Applications", icon: "applications" },
-      { path: "/schedule", label: "Schedule", icon: "schedule" },
+      { path: "/app", label: "Overview", icon: "overview" },
+      { path: "/app/shifts", label: "Shifts", icon: "shifts" },
+      { path: "/app/applications", label: "Applications", icon: "applications" },
+      { path: "/app/schedule", label: "Schedule", icon: "schedule" },
     ],
   },
   {
     label: "Manage",
     items: [
-      { path: "/templates", label: "Templates", icon: "templates" },
-      { path: "/workers", label: "Workers", icon: "workers" },
-      { path: "/analytics", label: "Analytics", icon: "analytics" },
-      { path: "/settings", label: "Settings", icon: "settings" },
+      { path: "/app/templates", label: "Templates", icon: "templates" },
+      { path: "/app/workers", label: "Workers", icon: "workers" },
+      { path: "/app/analytics", label: "Analytics", icon: "analytics" },
+      { path: "/app/settings", label: "Settings", icon: "settings" },
     ],
   },
 ] as const;
@@ -140,9 +142,14 @@ export function DashboardLayout() {
         </div>
       </aside>
 
+      <div className="dashboard-utilities">
+        <NotificationBell />
+      </div>
+
       <main className="main-content">
         <div className="content-wrapper"><Outlet /></div>
       </main>
+      <PostShiftRatingPrompt />
     </div>
   );
 }

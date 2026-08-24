@@ -11,6 +11,7 @@ from apps.api.src.auth.dependencies import (
     require_operator_owner,
     require_worker_owner,
     require_role,
+    require_verified_actor,
     extract_user_id_from_token,
 )
 
@@ -29,5 +30,6 @@ __all__ = [
     "get_actor_role",
     "get_actor_context",
     "require_role",
+    "require_verified_actor",
     "extract_user_id_from_token",
 ]

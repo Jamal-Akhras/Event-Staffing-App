@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import MessageModel
+from apps.api.src.datetime_utils import utc_now
 from apps.api.src.models.message import Message
 
 
@@ -24,42 +24,45 @@ class SqlAlchemyMessageRepository:
             model = MessageModel(message_id=message.message_id)
             self._session.add(model)
         _apply_domain(model, message)
-        self._session.commit()
+        self._session.flush()
         return message
 
-    def list_by_shift(self, shift_id: str) -> list[Message]:
+    def list_by_shift(self, shift_id: str, limit: int = 100) -> list[Message]:
         rows = (
             self._session.query(MessageModel)
             .filter(MessageModel.shift_id == shift_id)
-            .order_by(MessageModel.created_at)
+            .order_by(desc(MessageModel.created_at))
+            .limit(limit)
             .all()
         )
-        return [_to_domain(row) for row in rows]
+        return [_to_domain(row) for row in reversed(rows)]
 
-    def list_by_application(self, application_id: str) -> list[Message]:
+    def list_by_application(self, application_id: str, limit: int = 100) -> list[Message]:
         rows = (
             self._session.query(MessageModel)
             .filter(MessageModel.application_id == application_id)
-            .order_by(MessageModel.created_at)
+            .order_by(desc(MessageModel.created_at))
+            .limit(limit)
             .all()
         )
-        return [_to_domain(row) for row in rows]
+        return [_to_domain(row) for row in reversed(rows)]
 
-    def list_by_booking(self, booking_id: str) -> list[Message]:
+    def list_by_booking(self, booking_id: str, limit: int = 100) -> list[Message]:
         rows = (
             self._session.query(MessageModel)
             .filter(MessageModel.booking_id == booking_id)
-            .order_by(MessageModel.created_at)
+            .order_by(desc(MessageModel.created_at))
+            .limit(limit)
             .all()
         )
-        return [_to_domain(row) for row in rows]
+        return [_to_domain(row) for row in reversed(rows)]
 
     def mark_as_read(self, message_id: str) -> bool:
         model = self._session.get(MessageModel, message_id)
         if model is None:
             return False
-        model.read_at = datetime.utcnow()
-        self._session.commit()
+        model.read_at = utc_now()
+        self._session.flush()
         return True
 
 

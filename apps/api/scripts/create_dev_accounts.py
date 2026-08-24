@@ -1,12 +1,18 @@
 """Create dev/test operator accounts in the database."""
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import uuid4
 
 from apps.api.src.auth.password import hash_password
 from apps.api.src.db.database import Base, SessionLocal, engine
-from apps.api.src.db.models import AccountModel, UserModel
+from apps.api.src.db.models import (
+    OrganisationMembershipModel,
+    OrganisationModel,
+    MarketModel,
+    UserModel,
+    VenueModel,
+)
+from apps.api.src.datetime_utils import utc_now
 
 import os
 
@@ -34,9 +40,22 @@ ACCOUNTS = [
 
 def main() -> None:
     Base.metadata.create_all(bind=engine)
-    now = datetime.utcnow()
+    now = utc_now()
 
     with SessionLocal() as session:
+        market = session.get(MarketModel, "bath-gb")
+        if market is None:
+            market = MarketModel(
+                market_id="bath-gb",
+                name="Bath",
+                country="GB",
+                currency="GBP",
+                timezone="Europe/London",
+                high_pay_threshold=15,
+                is_active=True,
+                created_at=now,
+            )
+            session.add(market)
         for spec in ACCOUNTS:
             # Check if user already exists
             existing = session.query(UserModel).filter_by(email=spec["email"]).first()
@@ -44,11 +63,21 @@ def main() -> None:
                 print(f"  SKIP  {spec['email']} — already exists (user_id={existing.user_id})")
                 continue
 
-            account_id = str(uuid4())
+            organisation_id = str(uuid4())
+            venue_id = str(uuid4())
             user_id = str(uuid4())
 
-            session.add(AccountModel(
-                account_id=account_id,
+            session.add(OrganisationModel(
+                organisation_id=organisation_id,
+                market_id=market.market_id,
+                name=spec["venue_name"],
+                country=spec["country"],
+                currency=spec["currency"],
+                created_at=now,
+            ))
+            session.add(VenueModel(
+                venue_id=venue_id,
+                organisation_id=organisation_id,
                 name=spec["venue_name"],
                 country=spec["country"],
                 currency=spec["currency"],
@@ -60,15 +89,21 @@ def main() -> None:
                 email=spec["email"],
                 hashed_password=hash_password(spec["password"]),
                 role="operator",
-                account_id=account_id,
+                account_id=venue_id,
                 worker_profile_id=None,
                 is_active=True,
                 created_at=now,
                 updated_at=now,
             ))
+            session.add(OrganisationMembershipModel(
+                organisation_id=organisation_id,
+                user_id=user_id,
+                role="owner",
+                created_at=now,
+            ))
 
             session.commit()
-            print(f"  OK    {spec['email']} — user_id={user_id}  account_id={account_id}")
+            print(f"  OK    {spec['email']} — user_id={user_id}  venue_id={venue_id}")
 
     print("Done.")
 

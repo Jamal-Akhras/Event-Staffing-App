@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
+from apps.api.src.datetime_utils import normalize_utc
 from apps.api.src.helpers import _now
 from apps.api.src.models.shift import Shift
 from apps.api.src.models.shift_template import ShiftTemplate
@@ -89,7 +90,8 @@ class TemplateService:
 
         while current_date <= end_date:
             if request.days_of_week is None or current_date.weekday() in request.days_of_week:
-                shift_start = datetime.combine(current_date, datetime.min.time()).replace(hour=hour, minute=minute)
+                local_time = time(hour=hour, minute=minute, tzinfo=request.start_date.tzinfo)
+                shift_start = normalize_utc(datetime.combine(current_date, local_time))
                 shift_end = shift_start + timedelta(hours=template.duration_hours)
                 shifts.append(self._shifts.save(_shift_from_template(template, shift_start, shift_end)))
             current_date += timedelta(days=1)

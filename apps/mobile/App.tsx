@@ -9,6 +9,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
+import { PushNotificationProvider } from "./src/contexts/PushNotificationContext";
+import { RatingPromptProvider } from "./src/contexts/RatingPromptContext";
 import { BottomTabNavigator } from "./src/navigation/BottomTabNavigator";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { LoginScreen } from "./src/screens/auth/LoginScreen";
@@ -17,6 +19,7 @@ import { RegisterScreen } from "./src/screens/auth/RegisterScreen";
 import { COLORS } from "./src/theme/colors";
 import { fetchWorker } from "./src/lib/api";
 import type { WorkerProfile } from "./src/types";
+import { flushPendingNotificationTarget, navigationRef } from "./src/navigation/navigationRef";
 
 type AuthScreen = "login" | "register" | "forgotPassword";
 
@@ -67,11 +70,15 @@ function AppContent() {
 
   return (
     <NotificationProvider>
-      <NavigationContainer>
-        <BottomSheetModalProvider>
-          <BottomTabNavigator />
-        </BottomSheetModalProvider>
-      </NavigationContainer>
+      <PushNotificationProvider>
+        <RatingPromptProvider>
+          <NavigationContainer ref={navigationRef} onReady={flushPendingNotificationTarget}>
+            <BottomSheetModalProvider>
+              <BottomTabNavigator />
+            </BottomSheetModalProvider>
+          </NavigationContainer>
+        </RatingPromptProvider>
+      </PushNotificationProvider>
     </NotificationProvider>
   );
 }

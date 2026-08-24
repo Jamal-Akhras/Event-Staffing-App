@@ -34,3 +34,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("bookings")
+    if op.get_bind().dialect.name == "postgresql":
+        sa.Enum(BookingState, name="bookingstate").drop(op.get_bind(), checkfirst=True)

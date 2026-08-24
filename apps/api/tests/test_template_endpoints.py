@@ -69,9 +69,5 @@ def test_template_create_list_update_delete_round_trip():
 
 def test_default_template_dependency_uses_in_memory(monkeypatch):
     monkeypatch.setenv("USE_IN_MEMORY", "true")
-    repo_generator = get_template_repo()
-    repo = next(repo_generator)
-    try:
-        assert isinstance(repo, InMemoryTemplateRepository)
-    finally:
-        repo_generator.close()
+    repo = get_template_repo()
+    assert isinstance(repo, InMemoryTemplateRepository)

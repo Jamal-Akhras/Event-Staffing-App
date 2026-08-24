@@ -32,19 +32,15 @@ _CANCEL_STATES: Set[BookingState] = {
 
 
 def allowed_next_states(current: BookingState) -> Set[BookingState]:
-    if current == BookingState.PAID:
-        return set()
-
     next_states = {t.to_state for t in _ALLOWED_TRANSITIONS if t.from_state == current}
-    next_states.update(_CANCEL_STATES)
+    if current in {BookingState.REQUESTED, BookingState.CONFIRMED}:
+        next_states.update(_CANCEL_STATES)
     return next_states
 
 
 def is_valid_transition(current: BookingState, target: BookingState) -> bool:
-    if current == BookingState.PAID:
-        return False
     if target in _CANCEL_STATES:
-        return True
+        return current in {BookingState.REQUESTED, BookingState.CONFIRMED}
     return Transition(current, target) in _ALLOWED_TRANSITIONS
 
 

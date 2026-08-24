@@ -1,9 +1,10 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import { ToastProvider } from "./components/Toast";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { DashboardLayout } from "./layouts/DashboardLayout";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -15,6 +16,14 @@ import { SchedulePage } from "./pages/SchedulePage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { CookiesPage, PrivacyPage, TermsPage } from "./pages/LegalPage";
+import { PublicLayout } from "./pages/public/PublicLayout";
+import { HomePage } from "./pages/public/HomePage";
+import {
+  DownloadPage,
+  EmployerLandingPage,
+  SafetyPage,
+  WorkerLandingPage,
+} from "./pages/public/AudiencePages";
 
 export default function App() {
   return (
@@ -22,24 +31,45 @@ export default function App() {
       <ToastProvider>
         <AuthProvider>
           <Routes>
+            <Route element={<PublicLayout />}>
+              <Route index element={<HomePage />} />
+              <Route path="/for-workers" element={<WorkerLandingPage />} />
+              <Route path="/for-employers" element={<EmployerLandingPage />} />
+              <Route path="/download" element={<DownloadPage />} />
+              <Route path="/safety" element={<SafetyPage />} />
+            </Route>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ForgotPasswordPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/cookies" element={<CookiesPage />} />
             <Route element={<ProtectedRoute />}>
-              <Route element={<DashboardLayout />}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/shifts" element={<ShiftsPage />} />
-                <Route path="/templates" element={<TemplatesPage />} />
-                <Route path="/applications" element={<ApplicationsPage />} />
-                <Route path="/workers" element={<WorkersPage />} />
-                <Route path="/schedule" element={<SchedulePage />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/app" element={<DashboardLayout />}>
+                <Route index element={<DashboardPage />} />
+                <Route path="shifts" element={<ShiftsPage />} />
+                <Route path="templates" element={<TemplatesPage />} />
+                <Route path="applications" element={<ApplicationsPage />} />
+                <Route path="workers" element={<WorkersPage />} />
+                <Route path="schedule" element={<SchedulePage />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
+                <Route path="settings" element={<SettingsPage />} />
               </Route>
             </Route>
+            {[
+              "shifts",
+              "templates",
+              "applications",
+              "workers",
+              "schedule",
+              "analytics",
+              "settings",
+            ].map((route) => (
+              <Route key={route} path={`/${route}`} element={<Navigate to={`/app/${route}`} replace />} />
+            ))}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
       </ToastProvider>

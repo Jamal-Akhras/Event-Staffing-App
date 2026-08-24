@@ -10,9 +10,11 @@ import {
   View,
 } from "react-native";
 
+import { MarketPicker } from "../components/MarketPicker";
 import { useAuth } from "../contexts/AuthContext";
 import { putWorker } from "../lib/api";
 import { COLORS } from "../theme/colors";
+import type { Market } from "../types";
 
 type Props = { onComplete: () => void };
 
@@ -23,7 +25,7 @@ export function OnboardingScreen({ onComplete }: Props) {
   const [step, setStep] = useState(0);
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState("");
-  const [city, setCity] = useState("");
+  const [market, setMarket] = useState<Market | null>(null);
   const [experienceYears, setExperienceYears] = useState("0");
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
@@ -32,17 +34,22 @@ export function OnboardingScreen({ onComplete }: Props) {
   const workerId = user?.worker_profile_id ?? "";
 
   const canContinue = step === 0
-    ? displayName.trim().length > 0 && role.trim().length > 0 && city.trim().length > 0
+    ? displayName.trim().length > 0 && role.trim().length > 0 && market !== null
     : true;
 
   const save = async () => {
+    if (!market) {
+      setStep(0);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await putWorker(`/workers/${workerId}`, {
         display_name: displayName.trim(),
         role: role.trim(),
-        city: city.trim(),
+        city: market.name,
+        market_id: market.market_id,
         experience_years: Math.max(0, parseInt(experienceYears) || 0),
         bio: bio.trim() || null,
         languages: [],
@@ -94,13 +101,10 @@ export function OnboardingScreen({ onComplete }: Props) {
               </View>
             </Field>
 
-            <Field label="City" placeholder="e.g. London">
-              <TextInput
-                style={styles.input}
-                value={city}
-                onChangeText={setCity}
-                placeholder="e.g. London"
-                placeholderTextColor={COLORS.inkMuted}
+            <Field label="Your city">
+              <MarketPicker
+                selectedMarketId={market?.market_id ?? null}
+                onSelect={setMarket}
               />
             </Field>
           </View>

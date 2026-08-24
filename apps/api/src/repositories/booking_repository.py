@@ -42,3 +42,6 @@ class BookingRepository(Protocol):
 
     def list_by_state(self, state: BookingState) -> list[Booking]:
         raise NotImplementedError
+
+    def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Booking]:
+        raise NotImplementedError

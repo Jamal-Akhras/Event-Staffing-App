@@ -42,7 +42,7 @@ class SqlAlchemyUserRepository:
             model = UserModel(user_id=user.user_id)
             self._session.add(model)
         _apply_domain(model, user)
-        self._session.commit()
+        self._session.flush()
         return user
 
 
@@ -61,6 +61,9 @@ def _to_domain(model: UserModel) -> User:
         password_changed_at=getattr(model, "password_changed_at", None),
         email_verified=bool(getattr(model, "email_verified", False)),
         email_verification_token=getattr(model, "email_verification_token", None),
+        session_version=int(getattr(model, "session_version", 0)),
+        deactivated_at=getattr(model, "deactivated_at", None),
+        anonymized_at=getattr(model, "anonymized_at", None),
     )
 
 
@@ -80,3 +83,9 @@ def _apply_domain(model: UserModel, user: User) -> None:
         model.email_verified = user.email_verified
     if hasattr(model, "email_verification_token"):
         model.email_verification_token = user.email_verification_token
+    if hasattr(model, "session_version"):
+        model.session_version = user.session_version
+    if hasattr(model, "deactivated_at"):
+        model.deactivated_at = user.deactivated_at
+    if hasattr(model, "anonymized_at"):
+        model.anonymized_at = user.anonymized_at

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -59,7 +59,7 @@ def test_worker_feed_state_is_worker_owned():
 
 
 def _create_shift(client: TestClient) -> str:
-    now = datetime(2030, 1, 1, 9, 0, 0)
+    now = datetime(2030, 1, 1, 9, 0, 0, tzinfo=UTC)
     response = client.post(
         "/shifts",
         json={

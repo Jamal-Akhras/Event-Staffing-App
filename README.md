@@ -11,7 +11,7 @@ A reliability-first event staffing platform: venue managers post shifts, workers
 ## Architecture
 
 - **Hexagonal / ports and adapters.** Domain logic — the booking aggregate and shift state machine — is isolated behind repository ports. Adapters are swappable: in-memory for fast tests, SQLAlchemy over PostgreSQL for production.
-- **The fakes stay honest.** The CI backend job runs the full test suite twice: once against the in-memory repository and once against a live PostgreSQL service container with Alembic migrations applied. A fake repository is only safe if something continuously proves it equivalent to the real adapter.
+- **PostgreSQL is the source of truth.** CI runs lightweight tests against in-memory fakes and the complete endpoint, transaction, locking, and query suite against PostgreSQL with migrations applied from zero.
 - **Correct under concurrency.** Multi-worker shift capacity under concurrent approvals is handled with row locks inside a transaction, so a shift can never be oversubscribed by a race.
 - **Production guardrails.** Startup refuses to boot with a default or short JWT secret, or with dev-mode enabled outside a development environment.
 
@@ -22,8 +22,9 @@ A reliability-first event staffing platform: venue managers post shifts, workers
 - Shifts, applications, operator approvals, worker profiles, reliability scoring, and an automated no-show sweep.
 - Multi-worker shift capacity, notifications, ratings, messaging, and shift templates.
 - React web dashboard across seven pages (Dashboard, Shifts, Applications, Workers, Schedule, Analytics, Settings).
-- Expo mobile worker app with a browse feed, shifts and applications, and background polling.
-- Alembic migrations through 019, Docker Compose (api + worker + postgres), and Sentry observability.
+- Expo mobile worker app with a server-filtered, cursor-paginated browse feed, shifts and applications.
+- Normalized organisations, venues, and launch markets, beginning with Bath hospitality.
+- Alembic migrations through 022, Docker Compose (api + worker + postgres), and Sentry observability.
 
 ## Security
 
@@ -46,7 +47,7 @@ Database target:
 - Current development target: Docker-backed PostgreSQL.
 - Recommended production database: managed PostgreSQL.
 - Keep Alembic as the migration path and run migrations in CI against PostgreSQL before deploys.
-- Add explicit venue/account relationships before production instead of relying only on string `operator_id` ownership.
+- Keep organisation membership and venue-scoped ownership checks on every operator write path.
 - Consider PostGIS later if shift ranking starts using distance/geospatial queries.
 - See `docs/30-delivery/POSTGRES.md` for local database creation/reset commands.
 
@@ -57,7 +58,7 @@ Authentication:
 - Login via `/auth/login` returns a JWT token.
 - JWT tokens expire after 24 hours (configurable via `JWT_EXPIRATION_HOURS`).
 - Set `JWT_SECRET_KEY` environment variable in production (see `.env.example`).
-- Create operator accounts using: `python -m apps.api.scripts.create_operator <email> <password>`
+- Create operator accounts using: `python -m apps.api.scripts.create_operator <email> <password> <venue_name> <market_id>`
 - **CRITICAL**: Set `ENVIRONMENT=production`, `DEV_MODE=false`, and a non-default `JWT_SECRET_KEY` with at least 32 characters in production.
 
 Deploy:
@@ -83,7 +84,7 @@ CI:
 Migrations:
 - Alembic config lives in `apps/api/alembic.ini`.
 - Run migrations from the repo root: `python -m alembic -c apps/api/alembic.ini upgrade head`
-- Migrations currently run through 018, including accounts, currency, media fields, notifications, ratings, shift coordinates, and account notification preferences.
+- Migrations currently run through 022, including time/money integrity, organisation/venue separation, normalized markets, and the indexed worker-feed access path.
 
 Conda setup:
 - Create env: `conda env create -f environment.yml`
@@ -104,6 +105,12 @@ Running:
 - Mobile (Expo): from `apps/mobile` run `npm install` then `npx expo start`
 - Web API base URL: set `VITE_API_BASE` in `apps/web/.env` (local default: `http://127.0.0.1:8001`)
 - One-off no-show sweep job: from repo root run `python -m apps.api.src.jobs.run_no_show_sweep`
+
+Blank demo setup:
+- Set `DEMO_VENUE_EMAIL`, `DEMO_WORKER_EMAIL`, and `DEMO_ACCOUNT_PASSWORD` in the root `.env`.
+- Apply migrations with `python -m alembic -c apps/api/alembic.ini upgrade head`.
+- Run `python -m apps.api.scripts.prepare_demo_accounts`.
+- The command creates or refreshes the venue and worker logins without creating shifts, applications, messages, or bookings.
 
 API flows:
 - See `docs/api_flows.md` for web/mobile/backend flow diagram
@@ -132,5 +139,3 @@ Planned Mobile App Improvements:
 - See `docs/40-future/ui_restructure_plan.md` for full implementation plan
 
 See docs/ for authoritative specifications.
-
-

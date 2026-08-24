@@ -168,7 +168,7 @@ function LegalPage({ kind }: { kind: LegalKind }) {
     <main className="legal-page">
       <header className="legal-hero">
         <div className="legal-hero-nav">
-          <Link to="/login" className="legal-brand" aria-label="Back to Venue OS login">
+          <Link to="/" className="legal-brand" aria-label="Back to Venue OS home">
             <span className="legal-brand-mark">V</span>
             <span>Venue OS</span>
           </Link>

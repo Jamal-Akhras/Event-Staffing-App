@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -19,7 +19,7 @@ def _client() -> TestClient:
 
 def test_shift_create_and_list():
     client = _client()
-    now = datetime(2030, 1, 1, 9, 0, 0)
+    now = datetime(2030, 1, 1, 9, 0, 0, tzinfo=UTC)
     start = now + timedelta(hours=2)
     end = start + timedelta(hours=4)
 
@@ -52,3 +52,56 @@ def test_shift_create_and_list():
         headers=OTHER_OPERATOR_HEADERS,
     )
     assert other_operator_get.status_code == 403
+
+
+def test_shift_create_rejects_timezone_less_timestamps():
+    client = _client()
+    response = client.post(
+        "/shifts",
+        json={
+            "role": "server",
+            "location": "Downtown",
+            "start_time": "2030-01-01T11:00:00",
+            "end_time": "2030-01-01T15:00:00",
+            "pay_rate": 25,
+        },
+        headers=OPERATOR_HEADERS,
+    )
+
+    assert response.status_code == 422
+
+
+def test_shift_create_normalizes_offset_timestamps_to_utc():
+    client = _client()
+    response = client.post(
+        "/shifts",
+        json={
+            "role": "server",
+            "location": "Downtown",
+            "start_time": "2030-06-01T11:00:00+01:00",
+            "end_time": "2030-06-01T15:00:00+01:00",
+            "pay_rate": 25,
+        },
+        headers=OPERATOR_HEADERS,
+    )
+
+    assert response.status_code == 200
+    start_time = datetime.fromisoformat(response.json()["start_time"].replace("Z", "+00:00"))
+    assert start_time == datetime(2030, 6, 1, 10, 0, tzinfo=UTC)
+
+
+def test_shift_create_rejects_fractional_pennies():
+    client = _client()
+    response = client.post(
+        "/shifts",
+        json={
+            "role": "server",
+            "location": "Downtown",
+            "start_time": "2030-01-01T11:00:00Z",
+            "end_time": "2030-01-01T15:00:00Z",
+            "pay_rate": 25.001,
+        },
+        headers=OPERATOR_HEADERS,
+    )
+
+    assert response.status_code == 422

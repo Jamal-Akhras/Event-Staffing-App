@@ -92,6 +92,9 @@ class InMemoryApplicationRepository:
                 return application
         return None
 
+    def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Application]:
+        return self._list(10_000, shift_id=shift_id)
+
     def clear(self) -> None:
         self._applications.clear()
 

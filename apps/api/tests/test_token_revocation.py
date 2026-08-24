@@ -78,3 +78,51 @@ def test_logout_revokes_token():
 def test_logout_requires_token():
     response = client.post("/auth/logout")
     assert response.status_code == 401
+
+
+def test_logout_all_revokes_every_session():
+    register = client.post(
+        "/auth/register",
+        json={"email": "logout-all@example.com", "password": "password123"},
+    )
+    token = register.json()["access_token"]
+
+    response = client.post(
+        "/auth/logout-all",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    session = client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    assert session.status_code == 401
+
+
+def test_account_deletion_anonymizes_user_and_revokes_session(user_repo):
+    register = client.post(
+        "/auth/register",
+        json={"email": "delete-me@example.com", "password": "password123"},
+    )
+    token = register.json()["access_token"]
+    user_id = register.json()["user_id"]
+
+    response = client.request(
+        "DELETE",
+        "/auth/account",
+        json={"password": "password123", "confirmation": "DELETE"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    session = client.get(
+        "/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert session.status_code == 401
+    deleted = user_repo.get(user_id)
+    assert deleted is not None
+    assert deleted.is_active is False
+    assert deleted.email == f"deleted+{user_id}@deleted.invalid"
+    assert user_repo.get_by_email("delete-me@example.com") is None

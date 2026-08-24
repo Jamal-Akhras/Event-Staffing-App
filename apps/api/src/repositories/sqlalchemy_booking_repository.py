@@ -24,7 +24,7 @@ class SqlAlchemyBookingRepository:
             model = BookingModel(booking_id=booking.booking_id)
             self._session.add(model)
         _apply_domain(model, booking)
-        self._session.commit()
+        self._session.flush()
         return booking
 
     def list_recent(self, limit: int = 25) -> list[Booking]:
@@ -69,6 +69,12 @@ class SqlAlchemyBookingRepository:
         )
         return [_to_domain(row) for row in rows]
 
+    def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Booking]:
+        query = self._session.query(BookingModel).filter(BookingModel.shift_id == shift_id)
+        if for_update:
+            query = query.with_for_update()
+        return [_to_domain(row) for row in query.all()]
+
     def _list(
         self,
         limit: int | None,
@@ -107,7 +113,12 @@ def _to_domain(model: BookingModel) -> Booking:
         approved_at=model.approved_at,
         paid_at=model.paid_at,
         cancelled_at=model.cancelled_at,
+        cancellation_reason=getattr(model, "cancellation_reason", None),
+        cancelled_by_user_id=getattr(model, "cancelled_by_user_id", None),
         no_show_at=model.no_show_at,
+        payment_method=getattr(model, "payment_method", None),
+        payment_reference=getattr(model, "payment_reference", None),
+        payment_recorded_by_user_id=getattr(model, "payment_recorded_by_user_id", None),
     )
 
 
@@ -125,4 +136,9 @@ def _apply_domain(model: BookingModel, booking: Booking) -> None:
     model.approved_at = booking.approved_at
     model.paid_at = booking.paid_at
     model.cancelled_at = booking.cancelled_at
+    model.cancellation_reason = booking.cancellation_reason
+    model.cancelled_by_user_id = booking.cancelled_by_user_id
     model.no_show_at = booking.no_show_at
+    model.payment_method = booking.payment_method
+    model.payment_reference = booking.payment_reference
+    model.payment_recorded_by_user_id = booking.payment_recorded_by_user_id

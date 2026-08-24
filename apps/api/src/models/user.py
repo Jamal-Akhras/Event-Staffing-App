@@ -20,3 +20,6 @@ class User:
     password_changed_at: datetime | None = None
     email_verified: bool = False
     email_verification_token: str | None = None
+    session_version: int = 0
+    deactivated_at: datetime | None = None
+    anonymized_at: datetime | None = None

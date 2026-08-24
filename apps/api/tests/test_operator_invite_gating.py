@@ -5,9 +5,10 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from apps.api.src.deps import get_account_repo, get_user_repo
+from apps.api.src.deps import get_account_repo, get_organisation_repo, get_user_repo
 from apps.api.src.main import app
 from apps.api.src.repositories.in_memory_account_repository import InMemoryAccountRepository
+from apps.api.src.repositories.in_memory_organisation_repository import InMemoryOrganisationRepository
 from apps.api.src.repositories.in_memory_user_repository import InMemoryUserRepository
 
 client = TestClient(app)
@@ -25,8 +26,10 @@ def configure_invite_codes(monkeypatch):
 def override_repos():
     user_repo = InMemoryUserRepository()
     account_repo = InMemoryAccountRepository()
+    organisation_repo = InMemoryOrganisationRepository(account_repo)
     app.dependency_overrides[get_user_repo] = lambda: user_repo
     app.dependency_overrides[get_account_repo] = lambda: account_repo
+    app.dependency_overrides[get_organisation_repo] = lambda: organisation_repo
     yield
     app.dependency_overrides.clear()
     user_repo.clear()
@@ -38,6 +41,7 @@ def _payload(invite_code: str | None) -> dict:
         "password": "password123",
         "venue_name": "Test Venue",
         "country": "GB",
+        "market_id": "bath-gb",
     }
     if invite_code is not None:
         body["invite_code"] = invite_code

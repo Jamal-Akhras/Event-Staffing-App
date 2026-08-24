@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import BookingModel, ShiftModel, WorkerProfileModel
+from apps.api.src.money import money
 from apps.api.src.models.worker_profile import WorkerProfile
 from packages.domain.src.booking_state import BookingState
 
@@ -23,7 +24,7 @@ class SqlAlchemyWorkerProfileRepository:
             model = WorkerProfileModel(worker_id=profile.worker_id)
             self._session.add(model)
         _apply_domain(model, profile)
-        self._session.commit()
+        self._session.flush()
         return profile
 
     def list_all(self) -> list[WorkerProfile]:
@@ -66,11 +67,12 @@ def _to_domain(model: WorkerProfileModel) -> WorkerProfile:
         phone=model.phone,
         address=model.address,
         emergency_contact=model.emergency_contact,
-        pay_rate=model.pay_rate,
+        pay_rate=money(model.pay_rate) if model.pay_rate is not None else None,
         notes=model.notes,
         updated_at=model.updated_at,
         avatar_url=getattr(model, "avatar_url", None),
         allow_venue_recontact=bool(getattr(model, "allow_venue_recontact", False)),
+        market_id=model.market_id,
     )
 
 
@@ -87,8 +89,9 @@ def _apply_domain(model: WorkerProfileModel, profile: WorkerProfile) -> None:
     model.phone = profile.phone
     model.address = profile.address
     model.emergency_contact = profile.emergency_contact
-    model.pay_rate = profile.pay_rate
+    model.pay_rate = money(profile.pay_rate) if profile.pay_rate is not None else None
     model.notes = profile.notes
     model.updated_at = profile.updated_at
     model.avatar_url = profile.avatar_url
     model.allow_venue_recontact = profile.allow_venue_recontact
+    model.market_id = profile.market_id

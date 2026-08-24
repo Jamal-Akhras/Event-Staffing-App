@@ -1,25 +1,17 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Application, ApplicationReviewCard, MessageHistory, ShiftSummary, WorkerProfile } from "../components/ApplicationReviewCard";
+import { CancellationModal } from "../components/CancellationModal";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorCard } from "../components/ErrorCard";
 import { MessageThread } from "../components/MessageThread";
 import { SkeletonCard } from "../components/SkeletonCard";
 import { useToast } from "../components/Toast";
 import { WorkerProfilePanel } from "../components/WorkerProfilePanel";
-import { RatingModal } from "./workers/RatingModal";
+import type { Booking } from "../types/operations";
+import { CompletedShiftsPanel, type CompletedShift } from "./applications/CompletedShiftsPanel";
 
 import { fetchJson, postJson } from "../lib/api";
 import "./ApplicationsPage.css";
-
-type CompletedShift = {
-  booking_id: string;
-  shift_id: string;
-  worker_id: string;
-  start_time: string;
-  role: string;
-  location: string;
-  operator_rating: number | null;
-};
 
 export function ApplicationsPage() {
   const { toast } = useToast();
@@ -31,21 +23,24 @@ export function ApplicationsPage() {
   const [messagingApplication, setMessagingApplication] = useState<Application | null>(null);
   const [messageHistory, setMessageHistory] = useState<Record<string, MessageHistory[]>>({});
   const [completedShifts, setCompletedShifts] = useState<CompletedShift[]>([]);
-  const [ratingTarget, setRatingTarget] = useState<CompletedShift | null>(null);
+  const [bookingsById, setBookingsById] = useState<Record<string, Booking>>({});
+  const [cancellationTarget, setCancellationTarget] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadApplications = async () => {
     setLoading(true);
     try {
-      const [data, completed] = await Promise.all([
+      const [data, completed, bookings] = await Promise.all([
         fetchJson<Application[]>("/applications"),
         fetchJson<CompletedShift[]>("/accounts/me/completed-shifts").catch(() => [] as CompletedShift[]),
+        fetchJson<Booking[]>("/bookings"),
       ]);
       const [shiftMap, workerMap] = await Promise.all([loadShifts(data), loadWorkers(data)]);
       setApplications(data);
       setShiftsById(shiftMap);
       setWorkersById(workerMap);
       setCompletedShifts(completed);
+      setBookingsById(Object.fromEntries(bookings.map((booking) => [booking.booking_id, booking])));
       setLoadError(null);
     } catch (err) {
       toast({ type: "error", message: (err as Error).message });
@@ -136,55 +131,32 @@ export function ApplicationsPage() {
           {decidedApplications.map((item) => renderApplicationCard(item, false))}
         </ApplicationColumn>
 
-        {completedShifts.length > 0 && (
-          <ApplicationColumn
-            title="Completed Shifts"
-            count={completedShifts.length}
-            emptyTitle=""
-            emptyMessage=""
-          >
-            {completedShifts.map((shift) => (
-              <div key={shift.booking_id} className="application-card" style={{ display: "grid", gap: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <p className="booking-id" style={{ margin: 0 }}>{shift.role}</p>
-                    <p className="booking-meta" style={{ margin: "2px 0 0" }}>{shift.location}</p>
-                    <p className="booking-meta">{new Date(shift.start_time).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</p>
-                  </div>
-                  {shift.operator_rating !== null ? (
-                    <span style={{ color: "#F59E0B", fontWeight: 800, fontSize: "1.1rem" }}>
-                      {"★".repeat(shift.operator_rating)}{"☆".repeat(5 - shift.operator_rating)}
-                    </span>
-                  ) : (
-                    <button
-                      className="btn secondary"
-                      style={{ fontSize: "0.82rem", padding: "6px 12px" }}
-                      type="button"
-                      onClick={() => setRatingTarget(shift)}
-                    >
-                      Rate worker
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </ApplicationColumn>
-        )}
+        <CompletedShiftsPanel
+          shifts={completedShifts}
+          workersById={workersById}
+          onRated={loadApplications}
+        />
       </div>}
 
       {selectedProfile && <WorkerProfilePanel profile={selectedProfile} onClose={() => setSelectedProfile(null)} />}
 
       {messagingApplication && <MessageModal application={messagingApplication} onClose={() => setMessagingApplication(null)} />}
 
-      {ratingTarget && (
-        <RatingModal
-          bookingId={ratingTarget.booking_id}
-          workerName={workersById[ratingTarget.worker_id]?.display_name ?? ratingTarget.worker_id}
-          shiftRole={ratingTarget.role}
-          shiftLocation={ratingTarget.location}
-          shiftDate={new Date(ratingTarget.start_time).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
-          onDone={() => { setRatingTarget(null); loadApplications(); }}
-          onClose={() => setRatingTarget(null)}
+      {cancellationTarget?.booking_id && (
+        <CancellationModal
+          title={`Cancel ${workersById[cancellationTarget.worker_id]?.display_name ?? "worker"}'s booking?`}
+          consequence="The worker will be removed from this shift, the seat will reopen, and they will receive your reason."
+          confirmLabel="Cancel booking"
+          onClose={() => setCancellationTarget(null)}
+          onConfirm={async (reason) => {
+            await postJson(`/bookings/${cancellationTarget.booking_id}/cancel/operator`, {
+              reason,
+              now: new Date().toISOString(),
+            });
+            setCancellationTarget(null);
+            await loadApplications();
+            toast({ type: "success", message: "Booking cancelled and worker notified." });
+          }}
         />
       )}
     </div>
@@ -204,6 +176,8 @@ export function ApplicationsPage() {
         onMessage={() => setMessagingApplication(item)}
         onViewProfile={() => setSelectedProfile(workersById[item.worker_id])}
         onToggleHistory={() => loadMessageHistory(item.application_id)}
+        bookingState={item.booking_id ? bookingsById[item.booking_id]?.state : undefined}
+        onCancelBooking={item.booking_id ? () => setCancellationTarget(item) : undefined}
       />
     );
   }

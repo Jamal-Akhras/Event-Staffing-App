@@ -22,6 +22,10 @@ class SqlAlchemyAccountRepository(AccountRepository):
             row = AccountModel()
             self._session.add(row)
         row.account_id = account.account_id
+        if account.organisation_id is None:
+            raise ValueError("A venue must belong to an organisation.")
+        row.organisation_id = account.organisation_id
+        row.market_id = account.market_id
         row.name = account.name
         row.country = account.country
         row.currency = account.currency
@@ -33,7 +37,7 @@ class SqlAlchemyAccountRepository(AccountRepository):
         row.avatar_url = account.avatar_url
         row.photos = list(account.photos)
         row.notification_preferences = dict(account.notification_preferences)
-        self._session.commit()
+        self._session.flush()
         return _to_domain(row)
 
 
@@ -51,4 +55,6 @@ def _to_domain(row: AccountModel) -> Account:
         avatar_url=getattr(row, "avatar_url", None),
         photos=list(getattr(row, "photos", None) or []),
         notification_preferences=normalize_notification_preferences(getattr(row, "notification_preferences", None)),
+        organisation_id=row.organisation_id,
+        market_id=row.market_id,
     )

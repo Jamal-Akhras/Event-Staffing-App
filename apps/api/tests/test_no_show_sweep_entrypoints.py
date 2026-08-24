@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
@@ -71,7 +71,7 @@ def test_scheduler_run_no_show_sweep_end_to_end(monkeypatch):
     )
     from apps.api.src.db import database
 
-    booking_repo, worker_repo, shift_repo = _seed_confirmed_no_show(datetime.utcnow())
+    booking_repo, worker_repo, shift_repo = _seed_confirmed_no_show(datetime.now(UTC))
 
     monkeypatch.setattr(database, "SessionLocal", lambda: _DummySession())
     monkeypatch.setattr(
@@ -96,7 +96,7 @@ def test_scheduler_run_no_show_sweep_end_to_end(monkeypatch):
 def test_job_run_no_show_sweep_end_to_end(monkeypatch):
     from apps.api.src.jobs import run_no_show_sweep as job
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     booking_repo, worker_repo, shift_repo = _seed_confirmed_no_show(now)
 
     monkeypatch.setattr(job, "SessionLocal", lambda: _DummySession())

@@ -8,12 +8,6 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 _CHUNK_SIZE = 64 * 1024
 
-_MAGIC_PREFIXES: tuple[bytes, ...] = (
-    b"\xff\xd8\xff",  # JPEG
-    b"\x89PNG\r\n\x1a\n",  # PNG
-    b"RIFF",  # WEBP container (RIFF....WEBP)
-)
-
 
 def validate_extension(filename: str | None) -> str:
     ext = Path(filename or "").suffix.lower()
@@ -35,15 +29,26 @@ async def read_capped_image(file: UploadFile) -> bytes:
         chunks.append(chunk)
 
     data = b"".join(chunks)
-    _validate_image_magic_bytes(data)
+    image_content_type(data, validate_extension(file.filename))
     return data
 
 
-def _validate_image_magic_bytes(data: bytes) -> None:
+def image_content_type(data: bytes, extension: str) -> str:
     if data.startswith(b"RIFF"):
         if len(data) >= 12 and data[8:12] == b"WEBP":
-            return
+            detected_extension = ".webp"
+            content_type = "image/webp"
+        else:
+            raise HTTPException(400, "File content is not a valid image.")
+    elif data.startswith(b"\xff\xd8\xff"):
+        detected_extension = ".jpg"
+        content_type = "image/jpeg"
+    elif data.startswith(b"\x89PNG\r\n\x1a\n"):
+        detected_extension = ".png"
+        content_type = "image/png"
+    else:
         raise HTTPException(400, "File content is not a valid image.")
-    if any(data.startswith(prefix) for prefix in _MAGIC_PREFIXES):
-        return
-    raise HTTPException(400, "File content is not a valid image.")
+    normalized_extension = ".jpg" if extension == ".jpeg" else extension
+    if normalized_extension != detected_extension:
+        raise HTTPException(400, "File extension does not match the image content.")
+    return content_type

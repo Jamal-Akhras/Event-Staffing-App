@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 
 
 @dataclass(frozen=True)
@@ -19,8 +20,9 @@ class WorkerProfile:
     phone: str | None
     address: str | None
     emergency_contact: str | None
-    pay_rate: float | None
+    pay_rate: Decimal | None
     notes: str | None
     updated_at: datetime
     avatar_url: str | None = None
     allow_venue_recontact: bool = False
+    market_id: str | None = None

@@ -23,6 +23,7 @@ def init_sentry() -> None:
     sentry_sdk.init(
         dsn=dsn,
         environment=get_environment(),
+        release=get_env("SENTRY_RELEASE", "") or None,
         integrations=[FastApiIntegration(), SqlalchemyIntegration()],
         traces_sample_rate=float(get_env("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
         send_default_pii=False,

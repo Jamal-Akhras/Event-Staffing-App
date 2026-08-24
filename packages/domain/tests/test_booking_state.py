@@ -25,19 +25,22 @@ def test_no_show_only_from_confirmed():
     assert BookingState.NO_SHOW not in allowed_next_states(BookingState.REQUESTED)
 
 
-def test_cancel_is_allowed_from_non_terminal_states():
+def test_cancel_is_allowed_only_before_work_starts():
+    for state in [BookingState.REQUESTED, BookingState.CONFIRMED]:
+        assert BookingState.CANCELLED_BY_WORKER in allowed_next_states(state)
+        assert BookingState.CANCELLED_BY_OPERATOR in allowed_next_states(state)
+
     for state in [
-        BookingState.REQUESTED,
-        BookingState.CONFIRMED,
         BookingState.CHECKED_IN,
         BookingState.CHECKED_OUT,
         BookingState.APPROVED,
+        BookingState.PAID,
         BookingState.NO_SHOW,
         BookingState.CANCELLED_BY_WORKER,
         BookingState.CANCELLED_BY_OPERATOR,
     ]:
-        assert BookingState.CANCELLED_BY_WORKER in allowed_next_states(state)
-        assert BookingState.CANCELLED_BY_OPERATOR in allowed_next_states(state)
+        assert BookingState.CANCELLED_BY_WORKER not in allowed_next_states(state)
+        assert BookingState.CANCELLED_BY_OPERATOR not in allowed_next_states(state)
 
 
 def test_cancel_not_allowed_from_paid():

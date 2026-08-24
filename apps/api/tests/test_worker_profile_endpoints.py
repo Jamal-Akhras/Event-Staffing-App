@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
@@ -21,7 +21,7 @@ def _client() -> TestClient:
 
 def test_worker_profile_update_and_public_view():
     client = _client()
-    now = datetime(2030, 1, 1, 9, 0, 0)
+    now = datetime(2030, 1, 1, 9, 0, 0, tzinfo=UTC)
     payload = {
         "display_name": "Alex",
         "role": "server",

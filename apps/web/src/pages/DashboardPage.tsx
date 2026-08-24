@@ -153,7 +153,7 @@ function getDashboardAlert(pendingReviews: number, openSeats: number) {
     return {
       title: `${pendingReviews} pending applications`,
       note: `${openSeats} open seats across active shifts. Review workers before the next service window.`,
-      to: "/applications",
+      to: "/app/applications",
       action: "Review now",
     };
   }
@@ -162,7 +162,7 @@ function getDashboardAlert(pendingReviews: number, openSeats: number) {
     return {
       title: `${openSeats} open seats`,
       note: "Coverage is still incomplete across active shifts.",
-      to: "/schedule",
+      to: "/app/schedule",
       action: "View schedule",
     };
   }
@@ -170,7 +170,7 @@ function getDashboardAlert(pendingReviews: number, openSeats: number) {
   return {
     title: "No urgent staffing actions",
     note: "Coverage and application queues are clear right now.",
-    to: "/shifts",
+    to: "/app/shifts",
     action: "Post shift",
   };
 }
@@ -186,15 +186,15 @@ function QuickActions() {
       </div>
 
       <div className="quick-action-list">
-        <Link to="/shifts">
+        <Link to="/app/shifts">
           <strong>Post coverage</strong>
           <p>Create a shift or refresh open staffing needs.</p>
         </Link>
-        <Link to="/templates">
+        <Link to="/app/templates">
           <strong>Use a template</strong>
           <p>Generate repeatable shifts without retyping details.</p>
         </Link>
-        <Link to="/applications">
+        <Link to="/app/applications">
           <strong>Review applicants</strong>
           <p>Compare reliability, fit, and application history.</p>
         </Link>

@@ -29,6 +29,9 @@ class InMemoryUserRepository:
 
     def save(self, user: User) -> User:
         """Save a user (create or update)."""
+        previous = self._users.get(user.user_id)
+        if previous is not None and previous.email.lower() != user.email.lower():
+            self._users_by_email.pop(previous.email.lower(), None)
         self._users[user.user_id] = user
         self._users_by_email[user.email.lower()] = user
         return user

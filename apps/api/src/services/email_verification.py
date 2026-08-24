@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import secrets
 
-from apps.api.src.config import get_env
+from apps.api.src.config import get_web_base_url
 from apps.api.src.services.email import Email, EmailTransport
 
 
@@ -19,11 +19,15 @@ def generate_verification_token() -> str:
 
 
 def _verification_link(token: str) -> str:
-    base = get_env("WEB_BASE_URL", "http://localhost:5173").rstrip("/")
+    base = get_web_base_url()
     return f"{base}/verify-email?token={token}"
 
 
 def send_verification_email(transport: EmailTransport, to_address: str, token: str) -> None:
+    transport.send(build_verification_email(to_address, token))
+
+
+def build_verification_email(to_address: str, token: str) -> Email:
     link = _verification_link(token)
     body = (
         "Welcome to the Event Staffing Platform.\n\n"
@@ -32,10 +36,8 @@ def send_verification_email(transport: EmailTransport, to_address: str, token: s
         f"If the link does not work, use this verification token directly: {token}\n\n"
         "If you did not create this account you can ignore this message."
     )
-    transport.send(
-        Email(
-            to_address=to_address,
-            subject="Verify your email address",
-            body=body,
-        )
+    return Email(
+        to_address=to_address,
+        subject="Verify your email address",
+        body=body,
     )

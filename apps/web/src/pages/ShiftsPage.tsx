@@ -6,42 +6,22 @@ import { SkeletonCard } from "../components/SkeletonCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { useToast } from "../components/Toast";
 import { formatMoney } from "../lib/format";
-
-type Shift = {
-  shift_id: string;
-  role: string;
-  location: string;
-  start_time: string;
-  end_time: string;
-  pay_rate: number;
-  notes?: string | null;
-  status: string;
-  workers_needed: number;
-  workers_filled: number;
-  currency?: string;
-};
-
-import { API_BASE, getAuthHeaders } from "../lib/api";
+import { fetchJson } from "../lib/api";
+import type { Shift } from "../types/operations";
+import { ShiftManagementModal } from "./shifts/ShiftManagementModal";
 import "./ShiftsPage.css";
-
-const resolvedApiBase = API_BASE;
 
 export function ShiftsPage() {
   const { toast } = useToast();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
 
   const loadShifts = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${resolvedApiBase}/shifts`, {
-        headers: getAuthHeaders(),
-      });
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-      setShifts(await response.json());
+      setShifts(await fetchJson<Shift[]>("/shifts"));
       setLoadError(null);
     } catch (err) {
       toast({ type: "error", message: (err as Error).message });
@@ -62,6 +42,10 @@ export function ShiftsPage() {
   );
   const filledShifts = useMemo(
     () => shifts.filter((shift) => shift.status === "filled"),
+    [shifts]
+  );
+  const inactiveShifts = useMemo(
+    () => shifts.filter((shift) => shift.status === "closed" || shift.status === "cancelled"),
     [shifts]
   );
   const initialLoading = loading && shifts.length === 0 && !loadError;
@@ -94,11 +78,26 @@ export function ShiftsPage() {
             if (message) toast({ type: "error", message });
           }}
         />
-        <ShiftColumn title="Open Shifts" shifts={openShifts} emptyStatus="open" />
+        <ShiftColumn title="Open Shifts" shifts={openShifts} emptyStatus="open" onManage={setSelectedShift} />
         {filledShifts.length > 0 && (
-          <ShiftColumn title="Filled Shifts" shifts={filledShifts} emptyStatus="filled" />
+          <ShiftColumn title="Filled Shifts" shifts={filledShifts} emptyStatus="filled" onManage={setSelectedShift} />
+        )}
+        {inactiveShifts.length > 0 && (
+          <ShiftColumn title="Closed & Cancelled" shifts={inactiveShifts} emptyStatus="inactive" onManage={setSelectedShift} />
         )}
       </div>}
+
+      {selectedShift && (
+        <ShiftManagementModal
+          shift={selectedShift}
+          onClose={() => setSelectedShift(null)}
+          onSaved={async (message) => {
+            setSelectedShift(null);
+            await loadShifts();
+            toast({ type: "success", message });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -107,10 +106,12 @@ function ShiftColumn({
   title,
   shifts,
   emptyStatus,
+  onManage,
 }: {
   title: string;
   shifts: Shift[];
-  emptyStatus: "open" | "filled";
+  emptyStatus: "open" | "filled" | "inactive";
+  onManage: (shift: Shift) => void;
 }) {
   return (
     <div className="panel card">
@@ -126,7 +127,7 @@ function ShiftColumn({
       ) : (
         <div className="recent-list">
           {shifts.map((shift) => (
-            <ShiftCard key={shift.shift_id} shift={shift} />
+            <ShiftCard key={shift.shift_id} shift={shift} onManage={() => onManage(shift)} />
           ))}
         </div>
       )}
@@ -134,7 +135,7 @@ function ShiftColumn({
   );
 }
 
-function ShiftCard({ shift }: { shift: Shift }) {
+function ShiftCard({ shift, onManage }: { shift: Shift; onManage: () => void }) {
   const remaining = Math.max(shift.workers_needed - shift.workers_filled, 0);
 
   return (
@@ -159,6 +160,12 @@ function ShiftCard({ shift }: { shift: Shift }) {
             {shift.notes}
           </p>
         )}
+        {shift.cancellation_reason && (
+          <p className="booking-meta shift-cancellation-reason">Reason: {shift.cancellation_reason}</p>
+        )}
+        <button className="btn ghost compact shift-manage-button" type="button" onClick={onManage}>
+          {shift.status === "open" || shift.status === "filled" ? "Manage shift" : "View record"}
+        </button>
       </div>
     </div>
   );

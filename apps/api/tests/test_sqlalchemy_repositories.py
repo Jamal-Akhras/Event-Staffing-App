@@ -1,11 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from apps.api.src.db.database import Base
-from apps.api.src.db import models
 from apps.api.src.db.models import BookingModel, ShiftModel
 from apps.api.src.models.application import Application
 from apps.api.src.models.shift import Shift
@@ -23,17 +19,10 @@ from apps.api.src.repositories.sqlalchemy_worker_profile_repository import (
 )
 
 
-def _session():
-    engine = create_engine("sqlite+pysqlite:///:memory:", future=True)
-    models  # ensure models are registered
-    Base.metadata.create_all(engine)
-    return sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)()
-
-
-def test_sqlalchemy_shift_repository_round_trip():
-    session = _session()
+def test_sqlalchemy_shift_repository_round_trip(repo_session):
+    session = repo_session
     repo = SqlAlchemyShiftRepository(session)
-    now = datetime(2030, 1, 1, 9, 0, 0)
+    now = datetime(2030, 1, 1, 9, 0, 0, tzinfo=UTC)
     shift = Shift(
         shift_id="shift-1",
         operator_id="operator-1",
@@ -45,6 +34,7 @@ def test_sqlalchemy_shift_repository_round_trip():
         notes="Bring black shirt",
         status="open",
         created_at=now,
+        updated_at=now,
         workers_needed=1,
         workers_filled=0,
     )
@@ -54,11 +44,11 @@ def test_sqlalchemy_shift_repository_round_trip():
     assert loaded == shift
 
 
-def test_sqlalchemy_application_repository_round_trip():
-    session = _session()
+def test_sqlalchemy_application_repository_round_trip(repo_session):
+    session = repo_session
     repo = SqlAlchemyApplicationRepository(session)
     shift_repo = SqlAlchemyShiftRepository(session)
-    now = datetime(2030, 1, 1, 10, 0, 0)
+    now = datetime(2030, 1, 1, 10, 0, 0, tzinfo=UTC)
     shift_repo.save(
         Shift(
             shift_id="shift-1",
@@ -93,10 +83,10 @@ def test_sqlalchemy_application_repository_round_trip():
     assert loaded == application
 
 
-def test_sqlalchemy_worker_profile_repository_round_trip():
-    session = _session()
+def test_sqlalchemy_worker_profile_repository_round_trip(repo_session):
+    session = repo_session
     repo = SqlAlchemyWorkerProfileRepository(session)
-    now = datetime(2030, 1, 1, 8, 0, 0)
+    now = datetime(2030, 1, 1, 8, 0, 0, tzinfo=UTC)
     profile = WorkerProfile(
         worker_id="worker-1",
         display_name="Alex Worker",
@@ -121,11 +111,11 @@ def test_sqlalchemy_worker_profile_repository_round_trip():
     assert loaded == profile
 
 
-def test_sqlalchemy_application_repository_rejects_duplicate_worker_shift():
-    session = _session()
+def test_sqlalchemy_application_repository_rejects_duplicate_worker_shift(repo_session):
+    session = repo_session
     shift_repo = SqlAlchemyShiftRepository(session)
     repo = SqlAlchemyApplicationRepository(session)
-    now = datetime(2030, 1, 1, 10, 0, 0)
+    now = datetime(2030, 1, 1, 10, 0, 0, tzinfo=UTC)
     shift_repo.save(_shift("shift-1", now, workers_needed=2))
     repo.save(_application("app-1", "worker-1", now))
 
@@ -133,12 +123,12 @@ def test_sqlalchemy_application_repository_rejects_duplicate_worker_shift():
         repo.save(_application("app-2", "worker-1", now))
 
 
-def test_sqlalchemy_application_decision_approve_is_single_write_path():
-    session = _session()
+def test_sqlalchemy_application_decision_approve_is_single_write_path(repo_session):
+    session = repo_session
     shift_repo = SqlAlchemyShiftRepository(session)
     application_repo = SqlAlchemyApplicationRepository(session)
     decision_repo = SqlAlchemyApplicationDecisionRepository(session)
-    now = datetime(2030, 1, 1, 10, 0, 0)
+    now = datetime(2030, 1, 1, 10, 0, 0, tzinfo=UTC)
     shift_repo.save(_shift("shift-1", now))
     application_repo.save(_application("app-1", "worker-1", now))
 

@@ -9,21 +9,10 @@ export const FILTERS: { key: ShiftFilter; label: string }[] = [
   { key: "highPay", label: "High pay" },
 ];
 
-export function filterShifts(shifts: Shift[], filter: ShiftFilter, query: string) {
-  const normalizedQuery = query.trim().toLowerCase();
-  return shifts.filter((shift) => {
-    const start = new Date(shift.start_time);
-    const searchable = `${shift.role} ${shift.location}`.toLowerCase();
-    if (normalizedQuery && !searchable.includes(normalizedQuery)) return false;
-    if (filter === "today") return start.toDateString() === new Date().toDateString();
-    if (filter === "weekend") return start.getDay() === 0 || start.getDay() === 6;
-    if (filter === "highPay") return shift.pay_rate >= 30;
-    return true;
-  });
-}
+const DEFAULT_HIGH_PAY_THRESHOLD = 30;
 
-export function rankShiftsForFeed(shifts: Shift[]) {
-  return [...shifts].sort((left, right) => getShiftScore(right) - getShiftScore(left));
+export function payRateValue(shift: Shift): number {
+  return Number(shift.pay_rate);
 }
 
 export function getShiftStats(shift: Shift) {
@@ -33,7 +22,7 @@ export function getShiftStats(shift: Shift) {
     Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60)),
     0
   );
-  const totalPay = shift.pay_rate * durationHours;
+  const totalPay = payRateValue(shift) * durationHours;
   const filled = shift.workers_filled ?? 0;
   const needed = shift.workers_needed ?? 1;
   const remaining = Math.max(needed - filled, 0);
@@ -41,11 +30,12 @@ export function getShiftStats(shift: Shift) {
   return { capacityPct, durationHours, filled, needed, remaining, totalPay };
 }
 
-export function getShiftTags(shift: Shift) {
+export function getShiftTags(shift: Shift, highPayThreshold?: number | null) {
   const startDate = new Date(shift.start_time);
   const daysUntilShift = getDaysUntil(startDate);
+  const threshold = highPayThreshold ?? DEFAULT_HIGH_PAY_THRESHOLD;
   const tags: string[] = [];
-  if (shift.pay_rate >= 30) tags.push("High pay");
+  if (payRateValue(shift) >= threshold) tags.push("High pay");
   if (startDate.getDay() === 0 || startDate.getDay() === 6) tags.push("Weekend");
   if (daysUntilShift <= 2) tags.push("Soon");
   if (getShiftStats(shift).remaining <= 1) tags.push("Last spot");
@@ -73,15 +63,6 @@ export function formatShiftWindow(shift: Shift) {
 
 export function buildQuickApplyMessage(shift: Shift) {
   return `I can cover ${shift.role.toLowerCase()} at ${shift.location}.`;
-}
-
-function getShiftScore(shift: Shift) {
-  const startDate = new Date(shift.start_time);
-  const daysUntilShift = getDaysUntil(startDate);
-  const { remaining } = getShiftStats(shift);
-  const urgencyScore = Math.max(10 - daysUntilShift, 0);
-  const weekendScore = startDate.getDay() === 0 || startDate.getDay() === 6 ? 8 : 0;
-  return shift.pay_rate * 2 + urgencyScore + weekendScore + remaining * 3;
 }
 
 function getDaysUntil(date: Date) {

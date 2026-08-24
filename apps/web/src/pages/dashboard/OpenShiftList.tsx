@@ -16,7 +16,7 @@ export function OpenShiftList({ shifts }: OpenShiftListProps) {
           <h2>Next Open Shifts</h2>
           <p>Decision-ready view of the shifts still needing coverage.</p>
         </div>
-        <Link className="btn secondary" to="/shifts">
+        <Link className="btn secondary" to="/app/shifts">
           View all
         </Link>
       </div>

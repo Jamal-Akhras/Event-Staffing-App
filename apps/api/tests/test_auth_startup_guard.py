@@ -7,6 +7,8 @@ import sys
 
 def _run_import(env_overrides: dict[str, str]) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
+    env["USE_IN_MEMORY"] = "false"
+    env["REDIS_URL"] = "redis://localhost:6379/15"
     env.update(env_overrides)
     return subprocess.run(
         [sys.executable, "-c", "import apps.api.src.auth.jwt"],
@@ -64,7 +66,22 @@ def test_guard_is_noop_in_development() -> None:
             "ENVIRONMENT": "development",
             "DEV_MODE": "true",
             "JWT_SECRET_KEY": "dev-secret-change-in-production",
+            "USE_IN_MEMORY": "true",
         },
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_guard_rejects_in_memory_backends_in_production() -> None:
+    result = _run_import(
+        {
+            "ENVIRONMENT": "production",
+            "DEV_MODE": "false",
+            "USE_IN_MEMORY": "true",
+            "JWT_SECRET_KEY": "a" * 32,
+        },
+    )
+
+    assert result.returncode != 0
+    assert "USE_IN_MEMORY" in result.stderr
