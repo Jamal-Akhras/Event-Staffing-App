@@ -1,6 +1,6 @@
 ﻿# Dependency Map
 
-Generated: 2026-08-24 17:35:51
+Generated: 2026-08-24 22:44:36
 Format: <- means 'imports from'
 
 ## apps/api/alembic/env.py
@@ -971,6 +971,11 @@ Format: <- means 'imports from'
   <- sqlalchemy.exc
   <- sqlalchemy.orm
 
+## apps/api/src/services/image_processing.py
+  <- __future__
+  <- fastapi
+  <- PIL
+
 ## apps/api/src/services/message_service.py
   <- __future__
   <- apps.api.src.helpers
@@ -1074,7 +1079,9 @@ Format: <- means 'imports from'
 
 ## apps/api/src/services/upload_validation.py
   <- __future__
+  <- apps.api.src.services.image_processing
   <- fastapi
+  <- starlette.concurrency
 
 ## apps/api/src/services/worker_feed_cursor.py
   <- __future__
@@ -1218,6 +1225,13 @@ Format: <- means 'imports from'
   <- apps.api.src.services.idempotency
   <- apps.api.tests.test_postgres_flows
   <- fastapi.testclient
+
+## apps/api/tests/test_image_processing.py
+  <- __future__
+  <- apps.api.src.services.image_processing
+  <- fastapi
+  <- PIL
+  <- zlib
 
 ## apps/api/tests/test_message_endpoints.py
   <- apps.api.src
@@ -1470,6 +1484,7 @@ Format: <- means 'imports from'
   <- apps.api.src.storage.object_storage
   <- apps.api.src.storage_dependencies
   <- fastapi.testclient
+  <- PIL
 
 ## apps/api/tests/test_user_repository.py
   <- apps.api.src.models.user

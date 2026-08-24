@@ -3,9 +3,11 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
+from io import BytesIO
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from apps.api.src.deps import get_account_repo, get_worker_profile_repo
 from apps.api.src.main import app
@@ -14,8 +16,15 @@ from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.storage.object_storage import StoredObject
 from apps.api.src.storage_dependencies import get_object_storage
 
-PNG_BYTES = b"\x89PNG\r\n\x1a\nphase-four-image"
-JPEG_BYTES = b"\xff\xd8\xffphase-four-image"
+
+def _image_bytes(image_format: str, size: tuple[int, int] = (8, 8)) -> bytes:
+    buffer = BytesIO()
+    Image.new("RGB", size, (200, 40, 40)).save(buffer, format=image_format)
+    return buffer.getvalue()
+
+
+PNG_BYTES = _image_bytes("PNG")
+JPEG_BYTES = _image_bytes("JPEG")
 WORKER_HEADERS = {"X-Actor-Role": "worker", "X-Actor-Id": "worker-1"}
 OPERATOR_HEADERS = {
     "X-Actor-Role": "operator",

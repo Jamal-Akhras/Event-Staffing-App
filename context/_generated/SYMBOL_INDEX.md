@@ -1,7 +1,7 @@
 ﻿# Symbol Index
 
-Generated: 2026-08-24 17:35:43
-Python files: 257
+Generated: 2026-08-24 22:44:35
+Python files: 259
 
 ## apps/api/alembic/env.py (62 lines)
   L26 def _database_url
@@ -1133,13 +1133,13 @@ Python files: 257
   L35 @GET /venues
   L36 def list_my_venues
 
-## apps/api/src/routes/uploads.py (124 lines)
+## apps/api/src/routes/uploads.py (121 lines)
   L28 @POST /uploads/avatar
   L30 async def upload_worker_avatar
-  L61 @POST /uploads/venue-photo
-  L63 async def upload_venue_photo
-  L93 @POST /uploads/venue-avatar
-  L95 async def upload_venue_avatar
+  L60 @POST /uploads/venue-photo
+  L62 async def upload_venue_photo
+  L91 @POST /uploads/venue-avatar
+  L93 async def upload_venue_avatar
 
 ## apps/api/src/routes/worker_feed.py (118 lines)
   L31 @GET /workers/me/feed
@@ -1342,6 +1342,12 @@ Python files: 257
   L109 def _request_hash
   L114 def clear_in_memory_idempotency
 
+## apps/api/src/services/image_processing.py (65 lines)
+  L24 class ProcessedImage
+  L32 def process_image
+  L52 def _encode
+  L63 def _flatten_mode
+
 ## apps/api/src/services/message_service.py (163 lines)
   L17 class MessageService
   L18   def __init__
@@ -1465,10 +1471,11 @@ Python files: 257
   L107   def _parse_start_time
   L115 def _shift_from_template
 
-## apps/api/src/services/upload_validation.py (54 lines)
-  L12 def validate_extension
-  L19 async def read_capped_image
-  L36 def image_content_type
+## apps/api/src/services/upload_validation.py (62 lines)
+  L15 def validate_extension
+  L22 async def read_capped_image
+  L39 async def read_processed_image
+  L44 def image_content_type
 
 ## apps/api/src/services/worker_feed_cursor.py (85 lines)
   L15 class FeedCursorError (ValueError)
@@ -1639,6 +1646,17 @@ Python files: 257
 ## apps/api/tests/test_idempotency.py (62 lines)
   L17 def test_in_memory_idempotency_replays_and_rejects_payload_changes
   L33 def test_shift_creation_replays_same_response
+
+## apps/api/tests/test_image_processing.py (99 lines)
+  L18 def _encode
+  L24 def _png_header_claiming
+  L35 def test_jpeg_is_reencoded_without_exif_metadata
+  L50 def test_png_keeps_alpha_and_drops_text_chunks
+  L65 def test_webp_roundtrip
+  L73 def test_oversized_image_is_downscaled_to_max_edge
+  L80 def test_valid_magic_bytes_with_garbage_body_are_rejected
+  L87 def test_decompression_bomb_header_is_rejected_before_decode
+  L95 def test_unsupported_format_is_rejected
 
 ## apps/api/tests/test_message_endpoints.py (127 lines)
   L21 def _client
@@ -1905,29 +1923,30 @@ Python files: 257
   L25 def test_commit_runs_commit_callbacks_and_discards_rollback_callbacks
   L37 def test_failed_commit_preserves_cleanup_for_rollback
 
-## apps/api/tests/test_upload_endpoints.py (237 lines)
-  L27 class FakeStorage
-  L28   def __init__
-  L33   def put
-  L38   def delete
-  L42   def key_from_url
-  L47 class FakeWorkerRepository
-  L48   def __init__
-  L51   def get
-  L54   def save
-  L59 class FakeAccountRepository
-  L60   def __init__
-  L64   def get
-  L67   def save
-  L75 def upload_dependencies
-  L116 def test_worker_avatar_upload_updates_profile_and_retires_previous_object
-  L133 def test_venue_photo_upload_appends_public_object_url
-  L147 def test_upload_rejects_extension_content_mismatch
-  L160 def test_failed_database_write_removes_new_object
-  L175 def test_removing_venue_photo_retires_object_after_account_commit
-  L191 def test_account_update_cannot_attach_or_delete_another_venues_media
-  L210 def test_account_update_cannot_replace_avatar_url_directly
-  L225 def test_legacy_foreign_photo_is_not_deleted_by_venue_update
+## apps/api/tests/test_upload_endpoints.py (246 lines)
+  L20 def _image_bytes
+  L36 class FakeStorage
+  L37   def __init__
+  L42   def put
+  L47   def delete
+  L51   def key_from_url
+  L56 class FakeWorkerRepository
+  L57   def __init__
+  L60   def get
+  L63   def save
+  L68 class FakeAccountRepository
+  L69   def __init__
+  L73   def get
+  L76   def save
+  L84 def upload_dependencies
+  L125 def test_worker_avatar_upload_updates_profile_and_retires_previous_object
+  L142 def test_venue_photo_upload_appends_public_object_url
+  L156 def test_upload_rejects_extension_content_mismatch
+  L169 def test_failed_database_write_removes_new_object
+  L184 def test_removing_venue_photo_retires_object_after_account_commit
+  L200 def test_account_update_cannot_attach_or_delete_another_venues_media
+  L219 def test_account_update_cannot_replace_avatar_url_directly
+  L234 def test_legacy_foreign_photo_is_not_deleted_by_venue_update
 
 ## apps/api/tests/test_user_repository.py (153 lines)
   L10 def test_in_memory_user_repository_save_and_get

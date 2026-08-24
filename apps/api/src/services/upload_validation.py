@@ -3,6 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
+from starlette.concurrency import run_in_threadpool
+
+from apps.api.src.services.image_processing import ProcessedImage, process_image
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -31,6 +34,11 @@ async def read_capped_image(file: UploadFile) -> bytes:
     data = b"".join(chunks)
     image_content_type(data, validate_extension(file.filename))
     return data
+
+
+async def read_processed_image(file: UploadFile) -> ProcessedImage:
+    data = await read_capped_image(file)
+    return await run_in_threadpool(process_image, data)
 
 
 def image_content_type(data: bytes, extension: str) -> str:

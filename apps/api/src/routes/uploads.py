@@ -17,7 +17,7 @@ from apps.api.src.services.stored_upload import (
     store_image,
     venue_photo_key,
 )
-from apps.api.src.services.upload_validation import image_content_type, read_capped_image, validate_extension
+from apps.api.src.services.upload_validation import read_processed_image
 from apps.api.src.storage.object_storage import ObjectStorage
 from apps.api.src.storage_dependencies import get_object_storage
 from apps.api.src.unit_of_work import RequestUnitOfWork
@@ -42,14 +42,13 @@ async def upload_worker_avatar(
     if existing is None:
         raise HTTPException(404, "Worker profile not found.")
 
-    extension = validate_extension(file.filename)
-    data = await read_capped_image(file)
+    image = await read_processed_image(file)
     stored = await store_image(
         storage,
         unit_of_work,
-        avatar_key("workers", worker_id, extension),
-        data,
-        image_content_type(data, extension),
+        avatar_key("workers", worker_id, image.extension),
+        image.data,
+        image.content_type,
         existing.avatar_url,
         avatar_prefix("workers", worker_id),
     )
@@ -76,14 +75,13 @@ async def upload_venue_photo(
     if account is None:
         raise HTTPException(404, "Venue not found.")
 
-    extension = validate_extension(file.filename)
-    data = await read_capped_image(file)
+    image = await read_processed_image(file)
     stored = await store_image(
         storage,
         unit_of_work,
-        venue_photo_key(actor.account_id, extension),
-        data,
-        image_content_type(data, extension),
+        venue_photo_key(actor.account_id, image.extension),
+        image.data,
+        image.content_type,
     )
     account_repo.save(replace(account, photos=[*account.photos, stored.url]))
 
@@ -108,14 +106,13 @@ async def upload_venue_avatar(
     if account is None:
         raise HTTPException(404, "Venue not found.")
 
-    extension = validate_extension(file.filename)
-    data = await read_capped_image(file)
+    image = await read_processed_image(file)
     stored = await store_image(
         storage,
         unit_of_work,
-        avatar_key("venues", actor.account_id, extension),
-        data,
-        image_content_type(data, extension),
+        avatar_key("venues", actor.account_id, image.extension),
+        image.data,
+        image.content_type,
         account.avatar_url,
         avatar_prefix("venues", actor.account_id),
     )

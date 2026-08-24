@@ -16,3 +16,4 @@ sentry-sdk[fastapi]==2.68.0
 httpx==0.28.1
 bcrypt==4.0.1
 boto3==1.43.14
+pillow==12.3.0
