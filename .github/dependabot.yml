@@ -41,6 +41,7 @@ updates:
       - dependency-name: react
       - dependency-name: react-dom
       - dependency-name: react-native
+      - dependency-name: react-native-worklets
       - dependency-name: "@types/react"
   - package-ecosystem: docker
     directory: /
