@@ -37,6 +37,11 @@ updates:
       # Expo SDK pins native module versions; anything beyond a patch goes through `npx expo install` during an SDK migration.
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # These are pinned to exact versions by the Expo SDK, so patch bumps are excluded too.
+      - dependency-name: react
+      - dependency-name: react-dom
+      - dependency-name: react-native
+      - dependency-name: "@types/react"
   - package-ecosystem: docker
     directory: /
     schedule:

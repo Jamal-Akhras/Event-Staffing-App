@@ -91,7 +91,8 @@
 - 2026-08-24 [TOOL] Final backend verification: in-memory 160 passed + 44 PostgreSQL skips; PostgreSQL 204 passed with zero skips; full PostgreSQL base-to-029 rebuild passed.
 
 ## Next
-- 2026-08-24 [ASSUMPTION] Triage the three open Dependabot branches (reject `python-3.14-slim` and `react-native-safe-area-context 5.9.1`; let CI decide `uvicorn 0.52.4`), then proceed to UI polish while preserving the now-frozen auth/privacy/report/reputation/direct-payment/error/upload contracts.
+- 2026-08-24 [ASSUMPTION] Proceed to UI polish while preserving the now-frozen auth/privacy/report/reputation/direct-payment/error/upload contracts; merge Dependabot patch/minor bumps only after CI is green.
+- 2026-08-24 [ASSUMPTION] Two deferred dependency slices: the Expo SDK 57 migration (carries react-native, react, screens, safe-area-context, expo-status-bar) and a web toolchain slice (React 19, Vite 8, plugin-react 6, TypeScript 7); bcrypt stays at 4.0.1 until passlib is replaced.
 - 2026-08-24 [ASSUMPTION] Phase 7 load validation and a planned Expo SDK 57 migration follow against the release candidate; production EAS credentials remain external setup.
 - 2026-08-21 [ASSUMPTION] Web stream: finalise brand and marketing copy, then connect real store/waitlist destinations when distribution details exist.
 
@@ -120,6 +121,7 @@
 - 2026-08-24 [CODE] `apps/web/package.json`, `apps/web/package-lock.json`, `apps/mobile/package-lock.json`
 
 ## Receipts
+- 2026-08-24 [TOOL] Dependabot triage: 16 PRs reviewed against CI, Expo SDK 54 `bundledNativeModules.json` and a combined local run (168 passed with uvicorn 0.52.4, alembic 1.19.1, pytest 9.1.1, boto3 1.43.77 together); 5 merged onto `main` (rebase, linear), 11 closed, `.github/dependabot.yml` ignore rules added so majors/minors for Expo-pinned, web-toolchain, bcrypt and Docker Python bumps no longer reopen; `gh` CLI 2.98.0 installed and authenticated on this PC.
 - 2026-08-24 [TOOL] Pillow slice verification on the second PC (miniconda Python 3.13): in-memory suite 168 passed + 44 PostgreSQL skips; 7 new image-processing tests cover EXIF stripping, PNG alpha/text-chunk removal, WebP round-trip, 2048px downscale, garbage-after-magic rejection, decompression-bomb header rejection and unsupported-format rejection; PostgreSQL leg not re-run (no schema change). A stray untracked `apps/api/nul` file that broke `update-context.ps1` was deleted.
 - 2026-08-24 [USER] Repository-wide handoff requested: commit all legitimate source, client, migration, tests, deployment, documentation and generated context changes for continuation on another PC; exclude machine-only caches and secrets.
 - 2026-08-24 [TOOL] Final database verification: 204 tests passed with zero skips on PostgreSQL; 160 passed with 44 PostgreSQL-only skips in-memory; PostgreSQL fully downgraded to base and rebuilt through 029.
@@ -127,7 +129,6 @@
 - 2026-08-24 [TOOL] Client/dependency verification: web production build passed (451 modules, 335.86 kB), web production audit reports zero vulnerabilities, mobile TypeScript and Expo SDK-54 package checks pass; mobile retains 10 high/8 moderate Expo-toolchain findings whose complete fix requires Expo 57.
 - 2026-08-24 [TOOL] Render Blueprint YAML parses with four services; official Render documentation confirms `preDeployCommand`, static-site headers and forwarded client-IP behavior; Docker cannot be built locally because Docker is not installed.
 - 2026-08-24 [TOOL] Backend/security/API audit confirmed strong PostgreSQL transactions, ownership checks, Redis-backed production rate limiting, object storage and outbox foundations; CI lacks dependency/container security checks, `/health` is shallow, production DB/CORS startup validation is incomplete, and background geocoding has no persisted-coordinate test.
-- 2026-08-24 [TOOL] Notification improvement verification: mobile `tsc --noEmit`, Expo public config, dependency resolution and diff check passed; installed Expo SDK 54 versions are notifications 0.32.17, device 8.0.10 and constants 18.0.14; all mobile TypeScript files remain <=300 lines.
 - 2026-08-23 [TOOL] Phase 5 client handoff reconciled against backend response shapes and routes: web build passed (451 modules, 333.89 kB JS), mobile `tsc --noEmit` passed, focused backend contract/dispatcher tests passed 5/5, compileall/diff check passed, and notification files remain below 300 lines.
 - 2026-08-23 [TOOL] Phase 5 backend final verification: PostgreSQL migrations fully downgraded to base and rebuilt through 025, then 173 tests passed with zero skips; concurrency tests proved producer idempotency, `SKIP LOCKED` dispatch and stale-lease recovery; local server stopped.
 - 2026-08-23 [TOOL] Phase 5 lightweight verification: 135 tests passed with 38 PostgreSQL skips; SQLite migration upgrade/downgrade, Python compileall and backend diff check passed; all touched code files remain below 300 lines.
