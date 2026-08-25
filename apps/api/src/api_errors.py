@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
@@ -47,7 +48,7 @@ async def validation_exception_handler(
     _request: Request,
     exc: RequestValidationError,
 ) -> JSONResponse:
-    raw_errors = exc.errors()
+    raw_errors = jsonable_encoder(exc.errors())
     details = [
         {
             "field": ".".join(str(part) for part in item["loc"] if part != "body"),

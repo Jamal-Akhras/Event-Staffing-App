@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from apps.api.src.validation_types import MoneyAmount, UtcTimestamp
 
@@ -225,6 +225,19 @@ class RecurringScheduleResponse(BaseModel):
 
 class MessageSendRequest(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
+    application_id: str | None = None
+    booking_id: str | None = None
+
+    @field_validator("content")
+    @classmethod
+    def _require_visible_content(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Message content cannot be blank.")
+        return stripped
+
+
+class MessageThreadReadRequest(BaseModel):
     application_id: str | None = None
     booking_id: str | None = None
 

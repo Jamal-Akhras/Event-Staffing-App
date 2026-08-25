@@ -49,6 +49,9 @@ export function MessageThread({
       setMessages(data);
       setError(null);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      if (data.some((message) => message.sender_role !== currentUserRole && message.read_at === null)) {
+        await postWorker(`/shifts/${shiftId}/messages/read`, buildThreadBody(applicationId, bookingId));
+      }
     } catch (err) {
       setError((err as Error).message);
     }
@@ -100,7 +103,7 @@ export function MessageThread({
           placeholder="Type a message..."
           placeholderTextColor={COLORS.inkSubtle}
           multiline
-          maxLength={500}
+          maxLength={4000}
         />
         <Pressable
           style={[styles.sendButton, (!newMessage.trim() || sending) && styles.sendButtonDisabled]}
@@ -121,10 +124,10 @@ export function MessageThread({
     if (!newMessage.trim() || sending) return;
     setSending(true);
     try {
-      const payload: Record<string, string> = { content: newMessage.trim() };
-      if (applicationId) payload.application_id = applicationId;
-      if (bookingId) payload.booking_id = bookingId;
-      await postWorker(`/shifts/${shiftId}/messages`, payload);
+      await postWorker(`/shifts/${shiftId}/messages`, {
+        content: newMessage.trim(),
+        ...buildThreadBody(applicationId, bookingId),
+      });
       setNewMessage("");
       await loadMessages();
     } catch (err) {
@@ -172,6 +175,13 @@ function buildMessagePath(
   return `/shifts/${shiftId}/messages?${params.toString()}`;
 }
 
+function buildThreadBody(applicationId?: string, bookingId?: string) {
+  const body: Record<string, string> = {};
+  if (applicationId) body.application_id = applicationId;
+  if (bookingId) body.booking_id = bookingId;
+  return body;
+}
+
 function groupMessagesByDate(messages: Message[]) {
   return messages.reduce<{ date: string; messages: Message[] }[]>((groups, message) => {
     const date = formatDate(message.created_at);
@@ -186,8 +196,8 @@ function groupMessagesByDate(messages: Message[]) {
 }
 
 function formatTime(timestamp: string) {
-  return new Date(timestamp).toLocaleTimeString("en-US", {
-    hour: "numeric",
+  return new Date(timestamp).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
     minute: "2-digit",
   });
 }
@@ -197,7 +207,7 @@ function formatDate(timestamp: string) {
   if (date.toDateString() === new Date().toDateString()) {
     return "Today";
   }
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 const styles = StyleSheet.create({

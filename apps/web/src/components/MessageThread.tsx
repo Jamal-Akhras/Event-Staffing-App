@@ -1,5 +1,7 @@
 import { useState, useEffect, FormEvent, useRef } from "react";
 
+import { fetchJson, postJson } from "../lib/api";
+
 type Message = {
   message_id: string;
   shift_id: string;
@@ -19,34 +21,29 @@ type MessageThreadProps = {
   currentUserRole: "worker" | "operator";
 };
 
-import { API_BASE, getAuthHeaders } from "../lib/api";
-
-const resolvedApiBase = API_BASE;
+const POLL_INTERVAL_MS = 5000;
 
 export function MessageThread({ shiftId, applicationId, bookingId, currentUserRole }: MessageThreadProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const threadPath = buildThreadPath(shiftId, applicationId, bookingId);
+  const threadBody = { application_id: applicationId, booking_id: bookingId };
 
   const loadMessages = async () => {
     try {
-      const params = new URLSearchParams();
-      if (applicationId) params.set("application_id", applicationId);
-      if (bookingId) params.set("booking_id", bookingId);
-
-      const response = await fetch(
-        `${resolvedApiBase}/shifts/${shiftId}/messages?${params.toString()}`,
-        { headers: getAuthHeaders() }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data);
+      const data = await fetchJson<Message[]>(threadPath);
+      setMessages(data);
+      setError(null);
+      if (data.some((msg) => msg.sender_role !== currentUserRole && msg.read_at === null)) {
+        await postJson(`/shifts/${shiftId}/messages/read`, threadBody);
       }
     } catch (err) {
-      console.error("Failed to load messages:", err);
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -54,38 +51,26 @@ export function MessageThread({ shiftId, applicationId, bookingId, currentUserRo
 
   useEffect(() => {
     loadMessages();
-    // Poll for new messages every 5 seconds
-    const interval = setInterval(loadMessages, 5000);
+    const interval = setInterval(loadMessages, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [shiftId, applicationId, bookingId]);
 
   useEffect(() => {
-    // Scroll to bottom when messages change
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    const content = newMessage.trim();
+    if (!content) return;
 
     setSending(true);
     try {
-      const response = await fetch(`${resolvedApiBase}/shifts/${shiftId}/messages`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          content: newMessage,
-          application_id: applicationId,
-          booking_id: bookingId,
-        }),
-      });
-
-      if (response.ok) {
-        setNewMessage("");
-        await loadMessages();
-      }
+      await postJson(`/shifts/${shiftId}/messages`, { content, ...threadBody });
+      setNewMessage("");
+      await loadMessages();
     } catch (err) {
-      console.error("Failed to send message:", err);
+      setError((err as Error).message);
     } finally {
       setSending(false);
     }
@@ -101,7 +86,6 @@ export function MessageThread({ shiftId, applicationId, bookingId, currentUserRo
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Messages List */}
       <div
         style={{
           flex: 1,
@@ -122,63 +106,19 @@ export function MessageThread({ shiftId, applicationId, bookingId, currentUserRo
             </p>
           </div>
         ) : (
-          messages.map((msg) => {
-            const isCurrentUser = msg.sender_role === currentUserRole;
-            const senderLabel = msg.sender_role === "operator" ? "Venue" : "Worker";
-
-            return (
-              <div
-                key={msg.message_id}
-                style={{
-                  display: "flex",
-                  justifyContent: isCurrentUser ? "flex-end" : "flex-start",
-                }}
-              >
-                <div
-                  style={{
-                    maxWidth: "70%",
-                    padding: "12px 16px",
-                    borderRadius: "16px",
-                    background: isCurrentUser
-                      ? "var(--ocean-500)"
-                      : "rgba(15, 23, 32, 0.06)",
-                    color: isCurrentUser ? "#fff" : "var(--ink-900)",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      marginBottom: "4px",
-                      opacity: 0.8,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {isCurrentUser ? "You" : senderLabel}
-                  </div>
-                  <div style={{ fontSize: "0.95rem", lineHeight: 1.5 }}>{msg.content}</div>
-                  <div
-                    style={{
-                      fontSize: "0.7rem",
-                      marginTop: "6px",
-                      opacity: 0.7,
-                    }}
-                  >
-                    {new Date(msg.created_at).toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </div>
-                </div>
-              </div>
-            );
-          })
+          messages.map((msg) => (
+            <MessageBubble key={msg.message_id} message={msg} isCurrentUser={msg.sender_role === currentUserRole} />
+          ))
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
+      {error && (
+        <p className="status error" style={{ margin: 0, padding: "0 16px 8px", fontSize: "0.85rem" }}>
+          {error}
+        </p>
+      )}
+
       <form
         onSubmit={handleSendMessage}
         style={{
@@ -192,6 +132,7 @@ export function MessageThread({ shiftId, applicationId, bookingId, currentUserRo
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
+            maxLength={4000}
             disabled={sending}
             style={{
               flex: 1,
@@ -213,4 +154,46 @@ export function MessageThread({ shiftId, applicationId, bookingId, currentUserRo
       </form>
     </div>
   );
+}
+
+function MessageBubble({ message, isCurrentUser }: { message: Message; isCurrentUser: boolean }) {
+  const senderLabel = message.sender_role === "operator" ? "Venue" : "Worker";
+  return (
+    <div style={{ display: "flex", justifyContent: isCurrentUser ? "flex-end" : "flex-start" }}>
+      <div
+        style={{
+          maxWidth: "70%",
+          padding: "12px 16px",
+          borderRadius: "16px",
+          background: isCurrentUser ? "var(--ocean-500)" : "rgba(15, 23, 32, 0.06)",
+          color: isCurrentUser ? "#fff" : "var(--ink-900)",
+        }}
+      >
+        <div style={{ fontSize: "0.75rem", marginBottom: "4px", opacity: 0.8, fontWeight: 600 }}>
+          {isCurrentUser ? "You" : senderLabel}
+        </div>
+        <div style={{ fontSize: "0.95rem", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{message.content}</div>
+        <div style={{ fontSize: "0.7rem", marginTop: "6px", opacity: 0.7 }}>
+          {formatTimestamp(message.created_at)}
+          {isCurrentUser && message.read_at ? " · Read" : ""}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function buildThreadPath(shiftId: string, applicationId?: string, bookingId?: string) {
+  const params = new URLSearchParams();
+  if (applicationId) params.set("application_id", applicationId);
+  if (bookingId) params.set("booking_id", bookingId);
+  return `/shifts/${shiftId}/messages?${params.toString()}`;
+}
+
+function formatTimestamp(value: string) {
+  return new Date(value).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
