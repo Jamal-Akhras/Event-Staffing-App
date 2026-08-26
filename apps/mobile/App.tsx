@@ -1,8 +1,11 @@
 import "react-native-gesture-handler";
+import { ClerkProvider } from "@clerk/expo";
+import { tokenCache } from "@clerk/expo/token-cache";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import * as WebBrowser from "expo-web-browser";
+import { useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -18,10 +21,22 @@ import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { RegisterScreen } from "./src/screens/auth/RegisterScreen";
 import { COLORS } from "./src/theme/colors";
 import { fetchWorker } from "./src/lib/api";
+import { CLERK_PUBLISHABLE_KEY, SSO_ENABLED } from "./src/lib/clerk";
 import type { WorkerProfile } from "./src/types";
 import { flushPendingNotificationTarget, navigationRef } from "./src/navigation/navigationRef";
 
+WebBrowser.maybeCompleteAuthSession();
+
 type AuthScreen = "login" | "register" | "forgotPassword";
+
+function IdentityProvider({ children }: { children: ReactNode }) {
+  if (!SSO_ENABLED) return <>{children}</>;
+  return (
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
+      {children}
+    </ClerkProvider>
+  );
+}
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -88,9 +103,11 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: COLORS.canvas }}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
+        <IdentityProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </IdentityProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

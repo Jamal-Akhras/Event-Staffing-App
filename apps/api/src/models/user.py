@@ -6,13 +6,11 @@ from datetime import datetime
 
 @dataclass(frozen=True)
 class User:
-    """Domain model for a user account."""
-
     user_id: str
     email: str
     hashed_password: str
-    role: str  # "operator" or "worker"
-    account_id: str | None  # set for operators, None for workers
+    role: str
+    account_id: str | None
     worker_profile_id: str | None
     is_active: bool
     created_at: datetime
@@ -23,3 +21,5 @@ class User:
     session_version: int = 0
     deactivated_at: datetime | None = None
     anonymized_at: datetime | None = None
+    sso_provider: str | None = None
+    sso_subject: str | None = None

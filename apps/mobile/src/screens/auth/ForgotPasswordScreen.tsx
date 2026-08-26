@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { postPublicJson } from "../../lib/api";
 import { COLORS } from "../../theme/colors";
+import { authStyles } from "./authStyles";
 
 type Props = { onBack: () => void };
 type Step = "email" | "reset" | "done";
@@ -59,13 +60,13 @@ export function ForgotPasswordScreen({ onBack }: Props) {
 
   if (step === "done") {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={authStyles.container}>
         <View style={styles.centered}>
           <View style={styles.doneIcon}><Text style={styles.doneIconText}>✓</Text></View>
           <Text style={styles.doneTitle}>Password reset!</Text>
           <Text style={styles.doneSub}>You can now sign in with your new password.</Text>
-          <Pressable style={styles.button} onPress={onBack}>
-            <Text style={styles.buttonText}>Back to Sign In</Text>
+          <Pressable style={authStyles.button} onPress={onBack}>
+            <Text style={authStyles.buttonText}>Back to Sign In</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -73,22 +74,22 @@ export function ForgotPasswordScreen({ onBack }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={authStyles.container}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Pressable style={styles.backRow} onPress={onBack}>
             <Text style={styles.backText}>← Back to Sign In</Text>
           </Pressable>
 
-          <View style={styles.card}>
+          <View style={[authStyles.card, styles.card]}>
             {step === "email" ? (
               <>
-                <Text style={styles.heading}>Forgot password?</Text>
-                <Text style={styles.subheading}>Enter your email and we'll send you a reset link.</Text>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Email address</Text>
+                <Text style={authStyles.heading}>Forgot password?</Text>
+                <Text style={authStyles.subheading}>Enter your email and we'll send you a reset link.</Text>
+                <View style={authStyles.fieldGroup}>
+                  <Text style={authStyles.label}>Email address</Text>
                   <TextInput
-                    style={styles.input}
+                    style={authStyles.input}
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
@@ -98,23 +99,23 @@ export function ForgotPasswordScreen({ onBack }: Props) {
                     placeholderTextColor={COLORS.inkSubtle}
                   />
                 </View>
-                {error && <Text style={styles.error}>{error}</Text>}
+                {error && <Text style={authStyles.error}>{error}</Text>}
                 <Pressable
-                  style={[styles.button, loading && styles.buttonDisabled]}
+                  style={[authStyles.button, loading && authStyles.buttonDisabled]}
                   onPress={handleRequestReset}
                   disabled={loading}
                 >
-                  <Text style={styles.buttonText}>{loading ? "Sending…" : "Send Reset Link"}</Text>
+                  <Text style={authStyles.buttonText}>{loading ? "Sending…" : "Send Reset Link"}</Text>
                 </Pressable>
               </>
             ) : (
               <>
-                <Text style={styles.heading}>Reset password</Text>
-                <Text style={styles.subheading}>Enter the reset token and your new password.</Text>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Reset token</Text>
+                <Text style={authStyles.heading}>Reset password</Text>
+                <Text style={authStyles.subheading}>Enter the reset token and your new password.</Text>
+                <View style={authStyles.fieldGroup}>
+                  <Text style={authStyles.label}>Reset token</Text>
                   <TextInput
-                    style={[styles.input, styles.tokenInput]}
+                    style={[authStyles.input, styles.tokenInput]}
                     value={token}
                     onChangeText={setToken}
                     autoCapitalize="none"
@@ -123,10 +124,10 @@ export function ForgotPasswordScreen({ onBack }: Props) {
                     multiline
                   />
                 </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>New password</Text>
+                <View style={authStyles.fieldGroup}>
+                  <Text style={authStyles.label}>New password</Text>
                   <TextInput
-                    style={styles.input}
+                    style={authStyles.input}
                     value={newPassword}
                     onChangeText={setNewPassword}
                     secureTextEntry
@@ -134,10 +135,10 @@ export function ForgotPasswordScreen({ onBack }: Props) {
                     placeholderTextColor={COLORS.inkSubtle}
                   />
                 </View>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.label}>Confirm password</Text>
+                <View style={authStyles.fieldGroup}>
+                  <Text style={authStyles.label}>Confirm password</Text>
                   <TextInput
-                    style={styles.input}
+                    style={authStyles.input}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
@@ -145,13 +146,13 @@ export function ForgotPasswordScreen({ onBack }: Props) {
                     placeholderTextColor={COLORS.inkSubtle}
                   />
                 </View>
-                {error && <Text style={styles.error}>{error}</Text>}
+                {error && <Text style={authStyles.error}>{error}</Text>}
                 <Pressable
-                  style={[styles.button, loading && styles.buttonDisabled]}
+                  style={[authStyles.button, loading && authStyles.buttonDisabled]}
                   onPress={handleResetPassword}
                   disabled={loading}
                 >
-                  <Text style={styles.buttonText}>{loading ? "Resetting…" : "Reset Password"}</Text>
+                  <Text style={authStyles.buttonText}>{loading ? "Resetting…" : "Reset Password"}</Text>
                 </Pressable>
               </>
             )}
@@ -163,64 +164,12 @@ export function ForgotPasswordScreen({ onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.canvas },
   scroll: { flexGrow: 1, padding: 28, paddingTop: 16 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 28 },
   backRow: { marginBottom: 24 },
   backText: { color: COLORS.primary, fontSize: 14, fontWeight: "700" },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 22,
-    padding: 26,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: COLORS.ink,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  heading: { color: COLORS.ink, fontSize: 22, fontWeight: "800", marginBottom: 4, letterSpacing: -0.4 },
-  subheading: { color: COLORS.inkMuted, fontSize: 14, marginBottom: 26 },
-  fieldGroup: { marginBottom: 18 },
-  label: {
-    color: COLORS.inkMuted,
-    fontSize: 11,
-    fontWeight: "700",
-    marginBottom: 7,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  input: {
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    color: COLORS.ink,
-    fontSize: 15,
-    backgroundColor: COLORS.surfaceMuted,
-  },
+  card: { marginBottom: 0 },
   tokenInput: { minHeight: 70, textAlignVertical: "top" },
-  error: {
-    color: COLORS.error,
-    fontSize: 13,
-    marginBottom: 14,
-    padding: 12,
-    backgroundColor: "rgba(184,59,50,0.06)",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(184,59,50,0.15)",
-  },
-  button: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 6,
-  },
-  buttonDisabled: { opacity: 0.55 },
-  buttonText: { color: COLORS.onPrimary, fontSize: 15, fontWeight: "800", letterSpacing: 0.1 },
   doneIcon: {
     width: 72,
     height: 72,

@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -19,6 +18,7 @@ type AuthContextType = {
   user: AuthUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithSso: (ssoToken: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -50,7 +50,6 @@ async function clearSession(): Promise<void> {
   await Promise.all([
     SecureStore.deleteItemAsync(TOKEN_KEY),
     SecureStore.deleteItemAsync(USER_KEY),
-    AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]),
   ]);
 }
 
@@ -59,16 +58,7 @@ async function readSession(): Promise<{ token: string; rawUser: string } | null>
     SecureStore.getItemAsync(TOKEN_KEY),
     SecureStore.getItemAsync(USER_KEY),
   ]);
-  if (token && rawUser) return { token, rawUser };
-
-  const [[, legacyToken], [, legacyUser]] = await AsyncStorage.multiGet([TOKEN_KEY, USER_KEY]);
-  if (!legacyToken || !legacyUser) return null;
-  await Promise.all([
-    SecureStore.setItemAsync(TOKEN_KEY, legacyToken),
-    SecureStore.setItemAsync(USER_KEY, legacyUser),
-  ]);
-  await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
-  return { token: legacyToken, rawUser: legacyUser };
+  return token && rawUser ? { token, rawUser } : null;
 }
 
 async function callAuthEndpoint(path: string, body: object): Promise<AuthUser> {
@@ -117,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(stored);
         }
       } catch {
-        // ignore restore errors — user will need to log in
+        await clearSession();
       } finally {
         setIsLoading(false);
       }
@@ -135,13 +125,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(authUser);
   }
 
+  async function loginWithSso(ssoToken: string): Promise<void> {
+    const authUser = await callAuthEndpoint("/auth/sso", { token: ssoToken, role: "worker" });
+    setUser(authUser);
+  }
+
   async function register(email: string, password: string): Promise<void> {
     const authUser = await callAuthEndpoint("/auth/register", { email, password });
     setUser(authUser);
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithSso, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

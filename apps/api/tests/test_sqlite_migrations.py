@@ -89,7 +89,7 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "029"
+        assert version == "030"
 
     command.downgrade(config, "022")
     downgraded_rating_columns = {

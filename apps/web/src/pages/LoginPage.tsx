@@ -1,15 +1,20 @@
 import { useState, FormEvent } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { LegalLinks } from "../components/LegalLinks";
+import { SsoButtons } from "../components/SsoButtons";
 import { useAuth } from "../contexts/AuthContext";
+import { SSO_ENABLED } from "../lib/clerk";
 import "./LoginPage.css";
 
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    params.get("sso") === "incomplete" ? "That sign-in didn't complete. Try again or use your email and password." : null
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
@@ -70,6 +75,12 @@ export function LoginPage() {
           <p className="auth-subheading">
             Sign in to manage your venue. Workers — use the mobile app.
           </p>
+          {SSO_ENABLED && (
+            <>
+              <SsoButtons />
+              <div className="auth-divider">or with email</div>
+            </>
+          )}
           <form onSubmit={handleSubmit} className="auth-form">
             <label className="form-label">
               Email address

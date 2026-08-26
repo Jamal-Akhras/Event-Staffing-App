@@ -326,6 +326,64 @@
   background: var(--border-soft);
 }
 
+/* ── Single sign-on ──────────────────────────────────────── */
+.auth-sso {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.auth-sso-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  background: #fffdf9;
+  color: var(--ink-900);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.auth-sso-btn:hover:not(:disabled) {
+  border-color: rgba(14, 90, 58, 0.4);
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.auth-sso-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.auth-divider + .auth-form {
+  margin-top: 18px;
+}
+
+.auth-sso-note {
+  margin: 0 0 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(14, 90, 58, 0.22);
+  border-radius: 9px;
+  background: rgba(14, 90, 58, 0.06);
+  color: var(--ink-700);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.auth-page-centered {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 40px 24px;
+}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 700px) {
   .auth-page {

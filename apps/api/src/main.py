@@ -23,7 +23,7 @@ from apps.api.src.rate_limit import limiter
 from apps.api.src.request_middleware import RequestContextMiddleware
 from apps.api.src.routes import auth, bookings, shifts, applications, workers, templates, messages, worker_feed
 from apps.api.src.routes import uploads, accounts, notifications, ratings, auth_account, auth_password, markets, tenancy
-from apps.api.src.routes import reports
+from apps.api.src.routes import reports, auth_sso
 from apps.api.src.storage.config import get_storage_settings
 from apps.api.src.services.health import readiness_snapshot
 from apps.api.src.db.schema_guard import ensure_schema_current
@@ -58,12 +58,6 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
-    """Catch otherwise-uncaught exceptions so the response goes through CORS middleware.
-
-    Without this, Starlette's outer ServerErrorMiddleware returns a 500 that bypasses
-    CORS — the browser then blocks the response as a CORS failure and the client sees
-    a network error instead of the real 500.
-    """
     log.exception("unhandled exception: %s", exc)
     return JSONResponse(
         status_code=500,
@@ -86,6 +80,7 @@ storage_settings = get_storage_settings()
 app.include_router(auth.router)
 app.include_router(auth_account.router)
 app.include_router(auth_password.router)
+app.include_router(auth_sso.router)
 app.include_router(accounts.router)
 app.include_router(tenancy.router)
 app.include_router(markets.router)

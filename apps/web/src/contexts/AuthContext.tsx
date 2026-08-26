@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { postPublicJson, setUnauthorizedHandler } from "../lib/api";
+import { ApiError, postPublicJson, setUnauthorizedHandler } from "../lib/api";
 
 type AuthUser = {
   user_id: string;
@@ -12,12 +12,35 @@ type AuthUser = {
   currency: string;
 };
 
+export type SessionPayload = {
+  access_token: string;
+  user_id: string;
+  email: string;
+  role: string;
+  account_id?: string | null;
+  organisation_id?: string | null;
+  venue_id?: string | null;
+  currency?: string;
+};
+
 type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithSso: (ssoToken: string) => Promise<void>;
+  acceptSession: (session: SessionPayload) => void;
   logout: () => void;
 };
+
+export class SsoRegistrationRequiredError extends Error {
+  email: string;
+
+  constructor(email: string) {
+    super("No venue account exists for this email yet.");
+    this.name = "SsoRegistrationRequiredError";
+    this.email = email;
+  }
+}
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -37,35 +60,53 @@ function loadUser(): AuthUser | null {
   }
 }
 
+function toAuthUser(data: SessionPayload): AuthUser {
+  return {
+    user_id: data.user_id,
+    email: data.email,
+    role: data.role,
+    account_id: data.account_id ?? null,
+    organisation_id: data.organisation_id ?? null,
+    venue_id: data.venue_id ?? data.account_id ?? null,
+    currency: data.currency ?? "GBP",
+  };
+}
+
+function registrationRequiredEmail(err: unknown): string | null {
+  if (!(err instanceof ApiError) || err.status !== 404 || !err.serverDetail) return null;
+  try {
+    const detail = JSON.parse(err.serverDetail) as { code?: string; email?: string };
+    return detail.code === "SSO_REGISTRATION_REQUIRED" && detail.email ? detail.email : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [token, setToken] = useState<string | null>(loadToken);
   const [user, setUser] = useState<AuthUser | null>(loadUser);
 
-  async function login(email: string, password: string): Promise<void> {
-    const data = await postPublicJson<{
-      access_token: string;
-      user_id: string;
-      email: string;
-      role: string;
-      account_id?: string | null;
-      organisation_id?: string | null;
-      venue_id?: string | null;
-      currency?: string;
-    }>("/auth/login", { email, password });
-    const authUser: AuthUser = {
-      user_id: data.user_id,
-      email: data.email,
-      role: data.role,
-      account_id: data.account_id ?? null,
-      organisation_id: data.organisation_id ?? null,
-      venue_id: data.venue_id ?? data.account_id ?? null,
-      currency: data.currency ?? "GBP",
-    };
+  const acceptSession = useCallback((data: SessionPayload) => {
+    const authUser = toAuthUser(data);
     localStorage.setItem(TOKEN_KEY, data.access_token);
     localStorage.setItem(USER_KEY, JSON.stringify(authUser));
     setToken(data.access_token);
     setUser(authUser);
+  }, []);
+
+  async function login(email: string, password: string): Promise<void> {
+    acceptSession(await postPublicJson<SessionPayload>("/auth/login", { email, password }));
+  }
+
+  async function loginWithSso(ssoToken: string): Promise<void> {
+    try {
+      acceptSession(await postPublicJson<SessionPayload>("/auth/sso", { token: ssoToken, role: "operator" }));
+    } catch (err) {
+      const email = registrationRequiredEmail(err);
+      if (email) throw new SsoRegistrationRequiredError(email);
+      throw err;
+    }
   }
 
   const logout = useCallback(() => {
@@ -84,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logout, navigate]);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, login, loginWithSso, acceptSession, logout }}>
       {children}
     </AuthContext.Provider>
   );

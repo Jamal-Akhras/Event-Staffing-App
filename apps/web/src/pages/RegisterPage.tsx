@@ -1,66 +1,15 @@
-import { useEffect, useState, FormEvent } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { LegalLinks } from "../components/LegalLinks";
-import { MarketSelect } from "../components/MarketSelect";
-import { useAuth } from "../contexts/AuthContext";
-import { postPublicJson } from "../lib/api";
-import { useMarkets } from "../lib/useMarkets";
+import { Link, useSearchParams } from "react-router-dom";
+import { useAuth as useClerkAuth } from "@clerk/react";
+
+import { SsoButtons } from "../components/SsoButtons";
+import { SSO_ENABLED } from "../lib/clerk";
+import { RegisterForm } from "./register/RegisterForm";
 import "./LoginPage.css";
 
 export function RegisterPage() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const { markets, loading: marketsLoading, error: marketsError, retry: retryMarkets } = useMarkets();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [organisationName, setOrganisationName] = useState("");
-  const [venueName, setVenueName] = useState("");
-  const [country, setCountry] = useState<"GB" | "AE">("GB");
-  const [marketId, setMarketId] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!markets) return;
-    const countryMarkets = markets.filter((market) => market.country === country);
-    if (marketId && !countryMarkets.some((market) => market.market_id === marketId)) {
-      setMarketId("");
-      return;
-    }
-    if (!marketId && countryMarkets.length === 1) {
-      setMarketId(countryMarkets[0].market_id);
-    }
-  }, [markets, country, marketId]);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!marketId) {
-      setError("Select the city your venue operates in.");
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    try {
-      await postPublicJson("/auth/register/operator", {
-        email,
-        password,
-        ...(organisationName.trim() ? { organisation_name: organisationName.trim() } : {}),
-        venue_name: venueName,
-        country,
-        market_id: marketId,
-        invite_code: inviteCode,
-      });
-      setRegisteredEmail(email);
-      await login(email, password);
-      navigate("/app");
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [params] = useSearchParams();
+  const ssoEmail = params.get("email");
+  const ssoMode = SSO_ENABLED && params.get("sso") === "1" && Boolean(ssoEmail);
 
   return (
     <div className="auth-page">
@@ -107,96 +56,14 @@ export function RegisterPage() {
             Workers? Download the Venue OS app to get started.
           </p>
 
-          <form onSubmit={handleSubmit} className="auth-form">
-            <label className="form-label">
-              Email address
-              <input
-                type="email"
-                className="form-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                placeholder="you@venue.com"
-              />
-            </label>
-            <label className="form-label">
-              Password
-              <input
-                type="password"
-                className="form-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="new-password"
-                placeholder="••••••••"
-              />
-            </label>
-            <label className="form-label">
-              Organisation name <span className="auth-optional">(optional)</span>
-              <input
-                type="text"
-                className="form-input"
-                value={organisationName}
-                onChange={(e) => setOrganisationName(e.target.value)}
-                placeholder="e.g. Grand Hospitality Group"
-              />
-            </label>
-            <label className="form-label">
-              Venue name
-              <input
-                type="text"
-                className="form-input"
-                value={venueName}
-                onChange={(e) => setVenueName(e.target.value)}
-                required
-                placeholder="e.g. The Grand Ballroom"
-              />
-            </label>
-            <label className="form-label">
-              Country
-              <select
-                className="form-input"
-                value={country}
-                onChange={(e) => setCountry(e.target.value as "GB" | "AE")}
-              >
-                <option value="GB">United Kingdom (GBP £)</option>
-                <option value="AE">United Arab Emirates (AED د.إ)</option>
-              </select>
-            </label>
-            <label className="form-label">
-              City
-              <MarketSelect
-                markets={markets}
-                loading={marketsLoading}
-                error={marketsError}
-                value={marketId}
-                onChange={setMarketId}
-                onRetry={retryMarkets}
-                country={country}
-              />
-            </label>
-            <label className="form-label">
-              Invite code
-              <input
-                type="text"
-                className="form-input"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                required
-                placeholder="Provided by our team"
-              />
-            </label>
-            {error && <p className="auth-error">{error}</p>}
-            <p className="auth-consent">
-              By creating an account you agree to our{" "}
-              <Link to="/terms" className="auth-link">Terms</Link> and{" "}
-              <Link to="/privacy" className="auth-link">Privacy Policy</Link>.
-            </p>
-            <button type="submit" className="auth-btn" disabled={loading}>
-              {loading ? "Creating account…" : "Create account"}
-            </button>
-          </form>
+          {SSO_ENABLED && !ssoMode && (
+            <>
+              <SsoButtons />
+              <div className="auth-divider">or with email</div>
+            </>
+          )}
+
+          {ssoMode ? <SsoRegisterForm email={ssoEmail!} /> : <RegisterForm />}
 
           <p className="auth-link-row">
             Already have an account?{" "}
@@ -204,9 +71,13 @@ export function RegisterPage() {
               Sign in
             </Link>
           </p>
-          <LegalLinks className="auth-legal-links" />
         </div>
       </main>
     </div>
   );
+}
+
+function SsoRegisterForm({ email }: { email: string }) {
+  const { getToken } = useClerkAuth();
+  return <RegisterForm ssoEmail={email} getSsoToken={() => getToken()} />;
 }

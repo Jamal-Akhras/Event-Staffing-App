@@ -25,6 +25,7 @@ from apps.api.src.db.tenancy_models import (
     OrganisationModel,
     VenueModel,
 )
+from apps.api.src.db.message_models import ApplicationMessageHistoryModel, MessageModel
 from apps.api.src.db.notification_models import NotificationModel
 from apps.api.src.db.trust_models import ReportModel
 from apps.api.src.db.idempotency_models import IdempotencyRecordModel
@@ -177,6 +178,8 @@ class UserModel(Base):
     session_version = Column(Integer, nullable=False, default=0)
     deactivated_at = Column(UtcDateTime(), nullable=True)
     anonymized_at = Column(UtcDateTime(), nullable=True)
+    sso_provider = Column(String(32), nullable=True)
+    sso_subject = Column(String(255), nullable=True)
 
 
 class ShiftTemplateModel(Base):
@@ -229,45 +232,6 @@ class RecurringScheduleModel(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(UtcDateTime(), nullable=False)
     last_generated_at = Column(UtcDateTime(), nullable=True)
-
-
-class MessageModel(Base):
-    __tablename__ = "messages"
-    __table_args__ = (
-        CheckConstraint(
-            "application_id IS NOT NULL OR booking_id IS NOT NULL",
-            name="ck_messages_context_present",
-        ),
-    )
-
-    message_id = Column(String, primary_key=True)
-    shift_id = Column(String, ForeignKey("shifts.shift_id", ondelete="CASCADE"), nullable=False, index=True)
-    application_id = Column(
-        String,
-        ForeignKey("applications.application_id", ondelete="CASCADE"),
-        nullable=True,
-        index=True,
-    )
-    booking_id = Column(String, ForeignKey("bookings.booking_id", ondelete="CASCADE"), nullable=True, index=True)
-    sender_id = Column(String, nullable=False)
-    sender_role = Column(String, nullable=False)
-    content = Column(String, nullable=False)
-    read_at = Column(UtcDateTime(), nullable=True)
-    created_at = Column(UtcDateTime(), nullable=False)
-
-
-class ApplicationMessageHistoryModel(Base):
-    __tablename__ = "application_message_history"
-
-    history_id = Column(String, primary_key=True)
-    application_id = Column(
-        String,
-        ForeignKey("applications.application_id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    message = Column(String, nullable=False)
-    edited_at = Column(UtcDateTime(), nullable=False)
 
 
 class RatingModel(Base):

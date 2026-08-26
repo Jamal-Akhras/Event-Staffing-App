@@ -8,20 +8,16 @@ from apps.api.src.models.user import User
 
 
 class SqlAlchemyUserRepository:
-    """SQLAlchemy implementation of UserRepository."""
-
     def __init__(self, session: Session) -> None:
         self._session = session
 
     def get(self, user_id: str) -> User | None:
-        """Get a user by ID."""
         model = self._session.get(UserModel, user_id)
         if model is None:
             return None
         return _to_domain(model)
 
     def get_by_email(self, email: str) -> User | None:
-        """Get a user by email address."""
         stmt = select(UserModel).where(UserModel.email == email)
         model = self._session.execute(stmt).scalar_one_or_none()
         if model is None:
@@ -35,8 +31,17 @@ class SqlAlchemyUserRepository:
             return None
         return _to_domain(model)
 
+    def get_by_sso_subject(self, provider: str, subject: str) -> User | None:
+        stmt = select(UserModel).where(
+            UserModel.sso_provider == provider,
+            UserModel.sso_subject == subject,
+        )
+        model = self._session.execute(stmt).scalar_one_or_none()
+        if model is None:
+            return None
+        return _to_domain(model)
+
     def save(self, user: User) -> User:
-        """Save a user (create or update)."""
         model = self._session.get(UserModel, user.user_id)
         if model is None:
             model = UserModel(user_id=user.user_id)
@@ -47,7 +52,6 @@ class SqlAlchemyUserRepository:
 
 
 def _to_domain(model: UserModel) -> User:
-    """Convert SQLAlchemy model to domain model."""
     return User(
         user_id=model.user_id,
         email=model.email,
@@ -64,11 +68,12 @@ def _to_domain(model: UserModel) -> User:
         session_version=int(getattr(model, "session_version", 0)),
         deactivated_at=getattr(model, "deactivated_at", None),
         anonymized_at=getattr(model, "anonymized_at", None),
+        sso_provider=getattr(model, "sso_provider", None),
+        sso_subject=getattr(model, "sso_subject", None),
     )
 
 
 def _apply_domain(model: UserModel, user: User) -> None:
-    """Apply domain model fields to SQLAlchemy model."""
     model.email = user.email
     model.hashed_password = user.hashed_password
     model.role = user.role
@@ -89,3 +94,5 @@ def _apply_domain(model: UserModel, user: User) -> None:
         model.deactivated_at = user.deactivated_at
     if hasattr(model, "anonymized_at"):
         model.anonymized_at = user.anonymized_at
+    model.sso_provider = user.sso_provider
+    model.sso_subject = user.sso_subject

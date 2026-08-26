@@ -1,37 +1,43 @@
-"""Authentication request/response schemas."""
+from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 from apps.api.src.validation_types import UtcTimestamp
 
 
 class UserRegisterRequest(BaseModel):
-    """Request schema for user registration."""
-
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
 
 
 class OperatorRegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+    sso_token: str | None = Field(default=None, min_length=20, max_length=4096)
     venue_name: str = Field(min_length=1, max_length=160)
     organisation_name: str | None = Field(default=None, max_length=160)
     country: str = Field(min_length=2, max_length=2)
     market_id: str = Field(min_length=1, max_length=100)
     invite_code: str = Field(min_length=1, max_length=200)
 
+    @model_validator(mode="after")
+    def _require_one_credential(self) -> "OperatorRegisterRequest":
+        if (self.password is None) == (self.sso_token is None):
+            raise ValueError("Provide either a password or a sign-in token, not both.")
+        return self
+
+
+class SsoSignInRequest(BaseModel):
+    token: str = Field(min_length=20, max_length=4096)
+    role: Literal["worker", "operator"] = "worker"
+
 
 class UserLoginRequest(BaseModel):
-    """Request schema for user login."""
-
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
 
 
 class TokenResponse(BaseModel):
-    """Response schema for authentication endpoints."""
-
     access_token: str
     token_type: str = "bearer"
     user_id: str
@@ -73,8 +79,6 @@ class SessionResponse(BaseModel):
 
 
 class UserResponse(BaseModel):
-    """Response schema for user information."""
-
     user_id: str
     email: str
     role: str

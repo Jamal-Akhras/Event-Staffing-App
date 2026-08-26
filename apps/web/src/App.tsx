@@ -7,6 +7,9 @@ import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { SsoCallbackPage } from "./pages/SsoCallbackPage";
+import { SsoCompletePage } from "./pages/SsoCompletePage";
+import { SSO_ENABLED } from "./lib/clerk";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ShiftsPage } from "./pages/ShiftsPage";
 import { TemplatesPage } from "./pages/TemplatesPage";
@@ -40,6 +43,8 @@ export default function App() {
             </Route>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            {SSO_ENABLED && <Route path="/sso-callback" element={<SsoCallbackPage />} />}
+            {SSO_ENABLED && <Route path="/sso-complete" element={<SsoCompletePage />} />}
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ForgotPasswordPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />

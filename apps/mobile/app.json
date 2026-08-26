@@ -2,6 +2,7 @@
   "expo": {
     "name": "mobile",
     "slug": "mobile",
+    "scheme": "venueos",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -34,7 +35,9 @@
           "color": "#0E5A3A",
           "defaultChannel": "shift-updates"
         }
-      ]
+      ],
+      "@clerk/expo",
+      "expo-web-browser"
     ]
   }
 }
