@@ -5,6 +5,7 @@ from datetime import datetime
 
 from fastapi import HTTPException
 
+from apps.api.src.auth.actor import ActorRole
 from apps.api.src.datetime_utils import utc_now
 from apps.api.src.models.application import Application
 from apps.api.src.models.shift import Shift
@@ -17,6 +18,7 @@ from apps.api.src.schemas import (
     WorkerProfilePrivateResponse,
 )
 from packages.domain.src.booking import Booking
+from packages.domain.src.booking_state import BookingState
 from packages.domain.src.booking_state_machine import allowed_next_states
 
 def _now_or(request_time: datetime | None) -> datetime:
@@ -30,12 +32,16 @@ def _get_worker_profile(repo: WorkerProfileRepository, worker_id: str) -> Worker
     return profile
 
 
-def _booking_view(booking: Booking) -> BookingResponse:
+def _booking_view(booking: Booking, viewer: ActorRole | None = None) -> BookingResponse:
     payload = asdict(booking)
     payload["state"] = booking.state.value
     payload["allowed_transitions"] = [
         state.value for state in allowed_next_states(booking.state)
     ]
+    if viewer != ActorRole.WORKER or booking.state not in {BookingState.CHECKED_IN, BookingState.CHECKED_OUT}:
+        payload["completion_code"] = None
+    if viewer not in {ActorRole.OPERATOR, ActorRole.SYSTEM} or booking.state != BookingState.CONFIRMED:
+        payload["check_in_code"] = None
     return BookingResponse(**payload)
 
 

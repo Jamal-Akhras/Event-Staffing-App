@@ -7,6 +7,7 @@ from apps.api.src.validation_types import MoneyAmount, UtcTimestamp
 
 class BookingTransitionRequest(BaseModel):
     now: UtcTimestamp | None = None
+    code: str | None = Field(default=None, pattern=r"^\d{4}$")
 
 
 class BookingResponse(BaseModel):
@@ -31,6 +32,8 @@ class BookingResponse(BaseModel):
     payment_method: str | None = None
     payment_reference: str | None = None
     payment_recorded_by_user_id: str | None = None
+    check_in_code: str | None = None
+    completion_code: str | None = None
 
 
 class ShiftCreateRequest(BaseModel):

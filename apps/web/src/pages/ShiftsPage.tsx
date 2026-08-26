@@ -1,170 +1,154 @@
-import { useEffect, useMemo, useState } from "react";
-import { EmptyState } from "../components/EmptyState";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
 import { ErrorCard } from "../components/ErrorCard";
-import { ShiftCreateForm } from "../components/ShiftCreateForm";
 import { SkeletonCard } from "../components/SkeletonCard";
-import { StatusBadge } from "../components/StatusBadge";
 import { useToast } from "../components/Toast";
-import { formatDateTime, formatMoney } from "../lib/format";
-import { fetchJson } from "../lib/api";
+import { useVenue } from "../lib/useVenue";
+import { readWeekStart, saveWeekStart } from "../lib/weekStart";
 import type { Shift } from "../types/operations";
+import type { Template } from "../types/templates";
+import { DecisionList } from "./dashboard/DecisionList";
+import { StatRow } from "./dashboard/StatRow";
+import { completedCounts, describeOldest, liveShifts, pendingApplications, tonightRows } from "./dashboard/dashboardUtils";
+import { useDecideApplication, useOverviewData } from "./dashboard/useOverviewData";
+import { BoardHeader } from "./shifts/BoardHeader";
+import { PostShiftModal, type PostDraft } from "./shifts/PostShiftModal";
 import { ShiftManagementModal } from "./shifts/ShiftManagementModal";
+import { TemplateChips } from "./shifts/TemplateChips";
+import { TonightRail } from "./shifts/TonightRail";
+import { WeekBoard } from "./shifts/WeekBoard";
+import { boardDays, defaultStartFor, missingSeats, shiftDays, shiftsWithin, weekStartFor } from "./shifts/boardUtils";
+import "./DashboardPage.css";
+import "./dashboard/OverviewCards.css";
 import "./ShiftsPage.css";
 
 export function ShiftsPage() {
   const { toast } = useToast();
-  const [shifts, setShifts] = useState<Shift[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+  const queryClient = useQueryClient();
+  const venue = useVenue();
+  const data = useOverviewData();
+  const decide = useDecideApplication(
+    (message) => toast({ type: "success", message }),
+    (message) => toast({ type: "error", message })
+  );
+  const [weekStart, setWeekStart] = useState(readWeekStart);
+  const [anchor, setAnchor] = useState(() => new Date());
+  const [draft, setDraft] = useState<PostDraft | null>(null);
+  const [selected, setSelected] = useState<Shift | null>(null);
 
-  const loadShifts = async () => {
-    setLoading(true);
-    try {
-      setShifts(await fetchJson<Shift[]>("/shifts"));
-      setLoadError(null);
-    } catch (err) {
-      toast({ type: "error", message: (err as Error).message });
-      setShifts([]);
-      setLoadError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
+  const now = new Date();
+  const days = boardDays(weekStartFor(anchor, weekStart));
+  const location = venue.data?.default_location ?? "";
+  const currency = venue.data?.currency ?? "GBP";
+  const weekShifts = liveShifts(shiftsWithin(days, data.shifts));
+  const openSeats = weekShifts.reduce((sum, shift) => sum + missingSeats(shift), 0);
+  const openShifts = weekShifts.filter((shift) => missingSeats(shift) > 0).length;
+  const bookedSeats = weekShifts.reduce((sum, shift) => sum + shift.workers_filled, 0);
+  const postedSeats = weekShifts.reduce((sum, shift) => sum + shift.workers_needed, 0);
+  const pending = pendingApplications(data.applications);
+
+  const refresh = async () => {
+    await Promise.all(["shifts", "applications", "bookings"].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
   };
 
-  useEffect(() => {
-    loadShifts();
-  }, []);
+  const changeWeekStart = (day: number) => {
+    saveWeekStart(day);
+    setWeekStart(day);
+  };
 
-  const openShifts = useMemo(
-    () => shifts.filter((shift) => shift.status === "open"),
-    [shifts]
-  );
-  const filledShifts = useMemo(
-    () => shifts.filter((shift) => shift.status === "filled"),
-    [shifts]
-  );
-  const inactiveShifts = useMemo(
-    () => shifts.filter((shift) => shift.status === "closed" || shift.status === "cancelled"),
-    [shifts]
-  );
-  const initialLoading = loading && shifts.length === 0 && !loadError;
+  const postFromTemplate = (template: Template) =>
+    setDraft({
+      initial: {
+        role: template.role,
+        location: template.location,
+        pay_rate: String(template.pay_rate),
+        workers_needed: String(template.workers_needed),
+        notes: template.notes ?? "",
+      },
+      durationHours: template.duration_hours,
+    });
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Shifts</h1>
-          <p className="page-subtitle">Post coverage needs and monitor fill status</p>
-        </div>
-        <button className="btn secondary" type="button" onClick={loadShifts}>
-          Refresh
-        </button>
+    <div className="board-page">
+      <div className="board-main">
+        <BoardHeader
+          days={days}
+          openSeats={openSeats}
+          weekStart={weekStart}
+          onWeekStartChange={changeWeekStart}
+          onPrevious={() => setAnchor(shiftDays(anchor, -7))}
+          onToday={() => setAnchor(new Date())}
+          onNext={() => setAnchor(shiftDays(anchor, 7))}
+          onPost={() => setDraft({ initial: { location } })}
+        />
+        <TemplateChips currency={currency} onPick={postFromTemplate} />
+        {data.error ? (
+          <ErrorCard message={data.error.message} />
+        ) : data.loading ? (
+          <SkeletonCard lines={8} />
+        ) : (
+          <>
+            <WeekBoard
+              days={days}
+              shifts={data.shifts}
+              applications={data.applications}
+              now={now}
+              onAdd={(day) => setDraft({ initial: { location, start_time: defaultStartFor(day) } })}
+              onSelect={setSelected}
+            />
+            <div className="bd-summary">
+              <StatRow
+                stats={[
+                  { label: "Shifts this week", value: String(weekShifts.length), note: `${weekShifts.length - openShifts} filled · ${openShifts} still open` },
+                  { label: "Open seats", value: String(openSeats), note: openSeats > 0 ? "Across the shifts marked open" : "Everything is covered", tone: openSeats > 0 ? "warning" : "success" },
+                  { label: "Booked seats", value: `${bookedSeats} of ${postedSeats}`, note: "Workers confirmed against seats posted" },
+                  { label: "Applications waiting", value: String(pending.length), note: describeOldest(pending, now) },
+                ]}
+              />
+            </div>
+          </>
+        )}
       </div>
 
-      {initialLoading && (
-        <div className="workspace">
-          <SkeletonCard className="shifts-skeleton-form" lines={6} />
-          <SkeletonCard className="shifts-skeleton-list" lines={5} />
-          <SkeletonCard className="shifts-skeleton-list" lines={5} />
-        </div>
-      )}
-      {!initialLoading && loadError && <ErrorCard message={loadError} />}
-
-      {!initialLoading && !loadError && <div className="workspace">
-        <ShiftCreateForm
-          onCreated={loadShifts}
-          onError={(message) => toast({ type: "error", message })}
+      <aside className="board-rail">
+        <DecisionList
+          pending={pending}
+          shifts={data.shifts}
+          workers={data.workers}
+          completedCounts={completedCounts(data.bookings)}
+          busyId={decide.isPending ? decide.variables?.applicationId ?? null : null}
+          onDecide={(applicationId, action) => decide.mutate({ applicationId, action })}
         />
-        <ShiftColumn title="Open Shifts" shifts={openShifts} emptyStatus="open" onManage={setSelectedShift} />
-        {filledShifts.length > 0 && (
-          <ShiftColumn title="Filled Shifts" shifts={filledShifts} emptyStatus="filled" onManage={setSelectedShift} />
-        )}
-        {inactiveShifts.length > 0 && (
-          <ShiftColumn title="Closed & Cancelled" shifts={inactiveShifts} emptyStatus="inactive" onManage={setSelectedShift} />
-        )}
-      </div>}
+        <TonightRail rows={tonightRows(liveShifts(data.shifts), data.bookings, data.workers, now)} />
+      </aside>
 
-      {selectedShift && (
+      {draft && (
+        <PostShiftModal
+          draft={draft}
+          onClose={() => setDraft(null)}
+          onError={(message) => toast({ type: "error", message })}
+          onCreated={async () => {
+            setDraft(null);
+            await refresh();
+            toast({ type: "success", message: "Shift posted." });
+          }}
+        />
+      )}
+      {selected && (
         <ShiftManagementModal
-          shift={selectedShift}
-          onClose={() => setSelectedShift(null)}
+          shift={selected}
+          bookings={data.bookings}
+          workers={data.workers}
+          onChanged={refresh}
+          onClose={() => setSelected(null)}
           onSaved={async (message) => {
-            setSelectedShift(null);
-            await loadShifts();
+            setSelected(null);
+            await refresh();
             toast({ type: "success", message });
           }}
         />
       )}
-    </div>
-  );
-}
-
-function ShiftColumn({
-  title,
-  shifts,
-  emptyStatus,
-  onManage,
-}: {
-  title: string;
-  shifts: Shift[];
-  emptyStatus: "open" | "filled" | "inactive";
-  onManage: (shift: Shift) => void;
-}) {
-  return (
-    <div className="panel card">
-      <div className="panel-title">
-        <h3>{title}</h3>
-        <span className="pill">{shifts.length} {emptyStatus}</span>
-      </div>
-      {shifts.length === 0 ? (
-        <EmptyState
-          title={`No ${emptyStatus} shifts`}
-          message="Post a shift to start receiving applications from qualified workers."
-        />
-      ) : (
-        <div className="recent-list">
-          {shifts.map((shift) => (
-            <ShiftCard key={shift.shift_id} shift={shift} onManage={() => onManage(shift)} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ShiftCard({ shift, onManage }: { shift: Shift; onManage: () => void }) {
-  const remaining = Math.max(shift.workers_needed - shift.workers_filled, 0);
-
-  return (
-    <div className={`application-card shift-card ${shift.status}`}>
-      <div>
-        <div className="shift-card-header">
-          <p className="booking-id">
-            {shift.shift_id}
-          </p>
-          <StatusBadge status={shift.status} />
-        </div>
-        <p className="booking-state">{shift.role}</p>
-        <p className="booking-meta">{shift.location}</p>
-        <p className="booking-meta">{formatDateTime(shift.start_time)}</p>
-        <p className="booking-meta">{formatMoney(shift.pay_rate, shift.currency)}/hr</p>
-        <p className="booking-meta">
-          {shift.workers_filled} of {shift.workers_needed} workers filled
-          {remaining > 0 ? ` - ${remaining} still needed` : ""}
-        </p>
-        {shift.notes && (
-          <p className="booking-meta shift-note">
-            {shift.notes}
-          </p>
-        )}
-        {shift.cancellation_reason && (
-          <p className="booking-meta shift-cancellation-reason">Reason: {shift.cancellation_reason}</p>
-        )}
-        <button className="btn ghost compact shift-manage-button" type="button" onClick={onManage}>
-          {shift.status === "open" || shift.status === "filled" ? "Manage shift" : "View record"}
-        </button>
-      </div>
     </div>
   );
 }

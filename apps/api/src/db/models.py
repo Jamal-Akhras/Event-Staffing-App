@@ -13,12 +13,14 @@ from sqlalchemy import (
     Numeric,
     String,
     UniqueConstraint,
+    event,
 )
 from sqlalchemy.orm import synonym
 
 from apps.api.src.db.database import Base
 from apps.api.src.db.types import UtcDateTime
 from packages.domain.src.booking_state import BookingState
+from packages.domain.src.attendance import new_attendance_code
 from apps.api.src.db.tenancy_models import (
     MarketModel,
     OrganisationMembershipModel,
@@ -29,6 +31,7 @@ from apps.api.src.db.message_models import ApplicationMessageHistoryModel, Messa
 from apps.api.src.db.notification_models import NotificationModel
 from apps.api.src.db.trust_models import ReportModel
 from apps.api.src.db.idempotency_models import IdempotencyRecordModel
+from apps.api.src.db.billing_models import PartnerCodeModel, PartnerCodeRedemptionModel
 
 AccountModel = VenueModel
 
@@ -38,6 +41,9 @@ class BookingModel(Base):
     __table_args__ = (
         UniqueConstraint("worker_id", "shift_id", name="uq_bookings_worker_shift"),
         CheckConstraint("end_time > start_time", name="ck_bookings_time_order"),
+        CheckConstraint("length(check_in_code) = 4", name="ck_bookings_check_in_code_length"),
+        CheckConstraint("length(completion_code) = 4", name="ck_bookings_completion_code_length"),
+        CheckConstraint("check_in_code <> completion_code", name="ck_bookings_attendance_codes_distinct"),
     )
 
     booking_id = Column(String, primary_key=True)
@@ -61,6 +67,16 @@ class BookingModel(Base):
     payment_method = Column(String(30), nullable=True)
     payment_reference = Column(String(200), nullable=True)
     payment_recorded_by_user_id = Column(String, nullable=True)
+    check_in_code = Column(String(4), nullable=False)
+    completion_code = Column(String(4), nullable=False)
+
+
+@event.listens_for(BookingModel, "before_insert")
+def _set_booking_attendance_codes(_mapper, _connection, target: BookingModel) -> None:
+    if not target.check_in_code:
+        target.check_in_code = new_attendance_code()
+    if not target.completion_code or target.completion_code == target.check_in_code:
+        target.completion_code = new_attendance_code(target.check_in_code)
 
 
 class ShiftModel(Base):

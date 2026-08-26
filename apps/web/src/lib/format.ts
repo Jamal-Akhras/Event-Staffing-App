@@ -1,12 +1,12 @@
 const CURRENCY_SYMBOLS: Record<string, string> = {
   GBP: "£",
-  AED: "AED ",
+  AED: "AED ",
   USD: "$",
 };
 
-export function formatMoney(amount: number, currency = "GBP"): string {
-  const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
-  return `${symbol}${amount.toFixed(2)}`;
+export function formatMoney(amount: number | string, currency = "GBP"): string {
+  const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
+  return `${symbol}${Number(amount).toFixed(2)}`;
 }
 
 export function formatDateTime(value: string) {

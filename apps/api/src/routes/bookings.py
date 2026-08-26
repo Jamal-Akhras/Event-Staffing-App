@@ -31,7 +31,7 @@ def get_booking(
     try:
         booking = service.get_booking(booking_id)
         _require_booking_access(actor, booking, service)
-        return _booking_view(booking)
+        return _booking_view(booking, actor.role)
     except ServiceError as exc:
         raise_service_error(exc)
 
@@ -46,7 +46,7 @@ def list_bookings(
     require_role(actor.role, {ActorRole.OPERATOR, ActorRole.WORKER})
     worker_id, operator_id, account_id = list_scope(actor, worker_id, "bookings")
     items = service.list_bookings(limit, worker_id, operator_id, account_id)
-    return [_booking_view(booking) for booking in items]
+    return [_booking_view(booking, actor.role) for booking in items]
 
 
 @router.post("/bookings/{booking_id}/confirm", response_model=BookingResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
@@ -61,14 +61,16 @@ def confirm_booking(
 
 
 @router.post("/bookings/{booking_id}/check-in", response_model=BookingResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
+@limiter.limit("5/minute", key_func=actor_or_ip)
 def check_in_booking(
     booking_id: str,
-    request: BookingTransitionRequest,
+    request: Request,
+    payload: BookingTransitionRequest,
     service: BookingLifecycleService = Depends(get_booking_lifecycle_service),
     actor: ActorContext = Depends(get_actor_context),
 ) -> BookingResponse:
     require_role(actor.role, {ActorRole.WORKER})
-    return _transition(service, booking_id, BookingState.CHECKED_IN, request, actor)
+    return _transition(service, booking_id, BookingState.CHECKED_IN, payload, actor)
 
 
 @router.post("/bookings/{booking_id}/check-out", response_model=BookingResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
@@ -83,14 +85,16 @@ def check_out_booking(
 
 
 @router.post("/bookings/{booking_id}/approve", response_model=BookingResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
+@limiter.limit("5/minute", key_func=actor_or_ip)
 def approve_booking(
     booking_id: str,
-    request: BookingTransitionRequest,
+    request: Request,
+    payload: BookingTransitionRequest,
     service: BookingLifecycleService = Depends(get_booking_lifecycle_service),
     actor: ActorContext = Depends(get_actor_context),
 ) -> BookingResponse:
     require_role(actor.role, {ActorRole.OPERATOR})
-    return _transition(service, booking_id, BookingState.APPROVED, request, actor, True)
+    return _transition(service, booking_id, BookingState.APPROVED, payload, actor, True)
 
 
 @router.post("/bookings/{booking_id}/pay", response_model=BookingResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
@@ -148,7 +152,7 @@ def sweep_no_shows(
 ) -> list[BookingResponse]:
     require_role(actor.role, {ActorRole.SYSTEM})
     updated = service.sweep_no_shows(request)
-    return [_booking_view(item) for item in updated]
+    return [_booking_view(item, actor.role) for item in updated]
 
 
 def _transition(
@@ -162,7 +166,7 @@ def _transition(
     try:
         _require_booking_access(actor, service.get_booking(booking_id), service)
         booking = service.transition(booking_id, target, request, actor.user_id, refresh_worker_reliability)
-        return _booking_view(booking)
+        return _booking_view(booking, actor.role)
     except ServiceError as exc:
         raise_service_error(exc)
 

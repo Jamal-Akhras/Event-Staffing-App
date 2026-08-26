@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 
+from packages.domain.src.attendance import new_attendance_code
 from packages.domain.src.booking_state import BookingState
 from packages.domain.src.booking_state_machine import TransitionError, require_transition
 
@@ -33,6 +34,12 @@ class Booking:
     payment_method: str | None = None
     payment_reference: str | None = None
     payment_recorded_by_user_id: str | None = None
+    check_in_code: str = field(default_factory=new_attendance_code)
+    completion_code: str = field(default_factory=new_attendance_code)
+
+    def __post_init__(self) -> None:
+        if self.completion_code == self.check_in_code:
+            object.__setattr__(self, "completion_code", new_attendance_code(self.check_in_code))
 
     def transition_to(self, target: BookingState, now: datetime) -> "Booking":
         if target == self.state:

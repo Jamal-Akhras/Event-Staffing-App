@@ -23,6 +23,7 @@ from apps.api.src.repository_dependencies import (
     get_notification_repo,
     get_outbox_publisher,
     get_organisation_repo,
+    get_partner_code_repo,
     get_rating_repo,
     get_report_repo,
     get_request_session,
@@ -34,7 +35,10 @@ from apps.api.src.repository_dependencies import (
     get_worker_feed_query_repo,
     get_worker_profile_repo,
 )
+from apps.api.src.config import get_platform_fee_percent
+from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
 from apps.api.src.services.application_service import ApplicationService
+from apps.api.src.services.billing_service import BillingService
 from apps.api.src.services.booking_lifecycle_service import BookingLifecycleService
 from apps.api.src.services.message_service import MessageService
 from apps.api.src.services.shift_service import ShiftService
@@ -51,6 +55,7 @@ __all__ = [
     "get_application_message_history_repo",
     "get_application_repo",
     "get_application_service",
+    "get_billing_service",
     "get_booking_lifecycle_service",
     "get_booking_repo",
     "get_message_repo",
@@ -80,6 +85,15 @@ __all__ = [
 
 def get_shift_service(repo: ShiftRepository = Depends(get_shift_repo)) -> ShiftService:
     return ShiftService(repo)
+
+
+def get_billing_service(
+    booking_repo: BookingRepository = Depends(get_booking_repo),
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
+    partner_code_repo: PartnerCodeRepository = Depends(get_partner_code_repo),
+) -> BillingService:
+    return BillingService(booking_repo, shift_repo, worker_repo, partner_code_repo, get_platform_fee_percent())
 
 
 def get_idempotency_service(

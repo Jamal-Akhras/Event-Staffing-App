@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { fetchJson } from "../lib/api";
 import { formatMoney } from "../lib/format";
 import type { Application, Booking, Shift } from "../types/operations";
+import "./AnalyticsPage.css";
 
 export function AnalyticsPage() {
   const { user } = useAuth();
@@ -248,7 +249,7 @@ function buildInsights(shifts: Shift[], bookings: Booking[], applications: Appli
     topRoles: Object.entries(roleCounts).sort(([, left], [, right]) => right - left).slice(0, 5),
     dayOfWeekCounts,
     avgPayRate: shifts.length > 0
-      ? shifts.reduce((sum, shift) => sum + shift.pay_rate, 0) / shifts.length
+      ? shifts.reduce((sum, shift) => sum + Number(shift.pay_rate), 0) / shifts.length
       : 0,
   };
 }

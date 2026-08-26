@@ -1,15 +1,22 @@
 import { FormEvent, useState } from "react";
 
 import { ApiError, postJson, putJson } from "../../lib/api";
-import type { Shift } from "../../types/operations";
+import { toLocalInput } from "../../lib/localInput";
+import type { Booking, Shift, WorkerProfile } from "../../types/operations";
+import { BookedWorkers } from "./BookedWorkers";
+import "../../components/Modal.css";
+import "./ShiftManagementModal.css";
 
 type ShiftManagementModalProps = {
   shift: Shift;
+  bookings?: Booking[];
+  workers?: Record<string, WorkerProfile>;
+  onChanged?: () => Promise<void>;
   onClose: () => void;
   onSaved: (message: string) => Promise<void>;
 };
 
-export function ShiftManagementModal({ shift, onClose, onSaved }: ShiftManagementModalProps) {
+export function ShiftManagementModal({ shift, bookings, workers, onChanged, onClose, onSaved }: ShiftManagementModalProps) {
   const [form, setForm] = useState(() => ({
     role: shift.role,
     location: shift.location,
@@ -77,9 +84,9 @@ export function ShiftManagementModal({ shift, onClose, onSaved }: ShiftManagemen
   }
 
   return (
-    <div className="schedule-modal-backdrop" onClick={onClose}>
-      <section className="card schedule-modal shift-management-modal" onClick={(event) => event.stopPropagation()}>
-        <header className="schedule-modal-header">
+    <div className="modal-backdrop" onClick={onClose}>
+      <section className="card modal shift-management-modal" onClick={(event) => event.stopPropagation()}>
+        <header className="modal-header">
           <div>
             <p className="management-eyebrow">Shift controls</p>
             <h2>{shift.role}</h2>
@@ -87,6 +94,15 @@ export function ShiftManagementModal({ shift, onClose, onSaved }: ShiftManagemen
           </div>
           <button className="btn ghost" type="button" onClick={onClose}>Close</button>
         </header>
+
+        {bookings && onChanged && (
+          <BookedWorkers
+            shift={shift}
+            bookings={bookings.filter((booking) => booking.shift_id === shift.shift_id)}
+            workers={workers ?? {}}
+            onChanged={onChanged}
+          />
+        )}
 
         {canManage ? (
           <form className="shift-management-body" onSubmit={save}>
@@ -155,10 +171,4 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
       <input type={type} value={value} min={type === "number" ? "0" : undefined} step={label === "Hourly pay" ? "0.01" : undefined} onChange={(event) => onChange(event.target.value)} required />
     </label>
   );
-}
-
-function toLocalInput(value: string) {
-  const date = new Date(value);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
 }

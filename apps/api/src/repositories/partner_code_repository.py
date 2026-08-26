@@ -1,0 +1,19 @@
+from __future__ import annotations
+
+from typing import Protocol
+
+from apps.api.src.models.partner_code import PartnerCode, PartnerCodeRedemption
+
+
+class PartnerCodeRepository(Protocol):
+    def get_code(self, code: str) -> PartnerCode | None: ...
+
+    def get_code_for_redemption(self, code: str, account_id: str) -> PartnerCode | None: ...
+
+    def save_code(self, partner_code: PartnerCode) -> PartnerCode: ...
+
+    def list_redemptions(self, code: str) -> list[PartnerCodeRedemption]: ...
+
+    def get_redemption_for_account(self, account_id: str) -> PartnerCodeRedemption | None: ...
+
+    def save_redemption(self, redemption: PartnerCodeRedemption) -> PartnerCodeRedemption: ...

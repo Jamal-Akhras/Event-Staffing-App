@@ -5,7 +5,7 @@ export type Template = {
   role: string;
   location: string;
   duration_hours: number;
-  pay_rate: number;
+  pay_rate: string;
   workers_needed: number;
   notes: string | null;
   created_at: string;

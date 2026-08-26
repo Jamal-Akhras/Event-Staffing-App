@@ -22,6 +22,9 @@ from apps.api.src.repositories.in_memory_market_repository import InMemoryMarket
 from apps.api.src.repositories.in_memory_notification_repository import InMemoryNotificationRepository
 from apps.api.src.repositories.in_memory_report_repository import InMemoryReportRepository
 from apps.api.src.repositories.in_memory_organisation_repository import InMemoryOrganisationRepository
+from apps.api.src.repositories.in_memory_partner_code_repository import InMemoryPartnerCodeRepository
+from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
+from apps.api.src.repositories.sqlalchemy_partner_code_repository import SqlAlchemyPartnerCodeRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 from apps.api.src.repositories.in_memory_template_repository import InMemoryTemplateRepository
 from apps.api.src.repositories.in_memory_user_repository import InMemoryUserRepository
@@ -86,6 +89,7 @@ _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
 )
 _NOTIFICATIONS = InMemoryNotificationRepository()
 _REPORTS = InMemoryReportRepository()
+_PARTNER_CODES = InMemoryPartnerCodeRepository()
 _DECISIONS = InMemoryApplicationDecisionRepository(_APPLICATIONS, _BOOKINGS, _SHIFTS)
 
 
@@ -202,3 +206,7 @@ def get_rating_repo(session: Session | None = Depends(get_request_session)) -> R
 
 def get_report_repo(session: Session | None = Depends(get_request_session)) -> ReportRepository:
     return _REPORTS if use_in_memory_repositories() else SqlAlchemyReportRepository(_session(session))
+
+
+def get_partner_code_repo(session: Session | None = Depends(get_request_session)) -> PartnerCodeRepository:
+    return _PARTNER_CODES if use_in_memory_repositories() else SqlAlchemyPartnerCodeRepository(_session(session))

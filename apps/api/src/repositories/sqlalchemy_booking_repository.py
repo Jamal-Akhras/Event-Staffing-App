@@ -119,6 +119,8 @@ def _to_domain(model: BookingModel) -> Booking:
         payment_method=getattr(model, "payment_method", None),
         payment_reference=getattr(model, "payment_reference", None),
         payment_recorded_by_user_id=getattr(model, "payment_recorded_by_user_id", None),
+        check_in_code=model.check_in_code,
+        completion_code=model.completion_code,
     )
 
 
@@ -142,3 +144,5 @@ def _apply_domain(model: BookingModel, booking: Booking) -> None:
     model.payment_method = booking.payment_method
     model.payment_reference = booking.payment_reference
     model.payment_recorded_by_user_id = booking.payment_recorded_by_user_id
+    model.check_in_code = booking.check_in_code
+    model.completion_code = booking.completion_code

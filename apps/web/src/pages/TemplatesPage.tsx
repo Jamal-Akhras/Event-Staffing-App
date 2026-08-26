@@ -55,7 +55,7 @@ export function TemplatesPage() {
       role: template.role,
       location: template.location,
       duration_hours: template.duration_hours,
-      pay_rate: template.pay_rate,
+      pay_rate: Number(template.pay_rate),
       workers_needed: template.workers_needed,
       notes: template.notes || "",
     });

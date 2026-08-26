@@ -30,6 +30,7 @@ export function ShiftsScreen() {
   const [bookingsLoaded, setBookingsLoaded] = useState(false);
   const [selected, setSelected] = useState<Booking | null>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
+  const [checkInCode, setCheckInCode] = useState("");
   const [applications, setApplications] = useState<Application[]>([]);
   const [applicationsLoaded, setApplicationsLoaded] = useState(false);
   const [applicationsError, setApplicationsError] = useState<string | null>(null);
@@ -175,6 +176,8 @@ export function ShiftsScreen() {
         <SelectedBookingPanel
           booking={selected}
           error={bookingError}
+          checkInCode={checkInCode}
+          onCheckInCodeChange={setCheckInCode}
           onCheckIn={() => transition("check-in")}
           onCheckOut={() => transition("check-out")}
           onCancel={() => selected && setCancellationTarget({ type: "booking", value: selected })}
@@ -210,8 +213,10 @@ export function ShiftsScreen() {
     try {
       const data = await postWorker<Booking>(`/bookings/${selected.booking_id}/${action}`, {
         now: new Date().toISOString(),
+        ...(action === "check-in" ? { code: checkInCode } : {}),
       });
       setSelected(data);
+      setCheckInCode("");
       await loadBookings();
       if (action === "check-out") {
         await refreshRatingPrompt();

@@ -119,6 +119,8 @@ def _booking_to_model(booking: Booking) -> BookingModel:
         paid_at=booking.paid_at,
         cancelled_at=booking.cancelled_at,
         no_show_at=booking.no_show_at,
+        check_in_code=booking.check_in_code,
+        completion_code=booking.completion_code,
     )
 
 
@@ -139,6 +141,8 @@ def _booking_to_domain(model: BookingModel) -> Booking:
         paid_at=model.paid_at,
         cancelled_at=model.cancelled_at,
         no_show_at=model.no_show_at,
+        check_in_code=model.check_in_code,
+        completion_code=model.completion_code,
     )
 
 

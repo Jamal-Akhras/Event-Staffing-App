@@ -15,7 +15,6 @@ import { ShiftsPage } from "./pages/ShiftsPage";
 import { TemplatesPage } from "./pages/TemplatesPage";
 import { ApplicationsPage } from "./pages/ApplicationsPage";
 import { WorkersPage } from "./pages/WorkersPage";
-import { SchedulePage } from "./pages/SchedulePage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { CookiesPage, PrivacyPage, TermsPage } from "./pages/LegalPage";
@@ -58,7 +57,7 @@ export default function App() {
                 <Route path="templates" element={<TemplatesPage />} />
                 <Route path="applications" element={<ApplicationsPage />} />
                 <Route path="workers" element={<WorkersPage />} />
-                <Route path="schedule" element={<SchedulePage />} />
+                <Route path="schedule" element={<Navigate to="/app/shifts" replace />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>

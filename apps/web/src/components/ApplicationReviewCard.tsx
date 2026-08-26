@@ -9,7 +9,7 @@ export type ShiftSummary = {
   location: string;
   start_time: string;
   end_time: string;
-  pay_rate: number;
+  pay_rate: string;
   status: string;
   workers_needed: number;
   workers_filled: number;

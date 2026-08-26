@@ -83,10 +83,11 @@ export async function putJson<T>(path: string, body: object): Promise<T> {
   });
 }
 
-export async function deleteJson(path: string): Promise<void> {
+export async function deleteJson(path: string, body?: object): Promise<void> {
   await requestJson<void>(path, {
     method: "DELETE",
     headers: getAuthHeaders(),
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 }
 

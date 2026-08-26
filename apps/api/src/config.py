@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from decimal import Decimal
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -99,6 +100,16 @@ def get_web_base_url() -> str:
     if not is_development() and parsed.scheme != "https":
         raise RuntimeError("WEB_BASE_URL must use HTTPS outside development.")
     return value
+
+
+def get_platform_fee_percent() -> Decimal:
+    value = get_env("PLATFORM_FEE_PERCENT").strip()
+    if not value:
+        raise RuntimeError("PLATFORM_FEE_PERCENT must be set (percentage of wages charged on completed shifts).")
+    percent = Decimal(value)
+    if percent < 0 or percent > 100:
+        raise RuntimeError("PLATFORM_FEE_PERCENT must be between 0 and 100.")
+    return percent
 
 
 def use_in_memory_repositories() -> bool:

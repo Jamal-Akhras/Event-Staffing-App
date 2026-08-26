@@ -5,7 +5,7 @@ export type Shift = {
   location: string;
   start_time: string;
   end_time: string;
-  pay_rate: number;
+  pay_rate: string;
   status: string;
   created_at: string;
   notes?: string | null;
@@ -48,9 +48,32 @@ export type WorkerProfile = {
 
 export type Booking = {
   booking_id: string;
+  shift_id: string;
+  worker_id: string;
+  start_time: string;
+  end_time: string;
   state: string;
   created_at: string;
+  checked_in_at?: string | null;
+  checked_out_at?: string | null;
   no_show_at?: string | null;
   cancellation_reason?: string | null;
   cancelled_by_user_id?: string | null;
+  payment_method?: string | null;
+  check_in_code?: string | null;
+  completion_code?: string | null;
+};
+
+export type Venue = {
+  venue_id: string;
+  name: string;
+  country: string;
+  currency: string;
+  market_id: string | null;
+  venue_type?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  default_location?: string | null;
+  avatar_url?: string | null;
+  photos: string[];
 };

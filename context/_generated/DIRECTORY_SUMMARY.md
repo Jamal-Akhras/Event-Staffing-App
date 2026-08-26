@@ -1,22 +1,22 @@
 ﻿# Directory Summary
 
-Generated: 2026-08-26 14:49:20
+Generated: 2026-08-26 21:28:11
 
 | Directory | Files |
 |---|---:|
 | .github/ | 2 |
 |   .github/workflows/ | 1 |
-| apps/ | 432 |
-|   apps/api/ | 252 |
-|     apps/api/alembic/ | 30 |
-|     apps/api/scripts/ | 6 |
-|     apps/api/src/ | 165 |
-|     apps/api/tests/ | 49 |
-|   apps/mobile/ | 75 |
+| apps/ | 489 |
+|   apps/api/ | 277 |
+|     apps/api/alembic/ | 33 |
+|     apps/api/scripts/ | 7 |
+|     apps/api/src/ | 181 |
+|     apps/api/tests/ | 54 |
+|   apps/mobile/ | 79 |
 |     apps/mobile/assets/ | 4 |
-|     apps/mobile/src/ | 63 |
-|   apps/web/ | 104 |
-|     apps/web/src/ | 97 |
+|     apps/mobile/src/ | 67 |
+|   apps/web/ | 132 |
+|     apps/web/src/ | 125 |
 | context/ | 12 |
 |   context/_generated/ | 6 |
 |   context/scripts/ | 5 |
@@ -39,8 +39,8 @@ Generated: 2026-08-26 14:49:20
 |   documentation/70-quality/ | 1 |
 |   documentation/80-future/ | 2 |
 |   documentation/images/ | 1 |
-| packages/ | 7 |
-|   packages/domain/ | 7 |
-|     packages/domain/src/ | 4 |
+| packages/ | 8 |
+|   packages/domain/ | 8 |
+|     packages/domain/src/ | 5 |
 |     packages/domain/tests/ | 3 |
 | scripts/ | 1 |

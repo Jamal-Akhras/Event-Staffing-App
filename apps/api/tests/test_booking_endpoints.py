@@ -83,14 +83,28 @@ def test_booking_lifecycle_happy_path():
     assert confirm.status_code == 200
     assert confirm.json()["state"] == "confirmed"
 
+    booking = main.app.dependency_overrides[get_booking_repo]().get(booking_id)
+    assert confirm.json()["check_in_code"] == booking.check_in_code
+    assert confirm.json()["completion_code"] is None
+
     check_in_time = now + timedelta(minutes=40)
+    wrong_code = client.post(
+        f"/bookings/{booking_id}/check-in",
+        json={"now": check_in_time.isoformat(), "code": "0000" if booking.check_in_code != "0000" else "0001"},
+        headers=WORKER_HEADERS,
+    )
+    assert wrong_code.status_code == 400
+    assert "check-in code" in wrong_code.json()["detail"]
     check_in = client.post(
         f"/bookings/{booking_id}/check-in",
-        json={"now": check_in_time.isoformat()},
+        json={"now": check_in_time.isoformat(), "code": booking.check_in_code},
         headers=WORKER_HEADERS,
     )
     assert check_in.status_code == 200
     assert check_in.json()["state"] == "checked_in"
+    assert check_in.json()["completion_code"] == booking.completion_code
+    assert check_in.json()["check_in_code"] is None
+    assert client.get(f"/bookings/{booking_id}", headers=OPERATOR_HEADERS).json()["check_in_code"] is None
 
     check_out = client.post(
         f"/bookings/{booking_id}/check-out",
@@ -100,13 +114,20 @@ def test_booking_lifecycle_happy_path():
     assert check_out.status_code == 200
     assert check_out.json()["state"] == "checked_out"
 
-    approve = client.post(
+    missing_code = client.post(
         f"/bookings/{booking_id}/approve",
         json={"now": (now + timedelta(hours=5)).isoformat()},
         headers=OPERATOR_HEADERS,
     )
+    assert missing_code.status_code == 400
+    approve = client.post(
+        f"/bookings/{booking_id}/approve",
+        json={"now": (now + timedelta(hours=5)).isoformat(), "code": booking.completion_code},
+        headers=OPERATOR_HEADERS,
+    )
     assert approve.status_code == 200
     assert approve.json()["state"] == "approved"
+    assert client.get(f"/bookings/{booking_id}", headers=WORKER_HEADERS).json()["completion_code"] is None
 
     pay = client.post(
         f"/bookings/{booking_id}/pay",
@@ -134,6 +155,28 @@ def test_invalid_transition_returns_400():
         headers=WORKER_HEADERS,
     )
     assert check_in.status_code == 400
+
+
+def test_check_in_code_attempts_are_rate_limited():
+    client = _client()
+    booking_id, now = _create_booking(client)
+    booking = main.app.dependency_overrides[get_booking_repo]().get(booking_id)
+    wrong_code = "0000" if booking.check_in_code != "0000" else "0001"
+
+    for _ in range(5):
+        response = client.post(
+            f"/bookings/{booking_id}/check-in",
+            json={"now": (now + timedelta(minutes=40)).isoformat(), "code": wrong_code},
+            headers=WORKER_HEADERS,
+        )
+        assert response.status_code == 400
+
+    limited = client.post(
+        f"/bookings/{booking_id}/check-in",
+        json={"now": (now + timedelta(minutes=40)).isoformat(), "code": wrong_code},
+        headers=WORKER_HEADERS,
+    )
+    assert limited.status_code == 429
 
 
 def test_no_show_requires_window_closed():

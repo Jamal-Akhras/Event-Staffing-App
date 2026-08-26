@@ -12,6 +12,7 @@ from apps.api.src.services.booking_ops import _decrement_workers_filled, refresh
 from apps.api.src.services.errors import NotFoundError, ValidationError
 from apps.api.src.services.recovery_notifications import notify_worker
 from apps.api.src.services.outbox_publisher import OutboxPublisher
+from packages.domain.src.attendance import code_matches
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
 from packages.domain.src.booking_state_machine import TransitionError
@@ -71,6 +72,11 @@ class BookingLifecycleService:
     ) -> Booking:
         now = _now_or(request.now)
         booking = self.get_booking(booking_id)
+        submitted = request.code if isinstance(request, BookingTransitionRequest) else None
+        if target == BookingState.CHECKED_IN and not code_matches(submitted, booking.check_in_code):
+            raise ValidationError("That check-in code doesn't match. Ask the manager for the code on their board.")
+        if target == BookingState.APPROVED and not code_matches(submitted, booking.completion_code):
+            raise ValidationError("That completion code doesn't match. Ask the worker to show the code in their app.")
         try:
             booking = booking.transition_to(target, now)
         except TransitionError as exc:

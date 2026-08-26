@@ -1,198 +1,116 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-
 import { ErrorCard } from "../components/ErrorCard";
-import { Icon } from "../components/Icon";
 import { SkeletonCard } from "../components/SkeletonCard";
 import { useToast } from "../components/Toast";
-import { fetchJson } from "../lib/api";
-import type { Application, Shift } from "../types/operations";
-import { CoverageStrip } from "./dashboard/CoverageStrip";
-import { MetricGrid } from "./dashboard/MetricGrid";
-import { OpenShiftList } from "./dashboard/OpenShiftList";
+import { useVenue } from "../lib/useVenue";
+import { DecisionList } from "./dashboard/DecisionList";
+import { OverviewHeader } from "./dashboard/OverviewHeader";
+import { RegularsCard } from "./dashboard/RegularsCard";
+import { StatRow } from "./dashboard/StatRow";
+import { TonightCard } from "./dashboard/TonightCard";
+import { WeekStrip } from "./dashboard/WeekStrip";
 import {
+  attendance,
   buildCoverageDays,
-  buildDashboardMetrics,
-  getOpenSeats,
-  getRecentOpenShifts,
+  completedCounts,
+  describeOldest,
+  describeOpenSeats,
+  liveShifts,
+  pendingApplications,
+  regulars,
+  tonightRows,
 } from "./dashboard/dashboardUtils";
+import { useDecideApplication, useOverviewData } from "./dashboard/useOverviewData";
 import "./DashboardPage.css";
+import "./dashboard/OverviewCards.css";
 
 export function DashboardPage() {
   const { toast } = useToast();
-  const [shifts, setShifts] = useState<Shift[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const venue = useVenue();
+  const data = useOverviewData();
+  const decide = useDecideApplication(
+    (message) => toast({ type: "success", message }),
+    (message) => toast({ type: "error", message })
+  );
 
-  const loadDashboard = async () => {
-    setLoading(true);
-    try {
-      const [shiftData, applicationData] = await Promise.all([
-        fetchJson<Shift[]>("/shifts"),
-        fetchJson<Application[]>("/applications"),
-      ]);
-      setShifts(shiftData);
-      setApplications(applicationData);
-      setError(null);
-    } catch (err) {
-      toast({ type: "error", message: (err as Error).message });
-      setShifts([]);
-      setApplications([]);
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadDashboard();
-  }, []);
+  if (data.error) {
+    return <ErrorCard message={data.error.message} />;
+  }
+  if (data.loading || venue.isPending) {
+    return <OverviewSkeleton />;
+  }
 
   const now = new Date();
-  const metrics = useMemo(
-    () => buildDashboardMetrics(shifts, applications, now),
-    [shifts, applications]
-  );
-  const coverageDays = useMemo(
-    () => buildCoverageDays(shifts, now),
-    [shifts]
-  );
-  const openShifts = useMemo(
-    () => getRecentOpenShifts(shifts, now),
-    [shifts]
-  );
-  const pendingReviewCount = useMemo(
-    () => applications.filter((app) => app.status === "applied").length,
-    [applications]
-  );
-  const openSeatCount = useMemo(() => getOpenSeats(shifts), [shifts]);
-  const attentionCount = pendingReviewCount + openSeatCount;
-  const alert = getDashboardAlert(pendingReviewCount, openSeatCount);
-  const initialLoading = loading && shifts.length === 0 && applications.length === 0 && !error;
+  const shifts = liveShifts(data.shifts);
+  const days = buildCoverageDays(shifts, now);
+  const pending = pendingApplications(data.applications);
+  const turnout = attendance(data.bookings, now);
+  const tonight = tonightRows(shifts, data.bookings, data.workers, now);
+  const tonightMissing = tonight.reduce((sum, row) => sum + row.missing, 0);
+  const nextGap = days.slice(1).find((day) => day.openSeats > 0);
+  const openSeats = days.reduce((sum, day) => sum + day.openSeats, 0);
+
+  const lead = tonight.length === 0
+    ? "No shifts tonight."
+    : tonightMissing > 0
+      ? `Tonight still needs ${tonightMissing}.`
+      : "Tonight is fully covered.";
+  const emphasis = nextGap ? `${nextGap.longLabel} still needs ${nextGap.openSeats}.` : "The rest of the week is covered.";
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Overview</h1>
-          <p className="page-subtitle">{formatDashboardDate(now)}</p>
+    <div className="overview">
+      <OverviewHeader venueName={venue.data?.name ?? "team"} now={now} lead={lead} emphasis={emphasis} />
+
+      <StatRow
+        stats={[
+          {
+            label: "Open seats this week",
+            value: String(openSeats),
+            note: describeOpenSeats(days),
+            tone: openSeats > 0 ? "warning" : "success",
+          },
+          {
+            label: "Applications to review",
+            value: String(pending.length),
+            note: describeOldest(pending, now),
+          },
+          {
+            label: "Regulars turned up",
+            value: turnout.rate === null ? "—" : `${turnout.rate}%`,
+            note: turnout.total ? `Last 30 days · ${turnout.total} shifts` : "No completed shifts yet",
+            tone: turnout.rate !== null && turnout.rate >= 90 ? "success" : undefined,
+          },
+        ]}
+      />
+
+      <div className="ov-grid">
+        <div className="ov-column">
+          <TonightCard rows={tonight} />
+          <WeekStrip days={days} />
         </div>
-        <button className="btn secondary" type="button" onClick={loadDashboard}>
-          <Icon name="refresh" size={16} />
-          Refresh
-        </button>
+        <div className="ov-column">
+          <DecisionList
+            pending={pending}
+            shifts={shifts}
+            workers={data.workers}
+            completedCounts={completedCounts(data.bookings)}
+            busyId={decide.isPending ? decide.variables?.applicationId ?? null : null}
+            onDecide={(applicationId, action) => decide.mutate({ applicationId, action })}
+          />
+          <RegularsCard regulars={regulars(data.bookings, data.workers)} />
+        </div>
       </div>
-
-      {initialLoading ? (
-        <DashboardSkeleton />
-      ) : error ? (
-        <ErrorCard message={error} />
-      ) : (
-        <>
-          <section className={`dashboard-alert ${attentionCount === 0 ? "clear" : ""}`}>
-            <span className="attention-hero-icon">
-              <Icon name={attentionCount === 0 ? "check" : "alert-triangle"} size={24} />
-            </span>
-            <div className="attention-hero-copy">
-              <strong>{alert.title}</strong>
-              <p>{alert.note}</p>
-            </div>
-            <Link className="btn primary" to={alert.to}>
-              {alert.action}
-            </Link>
-          </section>
-
-          <MetricGrid metrics={metrics} loading={loading} />
-
-          <CoverageStrip days={coverageDays} />
-
-          <div className="dashboard-workspace">
-            <OpenShiftList shifts={openShifts} />
-            <QuickActions />
-          </div>
-        </>
-      )}
     </div>
   );
 }
 
-function DashboardSkeleton() {
+function OverviewSkeleton() {
   return (
-    <>
-      <div className="dashboard-grid">
-        {Array.from({ length: 4 }, (_, index) => <SkeletonCard key={index} variant="metric" />)}
+    <div className="overview">
+      <SkeletonCard lines={2} />
+      <div className="ov-grid">
+        <SkeletonCard lines={5} />
+        <SkeletonCard lines={5} />
       </div>
-      <div className="dashboard-workspace dashboard-skeleton-workspace">
-        <SkeletonCard className="dashboard-skeleton-wide" lines={5} />
-        <SkeletonCard className="dashboard-skeleton-wide" lines={4} />
-      </div>
-      <div className="dashboard-skeleton-strip">
-        {Array.from({ length: 7 }, (_, index) => <SkeletonCard key={index} variant="row" lines={2} />)}
-      </div>
-    </>
-  );
-}
-
-function formatDashboardDate(value: Date) {
-  return value.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function getDashboardAlert(pendingReviews: number, openSeats: number) {
-  if (pendingReviews > 0) {
-    return {
-      title: `${pendingReviews} pending applications`,
-      note: `${openSeats} open seats across active shifts. Review workers before the next service window.`,
-      to: "/app/applications",
-      action: "Review now",
-    };
-  }
-
-  if (openSeats > 0) {
-    return {
-      title: `${openSeats} open seats`,
-      note: "Coverage is still incomplete across active shifts.",
-      to: "/app/schedule",
-      action: "View schedule",
-    };
-  }
-
-  return {
-    title: "No urgent staffing actions",
-    note: "Coverage and application queues are clear right now.",
-    to: "/app/shifts",
-    action: "Post shift",
-  };
-}
-
-function QuickActions() {
-  return (
-    <section className="card quick-actions-panel">
-      <div className="dashboard-section-header">
-        <div>
-          <h2>Quick Actions</h2>
-          <p>Common venue-manager workflows.</p>
-        </div>
-      </div>
-
-      <div className="quick-action-list">
-        <Link to="/app/shifts">
-          <strong>Post coverage</strong>
-          <p>Create a shift or refresh open staffing needs.</p>
-        </Link>
-        <Link to="/app/templates">
-          <strong>Use a template</strong>
-          <p>Generate repeatable shifts without retyping details.</p>
-        </Link>
-        <Link to="/app/applications">
-          <strong>Review applicants</strong>
-          <p>Compare reliability, fit, and application history.</p>
-        </Link>
-      </div>
-    </section>
+    </div>
   );
 }

@@ -83,9 +83,10 @@ def test_reliability_updates_from_outcomes():
         headers=OPERATOR_HEADERS,
     )
     check_in_time = base + timedelta(minutes=40)
+    check_in_code = main.app.dependency_overrides[get_booking_repo]().get(booking_one).check_in_code
     client.post(
         f"/bookings/{booking_one}/check-in",
-        json={"now": check_in_time.isoformat()},
+        json={"now": check_in_time.isoformat(), "code": check_in_code},
         headers={"X-Actor-Role": "worker", "X-Actor-Id": worker_id},
     )
     check_out = client.post(

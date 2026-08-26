@@ -1,150 +1,77 @@
 import { useEffect, useState } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import { useAuth } from "../contexts/AuthContext";
-import { Icon } from "../components/Icon";
 import { NotificationBell } from "../components/NotificationBell";
 import { PostShiftRatingPrompt } from "../components/PostShiftRatingPrompt";
-import { API_BASE } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
+import { initials, useVenue } from "../lib/useVenue";
 import "./DashboardLayout.css";
 
-type HealthStatus = {
-  status: string;
-};
-
-const NAV_SECTIONS = [
-  {
-    label: "Main",
-    items: [
-      { path: "/app", label: "Overview", icon: "overview" },
-      { path: "/app/shifts", label: "Shifts", icon: "shifts" },
-      { path: "/app/applications", label: "Applications", icon: "applications" },
-      { path: "/app/schedule", label: "Schedule", icon: "schedule" },
-    ],
-  },
-  {
-    label: "Manage",
-    items: [
-      { path: "/app/templates", label: "Templates", icon: "templates" },
-      { path: "/app/workers", label: "Workers", icon: "workers" },
-      { path: "/app/analytics", label: "Analytics", icon: "analytics" },
-      { path: "/app/settings", label: "Settings", icon: "settings" },
-    ],
-  },
-] as const;
+const NAV = [
+  { path: "/app", label: "Overview", end: true },
+  { path: "/app/shifts", label: "Shifts" },
+  { path: "/app/applications", label: "Applications" },
+  { path: "/app/templates", label: "Templates" },
+  { path: "/app/workers", label: "Workers" },
+  { path: "/app/analytics", label: "Analytics" },
+  { path: "/app/settings", label: "Settings" },
+];
 
 export function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
-  const [health, setHealth] = useState<HealthStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { logout } = useAuth();
+  const venue = useVenue();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const venueName = venue.data?.name ?? "Your venue";
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch(`${API_BASE}/health`, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => setHealth(data))
-      .catch((err) => {
-        if ((err as Error).name !== "AbortError") {
-          setError((err as Error).message);
-        }
-      });
-
-    return () => controller.abort();
-  }, []);
-
-  useEffect(() => {
-    setIsSidebarOpen(false);
+    setMenuOpen(false);
   }, [location.pathname]);
 
   return (
-    <div className="dashboard-layout">
-      <button
-        className="mobile-nav-toggle"
-        type="button"
-        aria-label="Open navigation"
-        onClick={() => setIsSidebarOpen(true)}
-      >
-        <span />
-        <span />
-        <span />
-      </button>
-
-      {isSidebarOpen && (
-        <button
-          className="sidebar-backdrop"
-          type="button"
-          aria-label="Close navigation"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
-      <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`}>
-        <div className="sidebar-header">
-          <div className="brand">
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="topbar-inner">
+          <Link to="/app" className="brand">
             <span className="brand-mark">V</span>
-            <div>
-              <p className="brand-title">Venue OS</p>
-              <p className="brand-eyebrow">Reliability-first staffing</p>
-            </div>
+            <span>Venue OS</span>
+          </Link>
+
+          <nav className={`topnav ${menuOpen ? "open" : ""}`} aria-label="Main">
+            {NAV.map((item) => (
+              <NavLink key={item.path} to={item.path} end={item.end} className="topnav-link">
+                {item.label}
+              </NavLink>
+            ))}
+            <button
+              type="button"
+              className="topnav-link topnav-signout"
+              onClick={() => { logout(); navigate("/login"); }}
+            >
+              Sign out
+            </button>
+          </nav>
+
+          <div className="topbar-actions">
+            <NotificationBell />
+            <Link to="/app/settings" className="venue-chip" title={venueName}>
+              <span className="venue-chip-mark">{initials(venueName)}</span>
+              <span className="venue-chip-name">{venueName}</span>
+            </Link>
+            <button
+              type="button"
+              className="menu-toggle"
+              aria-label={menuOpen ? "Close navigation" : "Open navigation"}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <span />
+              <span />
+            </button>
           </div>
         </div>
-
-        <nav className="sidebar-nav">
-          {NAV_SECTIONS.map((section) => (
-            <div key={section.label} className="nav-section">
-              <p className="nav-section-label">{section.label}</p>
-              {section.items.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`nav-item ${isActive ? "active" : ""}`}
-                    onClick={() => setIsSidebarOpen(false)}
-                  >
-                    <span className="nav-active-marker" aria-hidden="true" />
-                    <Icon name={item.icon} size={18} className="nav-icon" />
-                    <span className="nav-label">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          {user && (
-            <div className="sidebar-user">
-              <div className="sidebar-user-email">{user.email}</div>
-              <button
-                type="button"
-                className="sidebar-logout-btn"
-                onClick={() => { logout(); navigate("/login"); }}
-              >
-                Sign out
-              </button>
-            </div>
-          )}
-          <div className="api-status">
-            <span className="status-label">API Status</span>
-            {error && <span className="status error">Error</span>}
-            {!error && !health && <span className="status pending">Checking</span>}
-            {health && <span className="status ok">Healthy</span>}
-          </div>
-        </div>
-      </aside>
-
-      <div className="dashboard-utilities">
-        <NotificationBell />
-      </div>
+      </header>
 
       <main className="main-content">
         <div className="content-wrapper"><Outlet /></div>

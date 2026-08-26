@@ -56,6 +56,7 @@ export type Booking = {
   cancelled_at?: string | null;
   cancellation_reason?: string | null;
   cancelled_by_user_id?: string | null;
+  completion_code?: string | null;
 };
 
 export type PendingRating = {

@@ -88,6 +88,7 @@ def prepare_demo_accounts(
     worker_profile.updated_at = now
     worker_profile.allow_venue_recontact = True
     worker_profile.market_id = market.market_id
+    session.flush()
 
     password_hash = hash_password(password)
     venue_user = _upsert_user(

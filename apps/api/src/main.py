@@ -23,7 +23,7 @@ from apps.api.src.rate_limit import limiter
 from apps.api.src.request_middleware import RequestContextMiddleware
 from apps.api.src.routes import auth, bookings, shifts, applications, workers, templates, messages, worker_feed
 from apps.api.src.routes import uploads, accounts, notifications, ratings, auth_account, auth_password, markets, tenancy
-from apps.api.src.routes import reports, auth_sso
+from apps.api.src.routes import reports, auth_sso, billing
 from apps.api.src.storage.config import get_storage_settings
 from apps.api.src.services.health import readiness_snapshot
 from apps.api.src.db.schema_guard import ensure_schema_current
@@ -95,6 +95,7 @@ app.include_router(uploads.router)
 app.include_router(notifications.router)
 app.include_router(ratings.router)
 app.include_router(reports.router)
+app.include_router(billing.router)
 
 if storage_settings.backend == "local":
     storage_settings.local_directory.mkdir(parents=True, exist_ok=True)
