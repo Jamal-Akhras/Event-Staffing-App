@@ -25,12 +25,3 @@ def normalize_notification_preferences(raw: object | None) -> NotificationPrefer
         if isinstance(value, bool):
             preferences[key] = value
     return preferences
-
-
-def operator_notification_enabled(raw: object | None, key: NotificationPreferenceKey) -> bool:
-    """Return True if the operator wants alerts of the given kind.
-
-    Call sites that send operator-facing alerts (email, push, in-app) must consult this
-    before delivery. Persisted today; delivery hooks land with the email integration.
-    """
-    return normalize_notification_preferences(raw)[key]

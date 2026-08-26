@@ -157,9 +157,9 @@ def mark_worker_notifications_read_legacy(
 
 def _recipient(actor: ActorContext) -> tuple[str, str]:
     if actor.role == ActorRole.WORKER:
-        return "worker", actor.worker_profile_id or actor.user_id
-    if actor.role == ActorRole.OPERATOR and actor.venue_id:
-        return "venue", actor.venue_id
+        return "worker", actor.effective_worker_id
+    if actor.role == ActorRole.OPERATOR and actor.account_id:
+        return "venue", actor.account_id
     raise HTTPException(status_code=403, detail="Actor has no notification inbox.")
 
 

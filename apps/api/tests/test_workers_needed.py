@@ -1,5 +1,3 @@
-"""Tests for multi-worker shift capacity."""
-
 from datetime import UTC, datetime, timedelta
 
 import pytest

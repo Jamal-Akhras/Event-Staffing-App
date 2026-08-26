@@ -9,16 +9,9 @@ export const COLORS = {
   borderStrong: "#d6cbb8",
   primary: "#0e5a3a",
   primaryDeep: "#123a2a",
-  primarySoft: "#2f8f5f",
   onPrimary: "#f7efe8",
   success: "#10b981",
   info: "#3b82f6",
   warning: "#d97706",
   error: "#b83b32",
-  mapPinHigh: "#10b981",
-  mapPinStandard: "#3b82f6",
-  mapPinUrgent: "#f59e0b",
-  mapPinFilled: "#9ca3af",
 } as const;
-
-export type ColorKey = keyof typeof COLORS;

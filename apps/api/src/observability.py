@@ -8,7 +8,6 @@ log = logging.getLogger(__name__)
 
 
 def init_sentry() -> None:
-    """Initialize Sentry if SENTRY_DSN is set. No-op otherwise."""
     dsn = get_env("SENTRY_DSN", "")
     if not dsn:
         return

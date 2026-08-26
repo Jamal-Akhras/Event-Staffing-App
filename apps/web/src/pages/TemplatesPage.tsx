@@ -5,9 +5,7 @@ import { TemplateForm } from "../components/TemplateForm";
 import { Template, TemplateFormData, emptyTemplateForm } from "../types/templates";
 import "./TemplatesPage.css";
 
-import { API_BASE, getAuthHeaders } from "../lib/api";
-
-const resolvedApiBase = API_BASE;
+import { deleteJson, fetchJson, postJson, putJson } from "../lib/api";
 
 export function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -20,11 +18,7 @@ export function TemplatesPage() {
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${resolvedApiBase}/templates`, {
-        headers: getAuthHeaders(),
-      });
-      await assertOk(response);
-      setTemplates(await response.json());
+      setTemplates(await fetchJson<Template[]>("/templates"));
       setTemplateError(null);
     } catch (err) {
       setTemplates([]);
@@ -42,12 +36,11 @@ export function TemplatesPage() {
     event.preventDefault();
 
     try {
-      const response = await fetch(templateUrl(editingTemplate), {
-        method: editingTemplate ? "PUT" : "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(formData),
-      });
-      await assertOk(response);
+      if (editingTemplate) {
+        await putJson(`/templates/${editingTemplate.template_id}`, formData);
+      } else {
+        await postJson("/templates", formData);
+      }
       await loadTemplates();
       closeForm();
     } catch (err) {
@@ -73,11 +66,7 @@ export function TemplatesPage() {
     if (!confirm("Are you sure you want to delete this template?")) return;
 
     try {
-      const response = await fetch(`${resolvedApiBase}/templates/${templateId}`, {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
-      await assertOk(response);
+      await deleteJson(`/templates/${templateId}`);
       await loadTemplates();
     } catch (err) {
       setTemplateError((err as Error).message);
@@ -124,74 +113,31 @@ export function TemplatesPage() {
         />
       )}
 
-      {renderTemplates({
-        loading,
-        templates,
-        openCreateForm,
-        handleEdit,
-        handleDelete,
-      })}
-    </div>
-  );
-}
-
-function renderTemplates({
-  loading,
-  templates,
-  openCreateForm,
-  handleEdit,
-  handleDelete,
-}: {
-  loading: boolean;
-  templates: Template[];
-  openCreateForm: () => void;
-  handleEdit: (template: Template) => void;
-  handleDelete: (templateId: string) => void;
-}) {
-  if (loading) {
-    return (
-      <div className="card templates-loading">
-        <p>Loading templates...</p>
-      </div>
-    );
-  }
-
-  if (templates.length === 0) {
-    return (
-      <EmptyState
-        title="No templates yet"
-        message="Create your first shift template to save time when posting similar shifts."
-        action={{
-          label: "Create Template",
-          onClick: openCreateForm,
-        }}
-      />
-    );
-  }
-
-  return (
-    <div className="templates-grid">
-      {templates.map((template) => (
-        <TemplateCard
-          key={template.template_id}
-          template={template}
-          onEdit={() => handleEdit(template)}
-          onDelete={() => handleDelete(template.template_id)}
+      {loading ? (
+        <div className="card templates-loading">
+          <p>Loading templates...</p>
+        </div>
+      ) : templates.length === 0 ? (
+        <EmptyState
+          title="No templates yet"
+          message="Create your first shift template to save time when posting similar shifts."
+          action={{
+            label: "Create Template",
+            onClick: openCreateForm,
+          }}
         />
-      ))}
+      ) : (
+        <div className="templates-grid">
+          {templates.map((template) => (
+            <TemplateCard
+              key={template.template_id}
+              template={template}
+              onEdit={() => handleEdit(template)}
+              onDelete={() => handleDelete(template.template_id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
-}
-
-function templateUrl(editingTemplate: Template | null) {
-  if (editingTemplate) {
-    return `${resolvedApiBase}/templates/${editingTemplate.template_id}`;
-  }
-  return `${resolvedApiBase}/templates`;
-}
-
-async function assertOk(response: Response) {
-  if (response.ok) return;
-  const errorPayload = await response.json();
-  throw new Error(errorPayload?.detail ?? `API error: ${response.status}`);
 }

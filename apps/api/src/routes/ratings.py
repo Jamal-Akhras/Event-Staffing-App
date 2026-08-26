@@ -56,10 +56,6 @@ def rate_booking(
         shift.account_id,
     )
 
-    existing = repo.get_by_booking_and_role(booking_id, role_str)
-    if existing is not None:
-        raise HTTPException(status_code=409, detail="You have already rated this booking.")
-
     rating = Rating(
         rating_id=str(uuid4()),
         booking_id=booking_id,
@@ -84,8 +80,7 @@ def list_pending_ratings(
 ) -> list[PendingRatingResponse]:
     require_role(actor.role, {ActorRole.WORKER, ActorRole.OPERATOR})
     if actor.role == ActorRole.WORKER:
-        worker_id = actor.worker_profile_id or actor.user_id
-        items = repo.pending_for_worker(worker_id, limit)
+        items = repo.pending_for_worker(actor.effective_worker_id, limit)
     elif actor.account_id:
         items = repo.pending_for_account(actor.account_id, limit)
     else:
@@ -142,31 +137,24 @@ def get_venue_rating_summary(
 @router.get("/accounts/me/completed-shifts", response_model=list[CompletedShiftResponse])
 def list_completed_shifts(
     repo: RatingRepository = Depends(get_rating_repo),
-    booking_repo: BookingRepository = Depends(get_booking_repo),
     actor: ActorContext = Depends(get_actor_context),
 ) -> list[CompletedShiftResponse]:
     require_role(actor.role, {ActorRole.OPERATOR})
     if not actor.account_id:
         return []
-    bookings = repo.completed_bookings_for_account(actor.account_id)
     results = []
-    for b in bookings:
+    for b in repo.completed_bookings_for_account(actor.account_id):
         existing = repo.get_by_booking_and_role(b.booking_id, "operator")
         results.append(CompletedShiftResponse(
             booking_id=b.booking_id,
             shift_id=b.shift_id,
-            worker_id=_get_worker_id(booking_repo, b.booking_id),
+            worker_id=b.worker_id,
             start_time=b.start_time,
             role=b.role,
             location=b.location,
             operator_rating=existing.stars if existing else None,
         ))
     return results
-
-
-def _get_worker_id(repo: BookingRepository, booking_id: str) -> str:
-    booking = repo.get(booking_id)
-    return booking.worker_id if booking else ""
 
 
 def _require_rating_access(
@@ -176,10 +164,9 @@ def _require_rating_access(
     account_id: str | None,
 ) -> str:
     if actor.role == ActorRole.WORKER:
-        effective_worker_id = actor.worker_profile_id or actor.user_id
-        if effective_worker_id != worker_id:
+        if actor.effective_worker_id != worker_id:
             raise HTTPException(status_code=403, detail="Worker can only rate their own shifts.")
-        return effective_worker_id
+        return actor.effective_worker_id
     if actor.account_id:
         if account_id != actor.account_id:
             raise HTTPException(status_code=403, detail="Operator can only rate shifts at their venue.")

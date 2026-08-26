@@ -10,7 +10,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add workers_needed and workers_filled columns to shifts table
     op.add_column("shifts", sa.Column("workers_needed", sa.Integer(), nullable=False, server_default="1"))
     op.add_column("shifts", sa.Column("workers_filled", sa.Integer(), nullable=False, server_default="0"))
 

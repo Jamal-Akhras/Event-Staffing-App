@@ -8,15 +8,12 @@ from apps.api.src.services.notification_preferences import (
     default_notification_preferences,
 )
 
-COUNTRY_CURRENCY = {"GB": "GBP", "AE": "AED"}
-
-
 @dataclass(frozen=True)
 class Account:
     account_id: str
     name: str
-    country: str  # "GB" or "AE"
-    currency: str  # "GBP" or "AED"
+    country: str
+    currency: str
     created_at: datetime
     venue_type: str | None = None
     contact_email: str | None = None

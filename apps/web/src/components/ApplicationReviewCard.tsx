@@ -1,20 +1,7 @@
 import { StatusBadge } from "./StatusBadge";
-import { formatMoney } from "../lib/format";
+import { formatDateTime, formatMoney } from "../lib/format";
+import type { Application, WorkerProfile } from "../types/operations";
 import "./ApplicationReviewCard.css";
-
-export type Application = {
-  application_id: string;
-  shift_id: string;
-  worker_id: string;
-  operator_id: string;
-  start_time: string;
-  end_time: string;
-  status: string;
-  message?: string | null;
-  booking_id?: string | null;
-  created_at: string;
-  decided_at?: string | null;
-};
 
 export type ShiftSummary = {
   shift_id: string;
@@ -27,19 +14,6 @@ export type ShiftSummary = {
   workers_needed: number;
   workers_filled: number;
   currency?: string;
-};
-
-export type WorkerProfile = {
-  worker_id: string;
-  display_name: string;
-  role: string;
-  city: string;
-  experience_years: number;
-  reliability_score: number;
-  badges: string[];
-  bio?: string | null;
-  languages: string[];
-  updated_at: string;
 };
 
 export type MessageHistory = {
@@ -96,7 +70,7 @@ export function ApplicationReviewCard({
             {worker ? `${worker.role} - ${worker.city}` : "Worker profile unavailable"}
           </p>
         </div>
-        <StatusBadge status={application.status} variant="application" />
+        <StatusBadge status={application.status} />
       </div>
 
       <div className="application-review-grid">
@@ -180,14 +154,4 @@ function Metric({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </div>
   );
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }

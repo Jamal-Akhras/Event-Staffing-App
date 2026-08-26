@@ -44,7 +44,7 @@ def list_worker_feed(
     actor: ActorContext = Depends(get_actor_context),
 ) -> WorkerFeedPageResponse:
     require_role(actor.role, {ActorRole.WORKER})
-    worker_id = actor.worker_profile_id or actor.user_id
+    worker_id = actor.effective_worker_id
     try:
         page = service.list_page(
             worker_id=worker_id,

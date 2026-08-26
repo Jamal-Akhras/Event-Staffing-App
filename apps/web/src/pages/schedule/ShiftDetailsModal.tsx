@@ -32,7 +32,7 @@ export function ShiftDetailsModal({ shift, onClose }: ShiftDetailsModalProps) {
           <Detail label="Pay Rate" value={`${formatMoney(shift.pay_rate, shift.currency)}/hr`} strong />
           <div className="schedule-detail">
             <span>Status & Capacity</span>
-            <StatusBadge status={shift.status} variant="shift" />
+            <StatusBadge status={shift.status} />
             <p>
               {shift.workers_filled} of {shift.workers_needed} workers assigned
             </p>

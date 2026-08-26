@@ -11,31 +11,14 @@ log = logging.getLogger(__name__)
 
 
 def run_no_show_sweep() -> None:
-    from apps.api.src.db.database import SessionLocal
-    from apps.api.src.repositories.sqlalchemy_booking_repository import SqlAlchemyBookingRepository
-    from apps.api.src.repositories.sqlalchemy_shift_repository import SqlAlchemyShiftRepository
-    from apps.api.src.repositories.sqlalchemy_worker_profile_repository import SqlAlchemyWorkerProfileRepository
-    from apps.api.src.schemas import BookingTransitionRequest
-    from apps.api.src.services.booking_lifecycle_service import BookingLifecycleService
-    from apps.api.src.services.outbox_publisher import SqlAlchemyOutboxPublisher
+    from apps.api.src.jobs.run_no_show_sweep import run
 
-    session = SessionLocal()
     try:
-        service = BookingLifecycleService(
-            SqlAlchemyBookingRepository(session),
-            SqlAlchemyWorkerProfileRepository(session),
-            SqlAlchemyShiftRepository(session),
-            SqlAlchemyOutboxPublisher(session),
-        )
-        updated = service.sweep_no_shows(BookingTransitionRequest(now=utc_now()))
-        session.commit()
+        updated = run()
         if updated:
-            log.info("no-show sweep: %d booking(s) marked", len(updated))
+            log.info("no-show sweep: %d booking(s) marked", updated)
     except Exception:
-        session.rollback()
         log.exception("no-show sweep failed")
-    finally:
-        session.close()
 
 
 def run_recurring_generation() -> None:

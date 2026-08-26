@@ -32,9 +32,8 @@ class SqlAlchemyWorkerProfileRepository:
 
     def list_for_account(self, account_id: str) -> list[WorkerProfile]:
         completed_states = {BookingState.CHECKED_OUT, BookingState.PAID}
-        # Deduplicate worker ids on the bookings side (String column) — selecting
-        # DISTINCT directly on worker_profiles would fail in Postgres because the
-        # row carries JSON columns (badges, languages) with no equality operator.
+
+
         worker_id_subq = (
             self._session.query(BookingModel.worker_id)
             .join(ShiftModel, ShiftModel.shift_id == BookingModel.shift_id)

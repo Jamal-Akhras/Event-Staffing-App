@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
+import { appendUnique } from "../lib/collections";
 import {
   fetchNotificationsPage,
   markAllNotificationsRead,
@@ -16,7 +17,6 @@ type NotificationContextType = {
   unreadCount: number;
   status: NotificationStatus;
   error: string | null;
-  hasMore: boolean;
   isLoadingMore: boolean;
   isRefreshing: boolean;
   refresh: () => Promise<void>;
@@ -30,7 +30,6 @@ const NotificationContext = createContext<NotificationContextType>({
   unreadCount: 0,
   status: "loading",
   error: null,
-  hasMore: false,
   isLoadingMore: false,
   isRefreshing: false,
   refresh: async () => {},
@@ -44,7 +43,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [unreadCount, setUnreadCount] = useState(0);
   const [status, setStatus] = useState<NotificationStatus>("loading");
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -60,16 +58,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       const page = await fetchNotificationsPage(null);
       if (seq !== requestSeq.current) return;
-      setNotifications(appendUnique([], page.items));
+      setNotifications(appendUnique([], page.items, getNotificationId));
       nextCursorRef.current = page.next_cursor;
-      setHasMore(page.next_cursor !== null);
       setUnreadCount(page.unread_count);
       setError(null);
       setStatus("ready");
     } catch (err) {
       if (seq !== requestSeq.current) return;
       setError((err as Error).message);
-      setStatus((current) => (current === "ready" ? "ready" : "error"));
+      setStatus((current) => (current === "ready" ? current : "error"));
     } finally {
       if (seq === requestSeq.current && asRefresh) setIsRefreshing(false);
     }
@@ -91,9 +88,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     try {
       const page = await fetchNotificationsPage(nextCursorRef.current);
       if (seq !== requestSeq.current) return;
-      setNotifications((current) => appendUnique(current, page.items));
+      setNotifications((current) => appendUnique(current, page.items, getNotificationId));
       nextCursorRef.current = page.next_cursor;
-      setHasMore(page.next_cursor !== null);
       setUnreadCount(page.unread_count);
     } catch (err) {
       if (seq === requestSeq.current) setError((err as Error).message);
@@ -133,7 +129,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         unreadCount,
         status,
         error,
-        hasMore,
         isLoadingMore,
         isRefreshing,
         refresh,
@@ -151,13 +146,6 @@ export function useNotifications() {
   return useContext(NotificationContext);
 }
 
-function appendUnique(current: AppNotification[], added: AppNotification[]): AppNotification[] {
-  const seen = new Set(current.map((item) => item.notification_id));
-  const merged = [...current];
-  for (const item of added) {
-    if (seen.has(item.notification_id)) continue;
-    seen.add(item.notification_id);
-    merged.push(item);
-  }
-  return merged;
+function getNotificationId(notification: AppNotification): string {
+  return notification.notification_id;
 }

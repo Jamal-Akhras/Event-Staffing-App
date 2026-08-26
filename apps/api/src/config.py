@@ -18,19 +18,37 @@ def get_env(name: str, default: str = "") -> str:
     return os.getenv(name, default)
 
 
+def get_bool_env(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.lower() in {"1", "true", "yes", "on"}
+
+
+def get_environment() -> str:
+    return get_env("ENVIRONMENT", "development").strip().lower()
+
+
+def is_development() -> bool:
+    return get_environment() == "development"
+
+
+def _forced_in_memory() -> bool:
+    forced = get_bool_env("USE_IN_MEMORY", False)
+    if forced and not is_development():
+        raise RuntimeError("USE_IN_MEMORY is development-only.")
+    return forced
+
+
 def get_database_url() -> str:
     configured_url = get_env("DATABASE_URL")
     if not configured_url:
-        if not is_development() and not get_bool_env("USE_IN_MEMORY", False):
-            raise RuntimeError(
-                "DATABASE_URL must be set when ENVIRONMENT is not development."
-            )
+        if not is_development() and not _forced_in_memory():
+            raise RuntimeError("DATABASE_URL must be set when ENVIRONMENT is not development.")
         configured_url = "sqlite+pysqlite:///./event_staffing.db"
     normalized_url = normalize_database_url(configured_url)
     if not is_development() and normalized_url.startswith("sqlite"):
-        raise RuntimeError(
-            "DATABASE_URL must use PostgreSQL when ENVIRONMENT is not development."
-        )
+        raise RuntimeError("DATABASE_URL must use PostgreSQL when ENVIRONMENT is not development.")
     return normalized_url
 
 
@@ -54,42 +72,23 @@ def resolve_sqlite_file_url(database_url: str) -> str:
     return database_url
 
 
-def get_bool_env(name: str, default: bool = False) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.lower() in {"1", "true", "yes", "on"}
-
-
 def get_cors_origins() -> list[str]:
+    development = is_development()
     value = get_env("CORS_ORIGINS")
-    if not value and not is_development():
-        raise RuntimeError(
-            "CORS_ORIGINS must contain the deployed web origin when ENVIRONMENT is not development."
-        )
-    value = value or DEFAULT_CORS_ORIGINS
+    if not value and not development:
+        raise RuntimeError("CORS_ORIGINS must contain the deployed web origin when ENVIRONMENT is not development.")
     parsed = [origin.strip() for origin in value.split(",") if origin.strip()]
     if not parsed:
-        if not is_development():
-            raise RuntimeError(
-                "CORS_ORIGINS must contain at least one origin when ENVIRONMENT is not development."
-            )
-        return [origin.strip() for origin in DEFAULT_CORS_ORIGINS.split(",") if origin.strip()]
+        if not development:
+            raise RuntimeError("CORS_ORIGINS must contain at least one origin when ENVIRONMENT is not development.")
+        parsed = DEFAULT_CORS_ORIGINS.split(",")
     for origin in parsed:
         parsed_origin = urlparse(origin)
         if origin == "*" or parsed_origin.scheme not in {"http", "https"} or not parsed_origin.netloc:
             raise RuntimeError("CORS_ORIGINS entries must be absolute HTTP(S) origins and cannot be '*'.")
-        if not is_development() and parsed_origin.scheme != "https":
+        if not development and parsed_origin.scheme != "https":
             raise RuntimeError("CORS_ORIGINS entries must use HTTPS outside development.")
     return parsed
-
-
-def get_environment() -> str:
-    return get_env("ENVIRONMENT", "development").strip().lower()
-
-
-def is_development() -> bool:
-    return get_environment() == "development"
 
 
 def get_web_base_url() -> str:
@@ -103,50 +102,23 @@ def get_web_base_url() -> str:
 
 
 def use_in_memory_repositories() -> bool:
-    if get_bool_env("USE_IN_MEMORY", False):
-        if not is_development():
-            raise RuntimeError("USE_IN_MEMORY is development-only.")
+    if _forced_in_memory():
         return True
-    if not get_env("DATABASE_URL"):
-        if is_development():
-            return True
-        raise RuntimeError(
-            "DATABASE_URL must be set when ENVIRONMENT is not development."
-        )
-    return False
+    if get_env("DATABASE_URL"):
+        return False
+    if is_development():
+        return True
+    raise RuntimeError("DATABASE_URL must be set when ENVIRONMENT is not development.")
 
 
 def use_in_memory_backends() -> bool:
-    """Whether Redis-backed infrastructure (rate limit store, token denylist)
-    should use the in-memory implementation instead of a real Redis server.
-
-    True in development when REDIS_URL is unset, or when USE_IN_MEMORY is forced.
-    Outside development this returns False — callers must fail loudly if REDIS_URL
-    is missing rather than silently degrading to a non-shared in-memory store.
-    """
-    if get_bool_env("USE_IN_MEMORY", False):
-        if not is_development():
-            raise RuntimeError("USE_IN_MEMORY is development-only.")
-        return True
-    if is_development() and not get_env("REDIS_URL"):
-        return True
-    return False
+    return _forced_in_memory() or (is_development() and not get_env("REDIS_URL"))
 
 
 def get_redis_url() -> str:
-    """Return REDIS_URL, raising outside development if it is unset.
-
-    In development an unset REDIS_URL is acceptable (callers fall back to
-    in-memory). In any other environment a missing REDIS_URL is a fatal
-    misconfiguration — we refuse to start rather than silently lose shared state.
-    """
     redis_url = get_env("REDIS_URL")
-    if redis_url:
+    if redis_url or _forced_in_memory() or is_development():
         return redis_url
-    if get_bool_env("USE_IN_MEMORY", False):
-        return ""
-    if is_development():
-        return ""
     raise RuntimeError(
         "REDIS_URL must be set when ENVIRONMENT is not development. "
         "A shared Redis store is required for rate limiting and token revocation; "
@@ -155,23 +127,14 @@ def get_redis_url() -> str:
 
 
 def trust_forwarded_for() -> bool:
-    """Whether to trust the X-Forwarded-For header for the real client IP.
-
-    Only enable this when the API runs behind a proxy/load balancer that
-    overwrites or appends a trustworthy client IP. When false, the socket
-    peer IP is used. Misconfiguring this is a spoofing risk, so it defaults off.
-    """
     return get_bool_env("TRUST_FORWARDED_FOR", False)
 
 
 def ensure_safe_startup_config(jwt_secret: str, default_secret: str) -> None:
-    if get_environment() == "development":
+    if is_development():
         return
     if get_bool_env("DEV_MODE", False):
         raise RuntimeError("DEV_MODE must be false when ENVIRONMENT is not development.")
-    if get_bool_env("USE_IN_MEMORY", False):
-        raise RuntimeError("USE_IN_MEMORY must be false when ENVIRONMENT is not development.")
+    _forced_in_memory()
     if jwt_secret == default_secret or len(jwt_secret) < 32:
-        raise RuntimeError(
-            "JWT_SECRET_KEY must be non-default and at least 32 characters outside development."
-        )
+        raise RuntimeError("JWT_SECRET_KEY must be non-default and at least 32 characters outside development.")

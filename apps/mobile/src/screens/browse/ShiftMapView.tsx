@@ -4,13 +4,13 @@ import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 
 import { NavigationLinks } from "../../components/NavigationLinks";
 import { COLORS } from "../../theme/colors";
-import type { Shift } from "../../types";
+import type { FeedShift } from "../../types";
 import { formatMoney } from "../earnings/earningsTypes";
 import { formatShiftWindow } from "./browseUtils";
 
 type Props = {
-  shifts: Shift[];
-  onApply: (shift: Shift) => void;
+  shifts: FeedShift[];
+  onApply: (shift: FeedShift) => void;
 };
 
 type Region = {
@@ -28,7 +28,7 @@ const LONDON: Region = {
 };
 
 export function ShiftMapView({ shifts, onApply }: Props) {
-  const [selected, setSelected] = useState<Shift | null>(null);
+  const [selected, setSelected] = useState<FeedShift | null>(null);
 
   const mappableShifts = useMemo(
     () => shifts.filter((s) => s.latitude != null && s.longitude != null),

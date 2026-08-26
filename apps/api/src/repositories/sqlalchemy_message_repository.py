@@ -28,34 +28,13 @@ class SqlAlchemyMessageRepository:
         return message
 
     def list_by_shift(self, shift_id: str, limit: int = 100) -> list[Message]:
-        rows = (
-            self._session.query(MessageModel)
-            .filter(MessageModel.shift_id == shift_id)
-            .order_by(desc(MessageModel.created_at))
-            .limit(limit)
-            .all()
-        )
-        return [_to_domain(row) for row in reversed(rows)]
+        return self._latest(MessageModel.shift_id == shift_id, limit)
 
     def list_by_application(self, application_id: str, limit: int = 100) -> list[Message]:
-        rows = (
-            self._session.query(MessageModel)
-            .filter(MessageModel.application_id == application_id)
-            .order_by(desc(MessageModel.created_at))
-            .limit(limit)
-            .all()
-        )
-        return [_to_domain(row) for row in reversed(rows)]
+        return self._latest(MessageModel.application_id == application_id, limit)
 
     def list_by_booking(self, booking_id: str, limit: int = 100) -> list[Message]:
-        rows = (
-            self._session.query(MessageModel)
-            .filter(MessageModel.booking_id == booking_id)
-            .order_by(desc(MessageModel.created_at))
-            .limit(limit)
-            .all()
-        )
-        return [_to_domain(row) for row in reversed(rows)]
+        return self._latest(MessageModel.booking_id == booking_id, limit)
 
     def mark_as_read(self, message_id: str) -> bool:
         model = self._session.get(MessageModel, message_id)
@@ -64,6 +43,16 @@ class SqlAlchemyMessageRepository:
         model.read_at = utc_now()
         self._session.flush()
         return True
+
+    def _latest(self, condition, limit: int) -> list[Message]:
+        rows = (
+            self._session.query(MessageModel)
+            .filter(condition)
+            .order_by(desc(MessageModel.created_at))
+            .limit(limit)
+            .all()
+        )
+        return [_to_domain(row) for row in reversed(rows)]
 
 
 def _to_domain(model: MessageModel) -> Message:

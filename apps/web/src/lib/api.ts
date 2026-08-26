@@ -118,8 +118,7 @@ async function parseResponse<T>(response: Response, path: string, method: string
     if (response.status === 401) {
       await unauthorizedHandler?.();
     }
-    const payload = await readErrorPayload(response);
-    const serverDetail = getServerDetail(payload);
+    const serverDetail = await readServerDetail(response);
     const apiError = new ApiError(getFriendlyErrorMessage(response.status, path, serverDetail), {
       status: response.status,
       path,
@@ -128,9 +127,6 @@ async function parseResponse<T>(response: Response, path: string, method: string
     });
     logApiError(apiError);
     throw apiError;
-  }
-  if (response.status === 204) {
-    return undefined as T;
   }
   const text = await response.text();
   if (!text) {
@@ -150,16 +146,20 @@ async function parseResponse<T>(response: Response, path: string, method: string
   }
 }
 
-async function readErrorPayload(response: Response): Promise<unknown> {
-  const text = await response.text().catch(() => "");
-  if (!text) {
-    return null;
+async function readServerDetail(response: Response): Promise<string | undefined> {
+  const rawText = await response.text().catch(() => "");
+  if (!rawText) {
+    return undefined;
   }
+  let detail: unknown = rawText;
   try {
-    return JSON.parse(text);
+    const payload = JSON.parse(rawText) as { detail?: unknown; message?: unknown; error?: unknown } | null;
+    detail = payload?.detail ?? payload?.message ?? payload?.error ?? rawText;
   } catch {
-    return text;
+    detail = rawText;
   }
+  const text = typeof detail === "string" ? detail : JSON.stringify(detail);
+  return text.length > 500 ? `${text.slice(0, 500)}...` : text;
 }
 
 function getFriendlyErrorMessage(status: number, path: string, serverDetail?: string): string {
@@ -193,40 +193,6 @@ function getFriendlyErrorMessage(status: number, path: string, serverDetail?: st
       }
       return "Something went wrong. Please try again.";
   }
-}
-
-function getServerDetail(payload: unknown): string | undefined {
-  if (payload == null) {
-    return undefined;
-  }
-  if (typeof payload === "string") {
-    return truncate(payload);
-  }
-  if (typeof payload === "object") {
-    const detail = (payload as { detail?: unknown; message?: unknown; error?: unknown }).detail
-      ?? (payload as { message?: unknown }).message
-      ?? (payload as { error?: unknown }).error;
-    return stringifyDetail(detail ?? payload);
-  }
-  return truncate(String(payload));
-}
-
-function stringifyDetail(value: unknown): string | undefined {
-  if (value == null) {
-    return undefined;
-  }
-  if (typeof value === "string") {
-    return truncate(value);
-  }
-  try {
-    return truncate(JSON.stringify(value));
-  } catch {
-    return truncate(String(value));
-  }
-}
-
-function truncate(value: string): string {
-  return value.length > 500 ? `${value.slice(0, 500)}...` : value;
 }
 
 function logApiError(error: ApiError): void {

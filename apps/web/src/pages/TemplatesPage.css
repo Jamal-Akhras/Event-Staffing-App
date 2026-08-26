@@ -72,12 +72,6 @@
   resize: vertical;
 }
 
-.error-card {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: #ef4444;
-  padding: 16px;
-}
-
 @media (max-width: 760px) {
   .templates-grid,
   .template-form-grid.two,

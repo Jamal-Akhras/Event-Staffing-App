@@ -1,10 +1,3 @@
-"""Add accounts table and account_id to users, shifts, shift_templates
-
-Revision ID: 010
-Revises: 009_add_worker_feed_state
-Create Date: 2026-05-06
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
@@ -82,7 +75,7 @@ def _drop_account_link(bind, table: str, index: str) -> None:
 def upgrade() -> None:
     bind = op.get_bind()
 
-    # accounts table — safe to skip if already exists (created by create_all)
+
     op.create_table(
         "accounts",
         sa.Column("account_id", sa.String(), primary_key=True, nullable=False),

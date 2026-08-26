@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from apps.api.src.auth.dependencies import ActorContext, ActorRole
+from apps.api.src.auth.actor import ActorContext, ActorRole
 from apps.api.src.repositories.application_repository import ApplicationRepository
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.message_repository import MessageRepository
@@ -69,7 +69,7 @@ def _require_shift_access(
         raise NotFoundError("Shift not found.")
     if actor.role == ActorRole.OPERATOR and shift.account_id == actor.account_id:
         return
-    worker_id = actor.worker_profile_id or actor.user_id
+    worker_id = actor.effective_worker_id
     if actor.role == ActorRole.WORKER:
         if shift.status == "open" or applications.find_by_worker_and_shift(worker_id, shift_id):
             return
@@ -85,7 +85,7 @@ def _require_participant(
     shifts: ShiftRepository,
 ) -> None:
     if actor.role == ActorRole.WORKER:
-        if (actor.worker_profile_id or actor.user_id) == worker_id:
+        if actor.effective_worker_id == worker_id:
             return
         raise ForbiddenError("You can only report your own marketplace activity.")
     shift = shifts.get(shift_id)

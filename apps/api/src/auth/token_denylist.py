@@ -1,14 +1,3 @@
-"""Token revocation denylist for JWT access tokens.
-
-A revoked token's ``jti`` is stored until its original expiry. ``decode_access_token``
-consults the denylist and rejects any token whose ``jti`` is present, so logout and
-leaked-token revocation take effect immediately rather than waiting out the 24h expiry.
-
-Two implementations, selected the same way as the Redis-backed rate limiter:
-- ``RedisTokenDenylist`` for shared, multi-replica, restart-surviving revocation.
-- ``InMemoryTokenDenylist`` for development and tests (per-process, lost on restart).
-"""
-
 from __future__ import annotations
 
 import time
@@ -21,7 +10,6 @@ _DENYLIST_KEY_PREFIX = "jwt:denylist:"
 
 class TokenDenylist(Protocol):
     def revoke(self, jti: str, ttl_seconds: int) -> None:
-        """Mark ``jti`` as revoked for ``ttl_seconds``. Non-positive TTLs are ignored."""
         raise NotImplementedError
 
     def is_revoked(self, jti: str) -> bool:

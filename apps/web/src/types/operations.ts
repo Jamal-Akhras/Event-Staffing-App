@@ -23,10 +23,14 @@ export type Application = {
   application_id: string;
   worker_id: string;
   shift_id: string;
+  operator_id: string;
+  start_time: string;
+  end_time: string;
   status: string;
+  message?: string | null;
+  booking_id?: string | null;
   created_at: string;
   decided_at?: string | null;
-  start_time?: string;
 };
 
 export type WorkerProfile = {

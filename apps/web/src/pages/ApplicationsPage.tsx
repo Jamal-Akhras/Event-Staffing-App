@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Application, ApplicationReviewCard, MessageHistory, ShiftSummary, WorkerProfile } from "../components/ApplicationReviewCard";
+import { ApplicationReviewCard, MessageHistory, ShiftSummary } from "../components/ApplicationReviewCard";
 import { CancellationModal } from "../components/CancellationModal";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorCard } from "../components/ErrorCard";
@@ -7,7 +7,7 @@ import { MessageThread } from "../components/MessageThread";
 import { SkeletonCard } from "../components/SkeletonCard";
 import { useToast } from "../components/Toast";
 import { WorkerProfilePanel } from "../components/WorkerProfilePanel";
-import type { Booking } from "../types/operations";
+import type { Application, Booking, WorkerProfile } from "../types/operations";
 import { CompletedShiftsPanel, type CompletedShift } from "./applications/CompletedShiftsPanel";
 
 import { fetchJson, postJson } from "../lib/api";

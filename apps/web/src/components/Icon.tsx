@@ -9,8 +9,7 @@ type IconName =
   | "settings"
   | "refresh"
   | "alert-triangle"
-  | "check"
-  | "clock";
+  | "check";
 
 type IconProps = {
   name: IconName;
@@ -30,7 +29,6 @@ const PATHS: Record<IconName, string> = {
   refresh: "M4 12a8 8 0 0113.7-5.7L20 8M20 4v4h-4M20 12a8 8 0 01-13.7 5.7L4 16M4 20v-4h4",
   "alert-triangle": "M12 3l9 16H3zM12 9v5M12 17h.01",
   check: "M5 13l4 4L19 7",
-  clock: "M12 3a9 9 0 100 18 9 9 0 000-18zM12 7v5l3 2",
 };
 
 export function Icon({ name, size = 20, className }: IconProps) {

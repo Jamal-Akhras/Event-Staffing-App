@@ -19,9 +19,9 @@ export function SelectedBookingPanel({
   onCheckOut,
   onCancel,
 }: SelectedBookingPanelProps) {
-  const canCheckIn = booking?.allowed_transitions?.includes("checked_in") ?? false;
-  const canCheckOut = booking?.allowed_transitions?.includes("checked_out") ?? false;
-  const canCancel = booking?.allowed_transitions?.includes("cancelled_by_worker") ?? false;
+  const canCheckIn = booking?.allowed_transitions.includes("checked_in") ?? false;
+  const canCheckOut = booking?.allowed_transitions.includes("checked_out") ?? false;
+  const canCancel = booking?.allowed_transitions.includes("cancelled_by_worker") ?? false;
 
   return (
     <View style={styles.card}>

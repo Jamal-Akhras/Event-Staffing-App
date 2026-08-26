@@ -14,15 +14,6 @@ export type DashboardMetric = {
   tone?: "default" | "warning" | "success";
 };
 
-export type AttentionItem = {
-  label: string;
-  value: string;
-  note: string;
-  to: string;
-  action: string;
-  tone: "warning" | "success" | "default";
-};
-
 export type CoverageDay = {
   label: string;
   date: string;
@@ -72,45 +63,6 @@ export function buildDashboardMetrics(
   ];
 }
 
-export function buildAttentionQueue(
-  shifts: Shift[],
-  applications: Application[],
-  now: Date
-): AttentionItem[] {
-  const urgentShifts = getUrgentShifts(shifts, now);
-  const pendingApplications = applications.filter((app) => app.status === "applied");
-  const openSeats = getOpenSeats(shifts);
-
-  const items: AttentionItem[] = [
-    {
-      label: "Shifts starting soon",
-      value: String(urgentShifts.length),
-      note: "Open shifts inside 48 hours",
-      to: "/app/shifts",
-      action: "Review shifts",
-      tone: urgentShifts.length > 0 ? "warning" : "success",
-    },
-    {
-      label: "Applications waiting",
-      value: String(pendingApplications.length),
-      note: "Approve or reject qualified workers",
-      to: "/app/applications",
-      action: "Open queue",
-      tone: pendingApplications.length > 0 ? "warning" : "success",
-    },
-    {
-      label: "Seats left to fill",
-      value: String(openSeats),
-      note: "Across active shifts",
-      to: "/app/schedule",
-      action: "View schedule",
-      tone: openSeats > 0 ? "warning" : "success",
-    },
-  ];
-
-  return items;
-}
-
 export function buildCoverageDays(shifts: Shift[], now: Date): CoverageDay[] {
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(now);
@@ -136,14 +88,11 @@ export function getRecentOpenShifts(shifts: Shift[], now: Date) {
     .slice(0, 5);
 }
 
-export function formatShiftTime(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+export function getOpenSeats(shifts: Shift[]) {
+  return shifts.reduce(
+    (sum, shift) => sum + Math.max(shift.workers_needed - shift.workers_filled, 0),
+    0
+  );
 }
 
 function getUpcomingShifts(shifts: Shift[], now: Date) {
@@ -152,21 +101,6 @@ function getUpcomingShifts(shifts: Shift[], now: Date) {
     const startTime = new Date(shift.start_time);
     return startTime >= now && startTime <= weekAhead;
   });
-}
-
-function getUrgentShifts(shifts: Shift[], now: Date) {
-  return shifts.filter((shift) => {
-    const hoursUntil =
-      (new Date(shift.start_time).getTime() - now.getTime()) / (1000 * 60 * 60);
-    return shift.status === "open" && hoursUntil > 0 && hoursUntil < 48;
-  });
-}
-
-function getOpenSeats(shifts: Shift[]) {
-  return shifts.reduce(
-    (sum, shift) => sum + Math.max(shift.workers_needed - shift.workers_filled, 0),
-    0
-  );
 }
 
 function isSameDay(left: Date, right: Date) {

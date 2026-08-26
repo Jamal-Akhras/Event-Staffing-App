@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { EmptyState } from "../components/EmptyState";
-import { useAuth } from "../contexts/AuthContext";
 import { fetchWorker, getWorkerId } from "../lib/api";
 import { COLORS } from "../theme/colors";
 import { EarningsRow } from "./earnings/EarningsRow";
@@ -11,8 +10,7 @@ import { PeriodSelector } from "./earnings/PeriodSelector";
 import type { EarningsSummary, Period } from "./earnings/earningsTypes";
 
 export default function EarningsScreen() {
-  const { user } = useAuth();
-  const workerId = user?.worker_profile_id ?? getWorkerId();
+  const workerId = getWorkerId();
   const [period, setPeriod] = useState<Period>("week");
   const [summary, setSummary] = useState<EarningsSummary | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta
+from uuid import uuid4
 
-from apps.api.src.datetime_utils import normalize_utc
-from apps.api.src.helpers import _now
+from apps.api.src.datetime_utils import normalize_utc, utc_now
 from apps.api.src.models.shift import Shift
 from apps.api.src.models.shift_template import ShiftTemplate
 from apps.api.src.repositories.shift_repository import ShiftRepository
@@ -26,9 +26,9 @@ class TemplateService:
         self._shifts = shift_repo
 
     def create_template(self, request: TemplateCreateRequest, operator_id: str, account_id: str | None = None) -> ShiftTemplate:
-        now = _now()
+        now = utc_now()
         template = ShiftTemplate(
-            template_id=f"tmpl_{now.strftime('%Y%m%d%H%M%S')}_{operator_id}",
+            template_id=f"tmpl_{uuid4().hex}",
             operator_id=operator_id,
             name=request.name,
             role=request.role,
@@ -56,20 +56,7 @@ class TemplateService:
         operator_id: str,
     ) -> ShiftTemplate:
         existing = self._get_owned_template(template_id, operator_id)
-        updated = ShiftTemplate(
-            template_id=existing.template_id,
-            operator_id=existing.operator_id,
-            name=request.name,
-            role=request.role,
-            location=request.location,
-            duration_hours=request.duration_hours,
-            pay_rate=request.pay_rate,
-            workers_needed=request.workers_needed,
-            notes=request.notes,
-            created_at=existing.created_at,
-            updated_at=_now(),
-            account_id=existing.account_id,
-        )
+        updated = existing.model_copy(update={**request.model_dump(), "updated_at": utc_now()})
         return self._templates.save_template(updated)
 
     def delete_template(self, template_id: str, operator_id: str) -> bool:
@@ -118,7 +105,7 @@ def _shift_from_template(
     end_time: datetime,
 ) -> Shift:
     return Shift(
-        shift_id=f"shift_{_now().strftime('%Y%m%d%H%M%S%f')}",
+        shift_id=str(uuid4()),
         operator_id=template.operator_id,
         role=template.role,
         location=template.location,
@@ -127,7 +114,7 @@ def _shift_from_template(
         pay_rate=template.pay_rate,
         notes=template.notes,
         status="open",
-        created_at=_now(),
+        created_at=utc_now(),
         workers_needed=template.workers_needed,
         workers_filled=0,
         account_id=template.account_id,

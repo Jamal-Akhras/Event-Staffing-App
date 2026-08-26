@@ -1,5 +1,3 @@
-"""Account-lifecycle auth endpoints: logout (token revocation) and email verification."""
-
 from __future__ import annotations
 
 from dataclasses import replace

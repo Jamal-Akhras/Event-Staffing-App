@@ -196,15 +196,15 @@ class TemplateResponse(BaseModel):
 class GenerateShiftsRequest(BaseModel):
     start_date: UtcTimestamp
     end_date: UtcTimestamp
-    start_time: str  # "HH:MM" format (e.g., "18:00")
-    days_of_week: list[int] | None = None  # [0-6] where 0=Monday, 6=Sunday. None means every day.
+    start_time: str
+    days_of_week: list[int] | None = None
 
 
 class RecurringScheduleCreateRequest(BaseModel):
     template_id: str
-    frequency: str  # "daily", "weekly", "monthly"
-    day_of_week: int | None = None  # 0-6 for weekly schedules (0=Monday, 6=Sunday)
-    time_of_day: str  # "HH:MM" format (e.g., "18:00")
+    frequency: str
+    day_of_week: int | None = None
+    time_of_day: str
     start_date: UtcTimestamp
     end_date: UtcTimestamp | None = None
 

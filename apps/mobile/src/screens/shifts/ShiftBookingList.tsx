@@ -1,6 +1,7 @@
 import { EmptyState } from "../../components/EmptyState";
 import type { Booking } from "../../types";
 import { BookingRow } from "./ShiftRows";
+import { sortHighlightedFirst } from "./shiftsUtils";
 
 type ShiftBookingListProps = {
   bookings: Booking[];
@@ -25,20 +26,17 @@ export function ShiftBookingList({
 
   return (
     <>
-      {[...bookings]
-        .sort((left, right) =>
-          Number(right.booking_id === highlightedBookingId) -
-          Number(left.booking_id === highlightedBookingId)
+      {sortHighlightedFirst(bookings, highlightedBookingId, (booking) => booking.booking_id).map(
+        (booking) => (
+          <BookingRow
+            key={booking.booking_id}
+            booking={booking}
+            highlighted={booking.booking_id === highlightedBookingId}
+            onSelect={() => onSelect(booking)}
+            onMessage={onMessage ? () => onMessage(booking) : undefined}
+          />
         )
-        .map((booking) => (
-        <BookingRow
-          key={booking.booking_id}
-          booking={booking}
-          highlighted={booking.booking_id === highlightedBookingId}
-          onSelect={() => onSelect(booking)}
-          onMessage={onMessage ? () => onMessage(booking) : undefined}
-        />
-        ))}
+      )}
     </>
   );
 }

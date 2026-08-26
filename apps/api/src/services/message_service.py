@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import uuid4
 
-from apps.api.src.helpers import _now
+from apps.api.src.auth.actor import ActorContext, ActorRole
+from apps.api.src.datetime_utils import utc_now
 from apps.api.src.models.application import Application
 from apps.api.src.models.message import Message
 from apps.api.src.models.shift import Shift
@@ -18,13 +19,6 @@ from packages.domain.src.booking import Booking
 
 NOTIFICATION_BODY_LIMIT = 140
 THREAD_READ_WINDOW = 500
-
-
-@dataclass(frozen=True)
-class MessageActor:
-    role: str
-    user_id: str
-    venue_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -50,27 +44,27 @@ class MessageService:
         self._bookings = booking_repo
         self._outbox = outbox
 
-    def send_message(self, shift_id: str, request: MessageSendRequest, actor: MessageActor) -> Message:
+    def send_message(self, shift_id: str, request: MessageSendRequest, actor: ActorContext) -> Message:
         thread = self._open_thread(shift_id, actor, request.application_id, request.booking_id)
         message = Message(
             message_id=f"msg_{uuid4().hex}",
             shift_id=shift_id,
             application_id=thread.application.application_id if thread.application else None,
             booking_id=thread.booking.booking_id if thread.booking else None,
-            sender_id=actor.user_id,
-            sender_role=actor.role,
+            sender_id=_sender_id(actor),
+            sender_role=actor.role.value,
             content=request.content,
             read_at=None,
-            created_at=_now(),
+            created_at=utc_now(),
         )
         saved = self._messages.save(message)
-        self._publish_message(saved, thread, actor.role)
+        self._publish_message(saved, thread, actor)
         return saved
 
     def list_messages(
         self,
         shift_id: str,
-        actor: MessageActor,
+        actor: ActorContext,
         application_id: str | None = None,
         booking_id: str | None = None,
         limit: int = 100,
@@ -81,24 +75,24 @@ class MessageService:
     def mark_thread_read(
         self,
         shift_id: str,
-        actor: MessageActor,
+        actor: ActorContext,
         application_id: str | None = None,
         booking_id: str | None = None,
     ) -> int:
         thread = self._open_thread(shift_id, actor, application_id, booking_id)
         marked = 0
         for message in self._thread_messages(thread, THREAD_READ_WINDOW):
-            if message.read_at is None and message.sender_role != actor.role:
+            if message.read_at is None and message.sender_role != actor.role.value:
                 if self._messages.mark_as_read(message.message_id):
                     marked += 1
         return marked
 
-    def mark_as_read(self, message_id: str, actor: MessageActor) -> None:
+    def mark_as_read(self, message_id: str, actor: ActorContext) -> None:
         message = self._messages.get(message_id)
         if message is None:
             raise NotFoundError(f"Message not found: {message_id}")
         self._open_thread(message.shift_id, actor, message.application_id, message.booking_id)
-        if message.sender_role == actor.role:
+        if message.sender_role == actor.role.value:
             raise ForbiddenError("Only the recipient can mark a message as read.")
         if not self._messages.mark_as_read(message_id):
             raise NotFoundError(f"Message not found: {message_id}")
@@ -106,7 +100,7 @@ class MessageService:
     def _open_thread(
         self,
         shift_id: str,
-        actor: MessageActor,
+        actor: ActorContext,
         application_id: str | None,
         booking_id: str | None,
     ) -> MessageThread:
@@ -143,16 +137,14 @@ class MessageService:
             raise NotFoundError("Booking not found.")
         return booking
 
-    def _require_thread_access(self, actor: MessageActor, thread: MessageThread) -> None:
-        if actor.role == "operator":
+    def _require_thread_access(self, actor: ActorContext, thread: MessageThread) -> None:
+        if actor.role == ActorRole.OPERATOR:
             if not _operator_owns_shift(actor, thread.shift):
                 raise ForbiddenError("Operator can only access their own shift messages.")
             return
-        if actor.role == "worker":
-            if thread.worker_id == actor.user_id:
-                return
-            raise ForbiddenError("Worker can only access their own message threads.")
-        raise ForbiddenError("Actor is not allowed to access messages.")
+        if actor.role == ActorRole.WORKER and thread.worker_id == actor.effective_worker_id:
+            return
+        raise ForbiddenError("Worker can only access their own message threads.")
 
     def _thread_messages(self, thread: MessageThread, limit: int) -> list[Message]:
         by_id: dict[str, Message] = {}
@@ -165,8 +157,8 @@ class MessageService:
         ordered = sorted(by_id.values(), key=lambda item: (item.created_at, item.message_id))
         return ordered[-limit:]
 
-    def _publish_message(self, message: Message, thread: MessageThread, sender_role: str) -> None:
-        if sender_role == "worker":
+    def _publish_message(self, message: Message, thread: MessageThread, actor: ActorContext) -> None:
+        if actor.role == ActorRole.WORKER:
             if not thread.shift.account_id:
                 return
             recipient_kind, recipient_id = "venue", thread.shift.account_id
@@ -190,9 +182,13 @@ class MessageService:
         )
 
 
-def _operator_owns_shift(actor: MessageActor, shift: Shift) -> bool:
-    if shift.account_id and actor.venue_id:
-        return shift.account_id == actor.venue_id
+def _sender_id(actor: ActorContext) -> str:
+    return actor.effective_worker_id if actor.role == ActorRole.WORKER else actor.user_id
+
+
+def _operator_owns_shift(actor: ActorContext, shift: Shift) -> bool:
+    if shift.account_id and actor.account_id:
+        return shift.account_id == actor.account_id
     return shift.operator_id == actor.user_id
 
 

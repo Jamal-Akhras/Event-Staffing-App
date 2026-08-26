@@ -23,25 +23,7 @@ def refresh_reliability(
     if profile is None:
         return None
     score = compute_reliability(booking_repo.list_by_worker(worker_id))
-    updated = WorkerProfile(
-        worker_id=profile.worker_id,
-        display_name=profile.display_name,
-        role=profile.role,
-        city=profile.city,
-        experience_years=profile.experience_years,
-        reliability_score=score,
-        badges=profile.badges,
-        bio=profile.bio,
-        languages=profile.languages,
-        email=profile.email,
-        phone=profile.phone,
-        address=profile.address,
-        emergency_contact=profile.emergency_contact,
-        pay_rate=profile.pay_rate,
-        notes=profile.notes,
-        updated_at=now,
-    )
-    return worker_repo.save(updated)
+    return worker_repo.save(replace(profile, reliability_score=score, updated_at=now))
 
 
 def sweep_no_shows(

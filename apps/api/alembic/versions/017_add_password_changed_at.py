@@ -1,10 +1,3 @@
-"""Add password_changed_at to users
-
-Revision ID: 017
-Revises: 016
-Create Date: 2026-05-24
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect

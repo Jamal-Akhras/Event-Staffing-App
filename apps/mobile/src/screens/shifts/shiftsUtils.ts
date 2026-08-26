@@ -28,6 +28,17 @@ export function getPreviousBookings(bookings: Booking[]) {
   });
 }
 
+export function sortHighlightedFirst<T>(
+  items: T[],
+  highlightedId: string | null | undefined,
+  getId: (item: T) => string
+): T[] {
+  return [...items].sort(
+    (left, right) =>
+      Number(getId(right) === highlightedId) - Number(getId(left) === highlightedId)
+  );
+}
+
 export function formatDateTime(value?: string | null) {
   if (!value) return "N/A";
   const date = new Date(value);

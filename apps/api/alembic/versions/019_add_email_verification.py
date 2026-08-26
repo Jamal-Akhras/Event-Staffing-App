@@ -1,10 +1,3 @@
-"""Add email verification to users
-
-Revision ID: 019
-Revises: 018
-Create Date: 2026-06-26
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect

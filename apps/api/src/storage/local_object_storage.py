@@ -33,10 +33,13 @@ class LocalObjectStorage:
         if not url.startswith(prefix):
             return None
         key = unquote(url.removeprefix(prefix))
-        self._path_for_key(key)
+        self._require_safe_key(key)
         return key
 
     def _path_for_key(self, key: str) -> Path:
+        return self._require_safe_key(key)
+
+    def _require_safe_key(self, key: str) -> Path:
         if not key or key.startswith(("/", "\\")):
             raise ValueError("Object key must be a non-empty relative path.")
         destination = (self.root / key).resolve()

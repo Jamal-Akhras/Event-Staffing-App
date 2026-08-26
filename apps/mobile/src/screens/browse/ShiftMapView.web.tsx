@@ -3,13 +3,13 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { NavigationLinks } from "../../components/NavigationLinks";
 import { COLORS } from "../../theme/colors";
-import type { Shift } from "../../types";
+import type { FeedShift } from "../../types";
 import { formatMoney } from "../earnings/earningsTypes";
 import { formatShiftWindow } from "./browseUtils";
 
 type Props = {
-  shifts: Shift[];
-  onApply: (shift: Shift) => void;
+  shifts: FeedShift[];
+  onApply: (shift: FeedShift) => void;
 };
 
 export function ShiftMapView({ shifts, onApply }: Props) {

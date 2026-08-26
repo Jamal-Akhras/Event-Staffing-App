@@ -75,10 +75,7 @@ class Booking:
                 raise TransitionError("Venue cancellations must be before start time.")
             return replace(self, state=target, cancelled_at=now)
 
-        if target == BookingState.CONFIRMED:
-            return replace(self, state=target, confirmed_at=now)
-
-        return replace(self, state=target)
+        return replace(self, state=target, confirmed_at=now)
 
 
 def _within_check_in_window(now: datetime, start_time: datetime) -> bool:

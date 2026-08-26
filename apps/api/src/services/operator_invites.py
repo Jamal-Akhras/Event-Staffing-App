@@ -1,11 +1,3 @@
-"""Operator sign-up invite codes.
-
-Operator registration grants venue privileges, so it must not be open. Valid invite
-codes are configured via the OPERATOR_INVITE_CODES env var (comma-separated). This is
-the simplest correct gate for now; a future phase can move codes into the database with
-per-code usage limits and expiry.
-"""
-
 from __future__ import annotations
 
 from apps.api.src.config import get_env

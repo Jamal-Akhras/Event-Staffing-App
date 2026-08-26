@@ -4,10 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from apps.api.src.auth import ActorContext, ActorRole, get_actor_context, require_role
 from apps.api.src.deps import get_booking_lifecycle_service
-from apps.api.src.helpers import (
-    _booking_view,
-)
+from apps.api.src.helpers import _booking_view
 from apps.api.src.rate_limit import actor_or_ip, limiter
+from apps.api.src.routes.actor_scope import list_scope
 from apps.api.src.routes.service_errors import raise_service_error
 from apps.api.src.schemas import (
     BookingResponse,
@@ -45,13 +44,7 @@ def list_bookings(
     actor: ActorContext = Depends(get_actor_context),
 ) -> list[BookingResponse]:
     require_role(actor.role, {ActorRole.OPERATOR, ActorRole.WORKER})
-    if actor.role == ActorRole.WORKER:
-        effective_worker_id = actor.worker_profile_id or actor.user_id
-        if worker_id is not None and worker_id != effective_worker_id:
-            raise HTTPException(status_code=403, detail="Worker can only access their own bookings.")
-        worker_id = effective_worker_id
-    account_id = actor.account_id if actor.role == ActorRole.OPERATOR else None
-    operator_id = actor.user_id if actor.role == ActorRole.OPERATOR and account_id is None else None
+    worker_id, operator_id, account_id = list_scope(actor, worker_id, "bookings")
     items = service.list_bookings(limit, worker_id, operator_id, account_id)
     return [_booking_view(booking) for booking in items]
 
@@ -168,19 +161,7 @@ def _transition(
 ) -> BookingResponse:
     try:
         _require_booking_access(actor, service.get_booking(booking_id), service)
-        cancellation_reason = request.reason if isinstance(request, CancellationRequest) else None
-        payment = request if isinstance(request, PaymentRecordRequest) else None
-        booking = service.transition(
-            booking_id,
-            target,
-            request,
-            refresh_worker_reliability,
-            cancellation_reason,
-            actor.user_id if cancellation_reason else None,
-            payment.method if payment else None,
-            payment.reference if payment else None,
-            actor.user_id if payment else None,
-        )
+        booking = service.transition(booking_id, target, request, actor.user_id, refresh_worker_reliability)
         return _booking_view(booking)
     except ServiceError as exc:
         raise_service_error(exc)
@@ -200,6 +181,5 @@ def _require_booking_access(
         and not service.booking_belongs_to_venue(booking, actor.account_id)
     ):
         raise HTTPException(status_code=403, detail="Operator can only access their own bookings.")
-    effective_worker_id = actor.worker_profile_id or actor.user_id
-    if actor.role == ActorRole.WORKER and booking.worker_id != effective_worker_id:
+    if actor.role == ActorRole.WORKER and booking.worker_id != actor.effective_worker_id:
         raise HTTPException(status_code=403, detail="Worker can only access their own bookings.")

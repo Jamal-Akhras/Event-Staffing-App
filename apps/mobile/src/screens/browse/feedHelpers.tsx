@@ -2,15 +2,6 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { COLORS } from "../../theme/colors";
 
-export function FeedStat({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 export function StatusCard({
   actionLabel,
   message,
@@ -34,35 +25,7 @@ export function StatusCard({
   );
 }
 
-export function addShiftId(
-  setter: (value: React.SetStateAction<Set<string>>) => void,
-  shiftId: string
-) {
-  setter((current) => new Set(current).add(shiftId));
-}
-
-export function removeShiftId(
-  setter: (value: React.SetStateAction<Set<string>>) => void,
-  shiftId: string
-) {
-  setter((current) => {
-    const next = new Set(current);
-    next.delete(shiftId);
-    return next;
-  });
-}
-
 const styles = StyleSheet.create({
-  statCard: {
-    flex: 1,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 16,
-    backgroundColor: COLORS.surface,
-  },
-  statValue: { color: COLORS.primary, fontSize: 22, fontWeight: "900" },
-  statLabel: { color: COLORS.inkMuted, fontSize: 12, fontWeight: "800" },
   statusCard: {
     flexDirection: "row",
     alignItems: "center",

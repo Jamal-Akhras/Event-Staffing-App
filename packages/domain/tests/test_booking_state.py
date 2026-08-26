@@ -1,4 +1,3 @@
-
 import pytest
 
 from packages.domain.src.booking_state import BookingState
@@ -6,7 +5,7 @@ from packages.domain.src.booking_state_machine import (
     TransitionError,
     allowed_next_states,
     is_valid_transition,
-    transition,
+    require_transition,
 )
 
 def test_paid_is_terminal():
@@ -49,4 +48,4 @@ def test_cancel_not_allowed_from_paid():
 
 def test_invalid_transition_raises():
     with pytest.raises(TransitionError):
-        transition(BookingState.REQUESTED, BookingState.CHECKED_IN)
+        require_transition(BookingState.REQUESTED, BookingState.CHECKED_IN)

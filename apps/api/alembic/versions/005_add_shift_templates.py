@@ -10,7 +10,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create shift_templates table
     op.create_table(
         "shift_templates",
         sa.Column("template_id", sa.String(), nullable=False),
@@ -27,7 +26,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("template_id"),
     )
 
-    # Create recurring_schedules table
+
     op.create_table(
         "recurring_schedules",
         sa.Column("schedule_id", sa.String(), nullable=False),

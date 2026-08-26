@@ -1,10 +1,3 @@
-"""Add media fields to accounts and worker_profiles
-
-Revision ID: 012
-Revises: 011
-Create Date: 2026-05-08
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect

@@ -1,10 +1,3 @@
-"""Add notifications table
-
-Revision ID: 013
-Revises: 012
-Create Date: 2026-05-08
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect

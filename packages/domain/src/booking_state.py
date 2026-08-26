@@ -1,4 +1,3 @@
-
 from enum import Enum
 
 class BookingState(str, Enum):

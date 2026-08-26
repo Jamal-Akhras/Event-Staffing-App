@@ -1,7 +1,3 @@
-"""Smoke harness — hits the live API and reports any non-2xx response.
-
-Run uvicorn first, then:  python -m apps.api.scripts.smoke
-"""
 from __future__ import annotations
 
 import json

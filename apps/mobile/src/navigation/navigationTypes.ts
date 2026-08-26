@@ -4,7 +4,6 @@ export type BrowseNotificationParams = {
 };
 
 export type ShiftsNotificationParams = {
-  focus?: "upcoming" | "previous" | "applications";
   notification_key?: string;
   application_id?: string;
   booking_id?: string;

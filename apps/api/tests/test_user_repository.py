@@ -1,5 +1,3 @@
-"""Tests for User repository implementations."""
-
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -8,7 +6,6 @@ from apps.api.src.repositories.in_memory_user_repository import InMemoryUserRepo
 
 
 def test_in_memory_user_repository_save_and_get():
-    """Test saving and retrieving a user."""
     repo = InMemoryUserRepository()
     now = datetime.now(UTC)
 
@@ -35,7 +32,6 @@ def test_in_memory_user_repository_save_and_get():
 
 
 def test_in_memory_user_repository_get_by_email():
-    """Test retrieving a user by email address."""
     repo = InMemoryUserRepository()
     now = datetime.now(UTC)
 
@@ -59,7 +55,6 @@ def test_in_memory_user_repository_get_by_email():
 
 
 def test_in_memory_user_repository_get_by_email_case_insensitive():
-    """Test that email lookup is case-insensitive."""
     repo = InMemoryUserRepository()
     now = datetime.now(UTC)
 
@@ -82,7 +77,6 @@ def test_in_memory_user_repository_get_by_email_case_insensitive():
 
 
 def test_in_memory_user_repository_get_nonexistent():
-    """Test retrieving a user that doesn't exist."""
     repo = InMemoryUserRepository()
 
     result = repo.get("nonexistent")
@@ -93,7 +87,6 @@ def test_in_memory_user_repository_get_nonexistent():
 
 
 def test_in_memory_user_repository_update():
-    """Test updating an existing user."""
     repo = InMemoryUserRepository()
     now = datetime.now(UTC)
 
@@ -129,7 +122,6 @@ def test_in_memory_user_repository_update():
 
 
 def test_in_memory_user_repository_clear():
-    """Test clearing all users from the repository."""
     repo = InMemoryUserRepository()
     now = datetime.now(UTC)
 

@@ -10,7 +10,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create application_message_history table
     op.create_table(
         "application_message_history",
         sa.Column("history_id", sa.String(), nullable=False),
@@ -20,7 +19,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("history_id"),
     )
 
-    # Create index for faster lookups by application_id
+
     op.create_index("ix_app_msg_history_application_id", "application_message_history", ["application_id"])
 
 

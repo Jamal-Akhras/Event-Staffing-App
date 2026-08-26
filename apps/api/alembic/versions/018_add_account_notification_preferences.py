@@ -1,10 +1,3 @@
-"""Add notification_preferences to accounts
-
-Revision ID: 018
-Revises: 017
-Create Date: 2026-05-25
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect

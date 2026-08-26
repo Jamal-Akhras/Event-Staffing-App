@@ -86,14 +86,6 @@ export type Application = {
   withdrawal_reason?: string | null;
 };
 
-export type WorkerFeedState = {
-  worker_id: string;
-  shift_id: string;
-  action: "passed";
-  created_at: string;
-  updated_at: string;
-};
-
 export type WorkerProfile = {
   worker_id: string;
   display_name: string;

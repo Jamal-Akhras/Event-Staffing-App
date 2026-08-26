@@ -19,10 +19,6 @@ from apps.api.src.schemas import (
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state_machine import allowed_next_states
 
-def _now() -> datetime:
-    return utc_now()
-
-
 def _now_or(request_time: datetime | None) -> datetime:
     return request_time or utc_now()
 
@@ -32,10 +28,6 @@ def _get_worker_profile(repo: WorkerProfileRepository, worker_id: str) -> Worker
     if profile is None:
         raise HTTPException(status_code=404, detail="Worker profile not found.")
     return profile
-
-
-def _save_worker_profile(repo: WorkerProfileRepository, profile: WorkerProfile) -> WorkerProfile:
-    return repo.save(profile)
 
 
 def _booking_view(booking: Booking) -> BookingResponse:
@@ -71,4 +63,3 @@ def _worker_public_view(profile: WorkerProfile) -> WorkerProfilePrivateResponse:
 def _worker_private_view(profile: WorkerProfile) -> WorkerProfilePrivateResponse:
     payload = asdict(profile)
     return WorkerProfilePrivateResponse(**payload)
-

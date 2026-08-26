@@ -40,14 +40,14 @@ def get_preferences(session: Session | None, user_id: str) -> tuple[dict[str, bo
     row = session.get(UserNotificationPreferenceModel, user_id)
     if row is None:
         return dict(CHANNEL_DEFAULTS), dict(CATEGORY_DEFAULTS)
-    return _normalize(row.channels, CHANNEL_DEFAULTS), _normalize(row.categories, CATEGORY_DEFAULTS)
+    return normalize_flags(row.channels, CHANNEL_DEFAULTS), normalize_flags(row.categories, CATEGORY_DEFAULTS)
 
 
 def save_preferences(
     session: Session | None,
     user_id: str,
-    channels: object,
-    categories: object,
+    channels: dict[str, bool],
+    categories: dict[str, bool],
 ) -> tuple[dict[str, bool], dict[str, bool]]:
     normalized_channels = _validate_complete(channels, CHANNEL_DEFAULTS, "channels")
     normalized_categories = _validate_complete(categories, CATEGORY_DEFAULTS, "categories")
@@ -72,10 +72,6 @@ def register_push_token(
     platform: str,
     device_id: str,
 ) -> PushToken:
-    if platform not in {"ios", "android"}:
-        raise ValueError("Platform must be ios or android.")
-    if not token.strip() or not device_id.strip():
-        raise ValueError("Token and device_id are required.")
     if session is None:
         matches = [
             item
@@ -130,7 +126,7 @@ def delete_push_token(session: Session | None, user_id: str, push_token_id: str)
     return count == 1
 
 
-def _normalize(raw: object, defaults: dict[str, bool]) -> dict[str, bool]:
+def normalize_flags(raw: object, defaults: dict[str, bool]) -> dict[str, bool]:
     result = dict(defaults)
     if isinstance(raw, dict):
         for key in result:
@@ -139,11 +135,9 @@ def _normalize(raw: object, defaults: dict[str, bool]) -> dict[str, bool]:
     return result
 
 
-def _validate_complete(raw: object, defaults: dict[str, bool], field: str) -> dict[str, bool]:
-    if not isinstance(raw, dict) or set(raw) != set(defaults):
+def _validate_complete(raw: dict[str, bool], defaults: dict[str, bool], field: str) -> dict[str, bool]:
+    if set(raw) != set(defaults):
         raise ValueError(f"{field} must include exactly: {', '.join(defaults)}.")
-    if any(not isinstance(value, bool) for value in raw.values()):
-        raise ValueError(f"Every {field} value must be boolean.")
     return dict(raw)
 
 

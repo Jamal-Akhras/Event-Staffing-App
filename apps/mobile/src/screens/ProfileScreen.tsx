@@ -4,11 +4,18 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-nat
 
 import { MarketPicker } from "../components/MarketPicker";
 import { useAuth } from "../contexts/AuthContext";
-import { API_BASE, fetchWorker, putWorker, uploadWorkerAvatar } from "../lib/api";
+import {
+  API_BASE,
+  fetchPublicJson,
+  fetchWorker,
+  getWorkerId,
+  putWorker,
+  uploadWorkerAvatar,
+} from "../lib/api";
 import { COLORS } from "../theme/colors";
 import type { WorkerProfile } from "../types";
 import { NotificationPrefsSection } from "./profile/NotificationPrefsSection";
-import { ProfileFormFields } from "./profile/ProfileFormFields";
+import { PrivateProfileFields, PublicProfileFields } from "./profile/ProfileFormFields";
 import { ProfileHeaderCard } from "./profile/ProfileHeaderCard";
 import { ProfileSection } from "./profile/ProfileSection";
 import {
@@ -20,7 +27,7 @@ import {
 
 export function ProfileScreen() {
   const { user, logout } = useAuth();
-  const workerId = user?.worker_profile_id ?? "";
+  const workerId = getWorkerId();
   const [health, setHealth] = useState<string>("Unknown");
   const [error, setError] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState<ProfileForm>({
@@ -33,27 +40,18 @@ export function ProfileScreen() {
   const [allowRecontact, setAllowRecontact] = useState(false);
 
   useEffect(() => {
-    const controller = new AbortController();
-    fetch(`${API_BASE}/health`, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
-        return response.json();
-      })
+    fetchPublicJson("/health")
       .then(() => {
         setHealth("Healthy");
         setError(null);
       })
-      .catch((err) => {
-        if ((err as Error).name !== "AbortError") {
-          setHealth("Unavailable");
-          setError((err as Error).message);
-        }
+      .catch((err: Error) => {
+        setHealth("Unavailable");
+        setError(err.message);
       });
-    return () => controller.abort();
   }, []);
 
   const loadProfile = async () => {
-    if (!workerId) return;
     try {
       const data = await fetchWorker<WorkerProfile>(`/workers/${workerId}`);
       setProfileMeta(data);
@@ -96,13 +94,12 @@ export function ProfileScreen() {
     }
   };
 
-  const saveProfile = async () => {
-    if (!workerId) return;
+  const persistProfile = async (allowVenueRecontact: boolean) => {
     setProfileStatus(null);
     try {
       const data = await putWorker<WorkerProfile>(
         `/workers/${workerId}`,
-        { ...formToPayload(profileForm), allow_venue_recontact: allowRecontact }
+        { ...formToPayload(profileForm), allow_venue_recontact: allowVenueRecontact }
       );
       setProfileMeta(data);
       setProfileStatus("Profile saved.");
@@ -110,6 +107,8 @@ export function ProfileScreen() {
       setProfileStatus((err as Error).message);
     }
   };
+
+  const saveProfile = () => persistProfile(allowRecontact);
 
   return (
     <ScrollView
@@ -139,11 +138,11 @@ export function ProfileScreen() {
             }
           />
         </View>
-        <ProfileFormFields form={profileForm} onChange={setProfileForm} />
+        <PublicProfileFields form={profileForm} onChange={setProfileForm} />
       </ProfileSection>
 
       <ProfileSection title="Private info">
-        <ProfileFormFields form={profileForm} onChange={setProfileForm} privateFields />
+        <PrivateProfileFields form={profileForm} onChange={setProfileForm} />
         <Pressable style={styles.button} onPress={saveProfile}>
           <Text style={styles.buttonText}>Save profile</Text>
         </Pressable>
@@ -162,12 +161,7 @@ export function ProfileScreen() {
             value={allowRecontact}
             onValueChange={(value) => {
               setAllowRecontact(value);
-              if (workerId) {
-                putWorker(`/workers/${workerId}`, {
-                  ...formToPayload(profileForm),
-                  allow_venue_recontact: value,
-                }).catch(() => {});
-              }
+              void persistProfile(value);
             }}
             trackColor={{ false: COLORS.border, true: COLORS.primary }}
             thumbColor="#fff"

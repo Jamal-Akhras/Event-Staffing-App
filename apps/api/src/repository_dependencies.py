@@ -89,10 +89,6 @@ _REPORTS = InMemoryReportRepository()
 _DECISIONS = InMemoryApplicationDecisionRepository(_APPLICATIONS, _BOOKINGS, _SHIFTS)
 
 
-def _use_in_memory() -> bool:
-    return use_in_memory_repositories()
-
-
 def get_request_unit_of_work() -> Generator[RequestUnitOfWork, None, None]:
     unit_of_work = RequestUnitOfWork(None if use_in_memory_repositories() else SessionLocal())
     try:
@@ -118,91 +114,91 @@ def _session(value: Session | None) -> Session:
 
 
 def get_booking_repo(session: Session | None = Depends(get_request_session)) -> BookingRepository:
-    return _BOOKINGS if _use_in_memory() else SqlAlchemyBookingRepository(_session(session))
+    return _BOOKINGS if use_in_memory_repositories() else SqlAlchemyBookingRepository(_session(session))
 
 
 def get_application_repo(session: Session | None = Depends(get_request_session)) -> ApplicationRepository:
-    return _APPLICATIONS if _use_in_memory() else SqlAlchemyApplicationRepository(_session(session))
+    return _APPLICATIONS if use_in_memory_repositories() else SqlAlchemyApplicationRepository(_session(session))
 
 
 def get_application_decision_repo(
     session: Session | None = Depends(get_request_session),
 ) -> ApplicationDecisionRepository:
-    return _DECISIONS if _use_in_memory() else SqlAlchemyApplicationDecisionRepository(_session(session))
+    return _DECISIONS if use_in_memory_repositories() else SqlAlchemyApplicationDecisionRepository(_session(session))
 
 
 def get_shift_repo(session: Session | None = Depends(get_request_session)) -> ShiftRepository:
-    return _SHIFTS if _use_in_memory() else SqlAlchemyShiftRepository(_session(session))
+    return _SHIFTS if use_in_memory_repositories() else SqlAlchemyShiftRepository(_session(session))
 
 
 def get_worker_profile_repo(
     session: Session | None = Depends(get_request_session),
 ) -> WorkerProfileRepository:
-    return _WORKERS if _use_in_memory() else SqlAlchemyWorkerProfileRepository(_session(session))
+    return _WORKERS if use_in_memory_repositories() else SqlAlchemyWorkerProfileRepository(_session(session))
 
 
 def get_user_repo(session: Session | None = Depends(get_request_session)) -> UserRepository:
-    return _USERS if _use_in_memory() else SqlAlchemyUserRepository(_session(session))
+    return _USERS if use_in_memory_repositories() else SqlAlchemyUserRepository(_session(session))
 
 
 def get_template_repo(session: Session | None = Depends(get_request_session)) -> TemplateRepository:
-    return _TEMPLATES if _use_in_memory() else SqlAlchemyTemplateRepository(_session(session))
+    return _TEMPLATES if use_in_memory_repositories() else SqlAlchemyTemplateRepository(_session(session))
 
 
 def get_message_repo(session: Session | None = Depends(get_request_session)) -> MessageRepository:
-    return _MESSAGES if _use_in_memory() else SqlAlchemyMessageRepository(_session(session))
+    return _MESSAGES if use_in_memory_repositories() else SqlAlchemyMessageRepository(_session(session))
 
 
 def get_application_message_history_repo(
     session: Session | None = Depends(get_request_session),
 ) -> ApplicationMessageHistoryRepository:
-    return _MESSAGE_HISTORY if _use_in_memory() else SqlAlchemyApplicationMessageHistoryRepository(_session(session))
+    return _MESSAGE_HISTORY if use_in_memory_repositories() else SqlAlchemyApplicationMessageHistoryRepository(_session(session))
 
 
 def get_worker_feed_state_repo(session: Session | None = Depends(get_request_session)):
-    return _FEED_STATES if _use_in_memory() else SqlAlchemyWorkerFeedStateRepository(_session(session))
+    return _FEED_STATES if use_in_memory_repositories() else SqlAlchemyWorkerFeedStateRepository(_session(session))
 
 
 def get_account_repo(session: Session | None = Depends(get_request_session)) -> AccountRepository:
-    return _ACCOUNTS if _use_in_memory() else SqlAlchemyAccountRepository(_session(session))
+    return _ACCOUNTS if use_in_memory_repositories() else SqlAlchemyAccountRepository(_session(session))
 
 
 def get_organisation_repo(
     session: Session | None = Depends(get_request_session),
 ) -> OrganisationRepository:
-    return _ORGANISATIONS if _use_in_memory() else SqlAlchemyOrganisationRepository(_session(session))
+    return _ORGANISATIONS if use_in_memory_repositories() else SqlAlchemyOrganisationRepository(_session(session))
 
 
 def get_market_repo(session: Session | None = Depends(get_request_session)) -> MarketRepository:
-    return _MARKETS if _use_in_memory() else SqlAlchemyMarketRepository(_session(session))
+    return _MARKETS if use_in_memory_repositories() else SqlAlchemyMarketRepository(_session(session))
 
 
 def get_worker_feed_query_repo(
     session: Session | None = Depends(get_request_session),
 ) -> WorkerFeedQueryRepository:
-    return _FEED_QUERY if _use_in_memory() else SqlAlchemyWorkerFeedQueryRepository(_session(session))
+    return _FEED_QUERY if use_in_memory_repositories() else SqlAlchemyWorkerFeedQueryRepository(_session(session))
 
 
 def get_notification_repo(
     session: Session | None = Depends(get_request_session),
 ) -> NotificationRepository:
-    return _NOTIFICATIONS if _use_in_memory() else SqlAlchemyNotificationRepository(_session(session))
+    return _NOTIFICATIONS if use_in_memory_repositories() else SqlAlchemyNotificationRepository(_session(session))
 
 
 def get_outbox_publisher(
     session: Session | None = Depends(get_request_session),
     notification_repo: NotificationRepository = Depends(get_notification_repo),
 ) -> OutboxPublisher:
-    if _use_in_memory():
+    if use_in_memory_repositories():
         return InMemoryOutboxPublisher(notification_repo, get_email_transport())
     return SqlAlchemyOutboxPublisher(_session(session))
 
 
 def get_rating_repo(session: Session | None = Depends(get_request_session)) -> RatingRepository:
-    if _use_in_memory():
+    if use_in_memory_repositories():
         raise RuntimeError("RatingRepository requires a database-backed request session.")
     return SqlAlchemyRatingRepository(_session(session))
 
 
 def get_report_repo(session: Session | None = Depends(get_request_session)) -> ReportRepository:
-    return _REPORTS if _use_in_memory() else SqlAlchemyReportRepository(_session(session))
+    return _REPORTS if use_in_memory_repositories() else SqlAlchemyReportRepository(_session(session))

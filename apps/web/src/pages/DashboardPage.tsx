@@ -13,6 +13,7 @@ import { OpenShiftList } from "./dashboard/OpenShiftList";
 import {
   buildCoverageDays,
   buildDashboardMetrics,
+  getOpenSeats,
   getRecentOpenShifts,
 } from "./dashboard/dashboardUtils";
 import "./DashboardPage.css";
@@ -48,24 +49,24 @@ export function DashboardPage() {
     loadDashboard();
   }, []);
 
-  const now = useMemo(() => new Date(), [shifts, applications]);
+  const now = new Date();
   const metrics = useMemo(
     () => buildDashboardMetrics(shifts, applications, now),
-    [shifts, applications, now]
+    [shifts, applications]
   );
   const coverageDays = useMemo(
     () => buildCoverageDays(shifts, now),
-    [shifts, now]
+    [shifts]
   );
   const openShifts = useMemo(
     () => getRecentOpenShifts(shifts, now),
-    [shifts, now]
+    [shifts]
   );
   const pendingReviewCount = useMemo(
     () => applications.filter((app) => app.status === "applied").length,
     [applications]
   );
-  const openSeatCount = useMemo(() => getOpenSeatCount(shifts), [shifts]);
+  const openSeatCount = useMemo(() => getOpenSeats(shifts), [shifts]);
   const attentionCount = pendingReviewCount + openSeatCount;
   const alert = getDashboardAlert(pendingReviewCount, openSeatCount);
   const initialLoading = loading && shifts.length === 0 && applications.length === 0 && !error;
@@ -130,13 +131,6 @@ function DashboardSkeleton() {
         {Array.from({ length: 7 }, (_, index) => <SkeletonCard key={index} variant="row" lines={2} />)}
       </div>
     </>
-  );
-}
-
-function getOpenSeatCount(shifts: Shift[]) {
-  return shifts.reduce(
-    (sum, shift) => sum + Math.max(shift.workers_needed - shift.workers_filled, 0),
-    0
   );
 }
 

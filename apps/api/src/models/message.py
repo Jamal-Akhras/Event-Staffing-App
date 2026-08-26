@@ -12,7 +12,7 @@ class Message(BaseModel):
     application_id: str | None
     booking_id: str | None
     sender_id: str
-    sender_role: str  # "worker" or "operator"
+    sender_role: str
     content: str
     read_at: datetime | None
     created_at: datetime

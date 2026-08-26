@@ -7,13 +7,13 @@ from apps.api.src.models.worker_profile import WorkerProfile
 
 class WorkerProfileRepository(Protocol):
     def get(self, worker_id: str) -> WorkerProfile | None:
-        raise NotImplementedError
+        ...
 
     def save(self, profile: WorkerProfile) -> WorkerProfile:
-        raise NotImplementedError
+        ...
 
     def list_all(self) -> list[WorkerProfile]:
-        raise NotImplementedError
+        ...
 
     def list_for_account(self, account_id: str) -> list[WorkerProfile]:
-        raise NotImplementedError
+        ...

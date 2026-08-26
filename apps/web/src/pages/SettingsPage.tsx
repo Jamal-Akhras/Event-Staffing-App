@@ -27,6 +27,10 @@ type VenueData = {
 
 type SectionKey = "profile" | "contact" | "photos" | "notifications";
 
+function resolveMediaUrl(url: string) {
+  return url.startsWith("/uploads") ? `${API_BASE}${url}` : url;
+}
+
 export function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -132,9 +136,7 @@ export function SettingsPage() {
 
   const removePhoto = (url: string) => setPhotos((prev) => prev.filter((p) => p !== url));
   const initials = name ? name.slice(0, 2).toUpperCase() : "VN";
-  const avatarSrc = account?.avatar_url
-    ? (account.avatar_url.startsWith("/uploads") ? `${API_BASE}${account.avatar_url}` : account.avatar_url)
-    : null;
+  const avatarSrc = account?.avatar_url ? resolveMediaUrl(account.avatar_url) : null;
   const initialLoading = loading && !account && !loadError;
 
   return (
@@ -239,7 +241,7 @@ export function SettingsPage() {
                 <div className="photo-grid">
                   {photos.map((url) => (
                     <div key={url} className="photo-item">
-                      <img src={url.startsWith("/uploads") ? `${API_BASE}${url}` : url} alt="" />
+                      <img src={resolveMediaUrl(url)} alt="" />
                       <button className="photo-remove" onClick={() => removePhoto(url)} title="Remove">✕</button>
                     </div>
                   ))}

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from apps.api.src.auth import (
     ActorContext,
@@ -11,11 +11,11 @@ from apps.api.src.auth import (
     require_worker_owner,
 )
 from apps.api.src.deps import get_application_service, get_idempotency_service
-from apps.api.src.helpers import (
-    _application_view,
-)
+from apps.api.src.helpers import _application_view
 from apps.api.src.models.application import Application
 from apps.api.src.rate_limit import actor_or_ip, limiter
+from apps.api.src.routes.actor_scope import list_scope
+from apps.api.src.routes.idempotency_support import IdempotencyKeyHeader, replayed
 from apps.api.src.routes.service_errors import raise_service_error
 from apps.api.src.schemas import (
     ApplicationCreateRequest,
@@ -39,13 +39,7 @@ def create_application(
     request: Request,
     payload: ApplicationCreateRequest,
     response: Response,
-    idempotency_key: str | None = Header(
-        default=None,
-        alias="Idempotency-Key",
-        min_length=1,
-        max_length=100,
-        pattern="^[A-Za-z0-9._:-]+$",
-    ),
+    idempotency_key: IdempotencyKeyHeader = None,
     idempotency: IdempotencyService = Depends(get_idempotency_service),
     service: ApplicationService = Depends(get_application_service),
     actor: ActorContext = Depends(get_actor_context),
@@ -53,15 +47,9 @@ def create_application(
     require_verified_actor(actor, "applying for shifts")
     require_worker_owner(actor, payload.worker_id)
     try:
-        started = idempotency.start(
-            actor.user_id,
-            "application.create",
-            idempotency_key,
-            payload.model_dump(mode="json"),
-        )
+        started = idempotency.start(actor.user_id, "application.create", idempotency_key, payload.model_dump(mode="json"))
         if started.cached_response is not None:
-            response.headers["Idempotency-Replayed"] = "true"
-            return ApplicationResponse(**started.cached_response)
+            return replayed(response, ApplicationResponse, started.cached_response)
         result = _application_view(service.create_application(payload))
         idempotency.finish(started.record_id, result.model_dump(mode="json"))
         return result
@@ -81,13 +69,7 @@ def list_applications(
     actor: ActorContext = Depends(get_actor_context),
 ) -> list[ApplicationResponse]:
     require_role(actor.role, {ActorRole.OPERATOR, ActorRole.WORKER})
-    if actor.role == ActorRole.WORKER:
-        effective_worker_id = actor.worker_profile_id or actor.user_id
-        if worker_id is not None and worker_id != effective_worker_id:
-            raise HTTPException(status_code=403, detail="Worker can only access their own applications.")
-        worker_id = effective_worker_id
-    account_id = actor.account_id if actor.role == ActorRole.OPERATOR else None
-    operator_id = actor.user_id if actor.role == ActorRole.OPERATOR and account_id is None else None
+    worker_id, operator_id, account_id = list_scope(actor, worker_id, "applications")
     items = service.list_applications(limit, status, worker_id, operator_id, account_id, shift_id)
     return [_application_view(item) for item in items]
 
@@ -182,8 +164,7 @@ def _require_application_access(
     service: ApplicationService,
 ) -> None:
     require_role(actor.role, {ActorRole.OPERATOR, ActorRole.WORKER})
-    effective_worker_id = actor.worker_profile_id or actor.user_id
-    if actor.role == ActorRole.WORKER and application.worker_id != effective_worker_id:
+    if actor.role == ActorRole.WORKER and application.worker_id != actor.effective_worker_id:
         raise HTTPException(status_code=403, detail="Worker can only access their own applications.")
     if (
         actor.role == ActorRole.OPERATOR

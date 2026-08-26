@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 
-import { formatMoney } from "../../lib/format";
+import { formatDateTime, formatMoney } from "../../lib/format";
 import type { Shift } from "../../types/operations";
-import { formatShiftTime } from "./dashboardUtils";
 
 type OpenShiftListProps = {
   shifts: Shift[];
@@ -32,7 +31,7 @@ export function OpenShiftList({ shifts }: OpenShiftListProps) {
                 <p>{shift.location}</p>
               </div>
               <div>
-                <span>{formatShiftTime(shift.start_time)}</span>
+                <span>{formatDateTime(shift.start_time)}</span>
                 <p>{formatMoney(shift.pay_rate, shift.currency)}/hr</p>
               </div>
               <div>

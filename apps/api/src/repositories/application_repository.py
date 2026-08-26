@@ -11,10 +11,10 @@ class DuplicateApplicationError(Exception):
 
 class ApplicationRepository(Protocol):
     def get(self, application_id: str) -> Application | None:
-        raise NotImplementedError
+        ...
 
     def save(self, application: Application) -> Application:
-        raise NotImplementedError
+        ...
 
     def list_recent(
         self,
@@ -22,7 +22,7 @@ class ApplicationRepository(Protocol):
         status: str | None = None,
         shift_id: str | None = None,
     ) -> list[Application]:
-        raise NotImplementedError
+        ...
 
     def list_by_worker(
         self,
@@ -32,7 +32,7 @@ class ApplicationRepository(Protocol):
         shift_id: str | None = None,
         operator_id: str | None = None,
     ) -> list[Application]:
-        raise NotImplementedError
+        ...
 
     def list_by_operator(
         self,
@@ -42,7 +42,7 @@ class ApplicationRepository(Protocol):
         shift_id: str | None = None,
         worker_id: str | None = None,
     ) -> list[Application]:
-        raise NotImplementedError
+        ...
 
     def list_for_account(
         self,
@@ -52,10 +52,10 @@ class ApplicationRepository(Protocol):
         shift_id: str | None = None,
         worker_id: str | None = None,
     ) -> list[Application]:
-        raise NotImplementedError
+        ...
 
     def find_by_worker_and_shift(self, worker_id: str, shift_id: str) -> Application | None:
-        raise NotImplementedError
+        ...
 
     def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Application]:
-        raise NotImplementedError
+        ...

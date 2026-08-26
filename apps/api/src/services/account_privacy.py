@@ -45,14 +45,13 @@ def build_account_export(session: Session, user: User, generated_at: datetime) -
         ),
         "generated_at": generated_at,
     }
-    data["worker_profile"] = _model_or_none(
-        session.get(WorkerProfileModel, worker_id) if worker_id else None
-    )
+    profile = session.get(WorkerProfileModel, worker_id) if worker_id else None
+    data["worker_profile"] = _model(profile) if profile is not None else None
     shifts = _shift_query(session, user)
     shift_ids = [row.shift_id for row in shifts]
     data["shifts"] = [_model(row) for row in shifts]
-    data["applications"] = [_model(row) for row in _applications(session, worker_id, shift_ids)]
-    data["bookings"] = [_model(row) for row in _bookings(session, worker_id, shift_ids)]
+    data["applications"] = [_model(row) for row in _owned(session, ApplicationModel, worker_id, shift_ids)]
+    data["bookings"] = [_model(row) for row in _owned(session, BookingModel, worker_id, shift_ids)]
     sender_id = worker_id or user.user_id
     data["messages_sent"] = [
         _model(row)
@@ -158,24 +157,12 @@ def _shift_query(session: Session, user: User) -> list[ShiftModel]:
     )
 
 
-def _applications(session: Session, worker_id: str | None, shift_ids: list[str]) -> list[ApplicationModel]:
+def _owned(session: Session, model, worker_id: str | None, shift_ids: list[str]) -> list:
     if worker_id:
-        return list(session.scalars(select(ApplicationModel).where(ApplicationModel.worker_id == worker_id)))
+        return list(session.scalars(select(model).where(model.worker_id == worker_id)))
     if not shift_ids:
         return []
-    return list(session.scalars(select(ApplicationModel).where(ApplicationModel.shift_id.in_(shift_ids))))
-
-
-def _bookings(session: Session, worker_id: str | None, shift_ids: list[str]) -> list[BookingModel]:
-    if worker_id:
-        return list(session.scalars(select(BookingModel).where(BookingModel.worker_id == worker_id)))
-    if not shift_ids:
-        return []
-    return list(session.scalars(select(BookingModel).where(BookingModel.shift_id.in_(shift_ids))))
-
-
-def _model_or_none(row: object | None) -> dict[str, Any] | None:
-    return _model(row) if row is not None else None
+    return list(session.scalars(select(model).where(model.shift_id.in_(shift_ids))))
 
 
 def _model(row: object) -> dict[str, Any]:

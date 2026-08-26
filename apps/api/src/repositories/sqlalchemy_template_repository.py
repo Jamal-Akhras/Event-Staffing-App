@@ -68,13 +68,6 @@ class SqlAlchemyTemplateRepository:
         )
         return [_schedule_to_domain(row) for row in rows]
 
-    def list_active_schedules(self) -> list[RecurringSchedule]:
-        rows = (
-            self._session.query(RecurringScheduleModel)
-            .filter(RecurringScheduleModel.is_active == True)
-            .all()
-        )
-        return [_schedule_to_domain(row) for row in rows]
 
     def delete_schedule(self, schedule_id: str) -> bool:
         model = self._session.get(RecurringScheduleModel, schedule_id)

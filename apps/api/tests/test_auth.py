@@ -1,5 +1,3 @@
-"""Tests for authentication endpoints."""
-
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -18,7 +16,6 @@ client = TestClient(app)
 
 @pytest.fixture
 def user_repo():
-    """Provide a fresh in-memory user repository for each test."""
     repo = InMemoryUserRepository()
     yield repo
     repo.clear()
@@ -33,7 +30,6 @@ def worker_profile_repo():
 
 @pytest.fixture(autouse=True)
 def override_repos(user_repo, worker_profile_repo):
-    """Override the user repository dependency for all tests."""
     app.dependency_overrides[get_user_repo] = lambda: user_repo
     app.dependency_overrides[get_worker_profile_repo] = lambda: worker_profile_repo
     yield
@@ -41,7 +37,6 @@ def override_repos(user_repo, worker_profile_repo):
 
 
 def test_register_worker_success(user_repo):
-    """Test successful worker registration."""
     response = client.post(
         "/auth/register",
         json={"email": "worker@example.com", "password": "password123"},
@@ -55,7 +50,7 @@ def test_register_worker_success(user_repo):
     assert "access_token" in data
     assert "user_id" in data
 
-    # Verify user was created
+
     user = user_repo.get_by_email("worker@example.com")
     assert user is not None
     assert user.role == "worker"
@@ -63,8 +58,6 @@ def test_register_worker_success(user_repo):
 
 
 def test_register_duplicate_email(user_repo):
-    """Test registration with an already registered email."""
-    # Create existing user
     now = datetime.now(UTC)
     existing_user = User(
         user_id=str(uuid4()),
@@ -79,7 +72,7 @@ def test_register_duplicate_email(user_repo):
     )
     user_repo.save(existing_user)
 
-    # Try to register with same email
+
     response = client.post(
         "/auth/register",
         json={"email": "existing@example.com", "password": "newpassword"},
@@ -115,8 +108,6 @@ def test_short_password_rejection():
 
 
 def test_login_success(user_repo):
-    """Test successful login."""
-    # Create a user
     now = datetime.now(UTC)
     user = User(
         user_id=str(uuid4()),
@@ -131,7 +122,7 @@ def test_login_success(user_repo):
     )
     user_repo.save(user)
 
-    # Login
+
     response = client.post(
         "/auth/login",
         json={"email": "user@example.com", "password": "correctpassword"},
@@ -162,7 +153,6 @@ def test_login_rate_limit_response():
 
 
 def test_login_invalid_email(user_repo):
-    """Test login with non-existent email."""
     response = client.post(
         "/auth/login",
         json={"email": "nonexistent@example.com", "password": "password123"},
@@ -173,8 +163,6 @@ def test_login_invalid_email(user_repo):
 
 
 def test_login_invalid_password(user_repo):
-    """Test login with incorrect password."""
-    # Create a user
     now = datetime.now(UTC)
     user = User(
         user_id=str(uuid4()),
@@ -189,7 +177,7 @@ def test_login_invalid_password(user_repo):
     )
     user_repo.save(user)
 
-    # Try to login with wrong password
+
     response = client.post(
         "/auth/login",
         json={"email": "user@example.com", "password": "wrongpassword"},
@@ -200,8 +188,6 @@ def test_login_invalid_password(user_repo):
 
 
 def test_login_inactive_user(user_repo):
-    """Test login with an inactive user account."""
-    # Create an inactive user
     now = datetime.now(UTC)
     user = User(
         user_id=str(uuid4()),
@@ -216,7 +202,7 @@ def test_login_inactive_user(user_repo):
     )
     user_repo.save(user)
 
-    # Try to login
+
     response = client.post(
         "/auth/login",
         json={"email": "inactive@example.com", "password": "password123"},

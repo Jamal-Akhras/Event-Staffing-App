@@ -23,7 +23,6 @@ export function notificationActionTarget(
       return {
         tab: "Shifts",
         params: {
-          focus: "applications",
           application_id: action.entity_id,
           notification_key: notificationKey,
         },
@@ -32,7 +31,6 @@ export function notificationActionTarget(
       return {
         tab: "Shifts",
         params: {
-          focus: "upcoming",
           booking_id: action.entity_id,
           notification_key: notificationKey,
         },
@@ -41,7 +39,6 @@ export function notificationActionTarget(
       return {
         tab: "Shifts",
         params: {
-          focus: "applications",
           open: "messages",
           application_id: action.entity_id,
           notification_key: notificationKey,

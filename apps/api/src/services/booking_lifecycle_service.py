@@ -7,7 +7,7 @@ from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
 from apps.api.src.schemas import BookingTransitionRequest
-from apps.api.src.schemas_recovery import PaymentRecordRequest
+from apps.api.src.schemas_recovery import CancellationRequest, PaymentRecordRequest
 from apps.api.src.services.booking_ops import _decrement_workers_filled, refresh_reliability, sweep_no_shows
 from apps.api.src.services.errors import NotFoundError, ValidationError
 from apps.api.src.services.recovery_notifications import notify_worker
@@ -65,13 +65,9 @@ class BookingLifecycleService:
         self,
         booking_id: str,
         target: BookingState,
-        request: BookingTransitionRequest | PaymentRecordRequest,
+        request: BookingTransitionRequest | CancellationRequest | PaymentRecordRequest,
+        actor_user_id: str,
         refresh_worker_reliability: bool = False,
-        cancellation_reason: str | None = None,
-        cancelled_by_user_id: str | None = None,
-        payment_method: str | None = None,
-        payment_reference: str | None = None,
-        payment_recorded_by_user_id: str | None = None,
     ) -> Booking:
         now = _now_or(request.now)
         booking = self.get_booking(booking_id)
@@ -79,22 +75,20 @@ class BookingLifecycleService:
             booking = booking.transition_to(target, now)
         except TransitionError as exc:
             raise ValidationError(str(exc)) from exc
+        cancellation_reason = None
         if target in {BookingState.CANCELLED_BY_WORKER, BookingState.CANCELLED_BY_OPERATOR}:
-            if not cancellation_reason or not cancelled_by_user_id:
+            if not isinstance(request, CancellationRequest) or not request.reason:
                 raise ValidationError("A cancellation reason and authenticated actor are required.")
-            booking = replace(
-                booking,
-                cancellation_reason=cancellation_reason.strip(),
-                cancelled_by_user_id=cancelled_by_user_id,
-            )
+            cancellation_reason = request.reason.strip()
+            booking = replace(booking, cancellation_reason=cancellation_reason, cancelled_by_user_id=actor_user_id)
         if target == BookingState.PAID:
-            if not payment_method or not payment_recorded_by_user_id:
+            if not isinstance(request, PaymentRecordRequest) or not request.method:
                 raise ValidationError("Payment method and authenticated recorder are required.")
             booking = replace(
                 booking,
-                payment_method=payment_method,
-                payment_reference=payment_reference,
-                payment_recorded_by_user_id=payment_recorded_by_user_id,
+                payment_method=request.method,
+                payment_reference=request.reference,
+                payment_recorded_by_user_id=actor_user_id,
             )
         booking = self._bookings.save(booking)
         if target in _CANCELLATION_STATES:

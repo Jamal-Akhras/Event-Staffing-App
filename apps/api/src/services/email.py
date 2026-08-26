@@ -1,16 +1,3 @@
-"""Pluggable email delivery for verification and other transactional messages.
-
-Two transports, selected by environment:
-- ``LoggingEmailTransport`` (dev/test default): logs the recipient, subject and body
-  instead of sending. No external service, no credentials. The verification link is
-  visible in the application log so flows can be exercised end to end locally.
-- ``SmtpEmailTransport``: sends via stdlib smtplib using SMTP_HOST/PORT/USER/PASSWORD/FROM.
-  Selected when EMAIL_TRANSPORT=smtp (or SMTP_HOST is set outside development).
-
-Failures are never swallowed: if SMTP is configured and a send fails, the exception
-propagates so the caller surfaces it rather than silently dropping the email.
-"""
-
 from __future__ import annotations
 
 import logging

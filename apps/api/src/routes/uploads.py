@@ -37,7 +37,7 @@ async def upload_worker_avatar(
 ) -> UploadResponse:
     require_verified_actor(actor, "uploading images")
     require_role(actor.role, {ActorRole.WORKER})
-    worker_id = actor.worker_profile_id or actor.user_id
+    worker_id = actor.effective_worker_id
     existing = repo.get(worker_id)
     if existing is None:
         raise HTTPException(404, "Worker profile not found.")

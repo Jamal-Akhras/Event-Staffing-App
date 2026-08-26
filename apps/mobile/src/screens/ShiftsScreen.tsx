@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { EmptyState } from "../components/EmptyState";
-import { useAuth } from "../contexts/AuthContext";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useRatingPrompt } from "../contexts/RatingPromptContext";
 import { ApiError, fetchWorker, getWorkerId, postWorker } from "../lib/api";
@@ -18,13 +17,13 @@ import { ShiftsTabBar } from "./shifts/ShiftsTabBar";
 import {
   getPreviousBookings,
   getUpcomingBookings,
+  sortHighlightedFirst,
   type ShiftTab,
 } from "./shifts/shiftsUtils";
 import { useShiftNotificationTarget } from "./shifts/useShiftNotificationTarget";
 
 export function ShiftsScreen() {
-  const { user } = useAuth();
-  const workerId = user?.worker_profile_id ?? getWorkerId();
+  const workerId = getWorkerId();
   const { notifications, unreadCount, markAllRead } = useNotifications();
   const { refreshRatingPrompt } = useRatingPrompt();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -98,10 +97,12 @@ export function ShiftsScreen() {
     onSelectTab: setShiftTab,
   });
   const visibleApplications = useMemo(
-    () => [...applications].sort((left, right) =>
-      Number(right.application_id === notificationTarget.highlightedApplicationId) -
-      Number(left.application_id === notificationTarget.highlightedApplicationId)
-    ),
+    () =>
+      sortHighlightedFirst(
+        applications,
+        notificationTarget.highlightedApplicationId,
+        (application) => application.application_id
+      ),
     [applications, notificationTarget.highlightedApplicationId]
   );
 

@@ -46,12 +46,6 @@ class InMemoryTemplateRepository:
         items.sort(key=lambda item: item.created_at, reverse=True)
         return items
 
-    def list_active_schedules(self) -> list[RecurringSchedule]:
-        return [
-            schedule
-            for schedule in self._schedules.values()
-            if schedule.is_active
-        ]
 
     def delete_schedule(self, schedule_id: str) -> bool:
         if schedule_id not in self._schedules:

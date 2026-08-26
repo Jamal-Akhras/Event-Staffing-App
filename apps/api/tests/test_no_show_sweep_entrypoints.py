@@ -13,11 +13,14 @@ from packages.domain.src.booking_state import BookingState
 
 
 class _DummySession:
-    def close(self) -> None:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc) -> None:
         pass
 
-    def commit(self) -> None:
-        pass
+    def begin(self):
+        return self
 
 
 def _seed_confirmed_no_show(now: datetime):
@@ -64,27 +67,14 @@ def _seed_confirmed_no_show(now: datetime):
 
 def test_scheduler_run_no_show_sweep_end_to_end(monkeypatch):
     from apps.api.src import scheduler
-    from apps.api.src.repositories import (
-        sqlalchemy_booking_repository,
-        sqlalchemy_shift_repository,
-        sqlalchemy_worker_profile_repository,
-    )
-    from apps.api.src.db import database
+    from apps.api.src.jobs import run_no_show_sweep as job
 
     booking_repo, worker_repo, shift_repo = _seed_confirmed_no_show(datetime.now(UTC))
 
-    monkeypatch.setattr(database, "SessionLocal", lambda: _DummySession())
-    monkeypatch.setattr(
-        sqlalchemy_booking_repository, "SqlAlchemyBookingRepository", lambda session: booking_repo
-    )
-    monkeypatch.setattr(
-        sqlalchemy_worker_profile_repository,
-        "SqlAlchemyWorkerProfileRepository",
-        lambda session: worker_repo,
-    )
-    monkeypatch.setattr(
-        sqlalchemy_shift_repository, "SqlAlchemyShiftRepository", lambda session: shift_repo
-    )
+    monkeypatch.setattr(job, "SessionLocal", lambda: _DummySession())
+    monkeypatch.setattr(job, "SqlAlchemyBookingRepository", lambda session: booking_repo)
+    monkeypatch.setattr(job, "SqlAlchemyWorkerProfileRepository", lambda session: worker_repo)
+    monkeypatch.setattr(job, "SqlAlchemyShiftRepository", lambda session: shift_repo)
 
     scheduler.run_no_show_sweep()
 

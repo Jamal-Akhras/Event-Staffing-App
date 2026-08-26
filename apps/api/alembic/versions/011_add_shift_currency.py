@@ -1,10 +1,3 @@
-"""Add currency column to shifts table
-
-Revision ID: 011
-Revises: 010
-Create Date: 2026-05-06
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect

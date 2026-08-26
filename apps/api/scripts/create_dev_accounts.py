@@ -1,4 +1,3 @@
-"""Create dev/test operator accounts in the database."""
 from __future__ import annotations
 
 from uuid import uuid4
@@ -16,8 +15,7 @@ from apps.api.src.datetime_utils import utc_now
 
 import os
 
-# Local development seed accounts only. Addresses are RFC 2606 reserved
-# example domains; the password is dev-only and overridable via env.
+
 DEV_PASSWORD = os.environ.get("DEV_ACCOUNT_PASSWORD", "change-me-dev-only")
 
 ACCOUNTS = [
@@ -57,7 +55,6 @@ def main() -> None:
             )
             session.add(market)
         for spec in ACCOUNTS:
-            # Check if user already exists
             existing = session.query(UserModel).filter_by(email=spec["email"]).first()
             if existing:
                 print(f"  SKIP  {spec['email']} — already exists (user_id={existing.user_id})")

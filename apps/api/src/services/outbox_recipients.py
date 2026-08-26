@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import UserModel
 from apps.api.src.db.notification_models import PushTokenModel, UserNotificationPreferenceModel
-from apps.api.src.services.notification_settings import CATEGORY_DEFAULTS, CHANNEL_DEFAULTS
+from apps.api.src.services.notification_settings import CATEGORY_DEFAULTS, CHANNEL_DEFAULTS, normalize_flags
 
 
 def channel_enabled(session: Session, recipient: dict, channel: str, payload: dict) -> bool:
@@ -13,34 +13,31 @@ def channel_enabled(session: Session, recipient: dict, channel: str, payload: di
     users = _recipient_users(session, recipient)
     if not users:
         return channel == "in_app"
-    category = payload["category"]
-    for user in users:
-        preferences = session.get(UserNotificationPreferenceModel, user.user_id)
-        channels = _normalized(preferences.channels if preferences else None, CHANNEL_DEFAULTS)
-        categories = _normalized(preferences.categories if preferences else None, CATEGORY_DEFAULTS)
-        if channels[channel] and categories[category]:
-            return True
-    return False
+    return bool(_opted_in(session, users, channel, payload["category"]))
 
 
 def push_tokens(session: Session, recipient_kind: str, recipient_id: str, payload: dict) -> list[str]:
-    recipient = {"kind": recipient_kind, "id": recipient_id}
-    users = _recipient_users(session, recipient)
-    enabled_user_ids = []
-    for user in users:
-        preferences = session.get(UserNotificationPreferenceModel, user.user_id)
-        channels = _normalized(preferences.channels if preferences else None, CHANNEL_DEFAULTS)
-        categories = _normalized(preferences.categories if preferences else None, CATEGORY_DEFAULTS)
-        if channels["push"] and categories[payload["category"]]:
-            enabled_user_ids.append(user.user_id)
-    if not enabled_user_ids:
+    users = _recipient_users(session, {"kind": recipient_kind, "id": recipient_id})
+    user_ids = _opted_in(session, users, "push", payload["category"])
+    if not user_ids:
         return []
     rows = (
         session.query(PushTokenModel.token)
-        .filter(PushTokenModel.user_id.in_(enabled_user_ids), PushTokenModel.revoked_at.is_(None))
+        .filter(PushTokenModel.user_id.in_(user_ids), PushTokenModel.revoked_at.is_(None))
         .all()
     )
     return [row.token for row in rows]
+
+
+def _opted_in(session: Session, users: list[UserModel], channel: str, category: str) -> list[str]:
+    opted_in = []
+    for user in users:
+        preferences = session.get(UserNotificationPreferenceModel, user.user_id)
+        channels = normalize_flags(preferences.channels if preferences else None, CHANNEL_DEFAULTS)
+        categories = normalize_flags(preferences.categories if preferences else None, CATEGORY_DEFAULTS)
+        if channels[channel] and categories[category]:
+            opted_in.append(user.user_id)
+    return opted_in
 
 
 def _recipient_users(session: Session, recipient: dict) -> list[UserModel]:
@@ -49,12 +46,3 @@ def _recipient_users(session: Session, recipient: dict) -> list[UserModel]:
     if recipient["kind"] == "venue":
         return session.query(UserModel).filter(UserModel.active_venue_id == recipient["id"]).all()
     return []
-
-
-def _normalized(raw: object, defaults: dict[str, bool]) -> dict[str, bool]:
-    values = dict(defaults)
-    if isinstance(raw, dict):
-        values.update(
-            {key: value for key, value in raw.items() if key in values and isinstance(value, bool)}
-        )
-    return values

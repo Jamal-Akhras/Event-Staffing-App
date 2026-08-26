@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { StyleSheet, Switch, Text, View } from "react-native";
 
+import { LoadFailure, loadStateStyles } from "../../components/LoadFailure";
 import {
   fetchNotificationPreferences,
   saveNotificationPreferences,
@@ -57,23 +58,18 @@ export function NotificationPrefsSection() {
   };
 
   if (loading) {
-    return <Text style={styles.stateText}>Loading notification preferences…</Text>;
+    return <Text style={loadStateStyles.stateText}>Loading notification preferences…</Text>;
   }
 
   if (!prefs) {
     return (
-      <View style={styles.stateBlock}>
-        <Text style={styles.errorText}>{error ?? "Couldn't load notification preferences."}</Text>
-        <Pressable style={styles.retryBtn} onPress={load} accessibilityRole="button">
-          <Text style={styles.retryText}>Try again</Text>
-        </Pressable>
-      </View>
+      <LoadFailure message={error ?? "Couldn't load notification preferences."} onRetry={load} />
     );
   }
 
   return (
     <View style={styles.block}>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && <Text style={loadStateStyles.errorText}>{error}</Text>}
       <Text style={styles.groupLabel}>Delivery</Text>
       {CHANNEL_ROWS.map(([key, label, desc]) => (
         <PrefRow
@@ -91,12 +87,7 @@ export function NotificationPrefsSection() {
           }}
         />
       ))}
-      <PushDeviceStatusCard
-        status={push.status}
-        message={push.message}
-        onEnable={push.enable}
-        onRetry={push.retry}
-      />
+      <PushDeviceStatusCard />
       <Text style={[styles.groupLabel, styles.groupLabelSpaced]}>Categories</Text>
       {CATEGORY_ROWS.map(([key, label, desc]) => (
         <PrefRow
@@ -162,16 +153,4 @@ const styles = StyleSheet.create({
   rowCopy: { flex: 1 },
   rowLabel: { color: COLORS.ink, fontSize: 15, fontWeight: "700" },
   rowDesc: { color: COLORS.inkMuted, fontSize: 12, marginTop: 1 },
-  stateText: { color: COLORS.inkMuted, fontWeight: "600", fontSize: 13 },
-  stateBlock: { gap: 8 },
-  errorText: { color: COLORS.error, fontWeight: "700", fontSize: 13 },
-  retryBtn: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-  },
-  retryText: { color: COLORS.primary, fontWeight: "800", fontSize: 13 },
 });

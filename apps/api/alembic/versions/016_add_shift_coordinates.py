@@ -1,10 +1,3 @@
-"""Add latitude and longitude to shifts
-
-Revision ID: 016
-Revises: 015
-Create Date: 2026-05-09
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect

@@ -8,13 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from apps.api.src.auth import ActorContext, ActorRole, get_actor_context, require_role, require_worker_owner
 from apps.api.src.deps import get_booking_repo, get_market_repo, get_shift_repo, get_worker_profile_repo
 from apps.api.src.datetime_utils import utc_now
-from apps.api.src.helpers import (
-    _get_worker_profile,
-    _now_or,
-    _save_worker_profile,
-    _worker_private_view,
-    _worker_public_view,
-)
+from apps.api.src.helpers import _get_worker_profile, _now_or, _worker_private_view, _worker_public_view
 from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.money import money
 from apps.api.src.repositories.booking_repository import BookingRepository
@@ -31,6 +25,7 @@ from apps.api.src.schemas import (
 from packages.domain.src.booking_state import BookingState
 
 router = APIRouter(tags=["workers"])
+_EARNING_STATES = {BookingState.PAID, BookingState.APPROVED, BookingState.CHECKED_OUT}
 
 
 @router.get("/workers", response_model=list[WorkerProfilePrivateResponse])
@@ -55,8 +50,7 @@ def get_worker_profile(
     require_role(actor.role, {ActorRole.OPERATOR, ActorRole.WORKER})
     profile = _get_worker_profile(repo, worker_id)
     if actor.role == ActorRole.WORKER:
-        effective_id = actor.worker_profile_id or actor.user_id
-        if effective_id != worker_id:
+        if actor.effective_worker_id != worker_id:
             raise HTTPException(status_code=403, detail="Worker can only access their own profile.")
         return _worker_private_view(profile)
     return _worker_public_view(profile)
@@ -82,14 +76,10 @@ def get_worker_earnings(
     else:
         cutoff = now - timedelta(days=7)
 
-    paid_states = {BookingState.PAID}
-    pending_states = {BookingState.APPROVED, BookingState.CHECKED_OUT}
     entries: list[EarningsEntryResponse] = []
 
     for booking in worker_bookings:
-        if booking.state not in paid_states and booking.state not in pending_states:
-            continue
-        if booking.start_time < cutoff:
+        if booking.state not in _EARNING_STATES or booking.start_time < cutoff:
             continue
         shift = shifts_by_id.get(booking.shift_id)
         if shift is None:
@@ -106,7 +96,7 @@ def get_worker_earnings(
             hours=hours,
             pay_rate=shift.pay_rate,
             total=money(hours_value * shift.pay_rate),
-            status="paid" if booking.state in paid_states else "pending",
+            status="paid" if booking.state == BookingState.PAID else "pending",
             currency=shift.currency,
         ))
 
@@ -161,4 +151,4 @@ def update_worker_profile(
         allow_venue_recontact=request.allow_venue_recontact,
         market_id=market_id,
     )
-    return _worker_private_view(_save_worker_profile(repo, profile))
+    return _worker_private_view(repo.save(profile))

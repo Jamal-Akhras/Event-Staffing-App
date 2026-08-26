@@ -7,4 +7,4 @@ from apps.api.src.models.worker_feed_query import WorkerFeedItem, WorkerFeedQuer
 
 class WorkerFeedQueryRepository(Protocol):
     def list_page(self, query: WorkerFeedQuery) -> list[WorkerFeedItem]:
-        raise NotImplementedError
+        ...

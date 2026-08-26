@@ -93,9 +93,9 @@ def quote_payment(
 
 
 def _processing_fee(subtotal: Decimal, method: str, fee_policy: str, rate_card: dict) -> Decimal:
-    if method in {"manual", "bank_transfer"}:
-        if method == "manual":
-            return Decimal("0.00")
+    if method == "manual":
+        return Decimal("0.00")
+    if method == "bank_transfer":
         return _capped_fee(subtotal, rate_card["bank_percent"], rate_card["bank_fixed"], rate_card["bank_cap"])
 
     percent = rate_card["card_percent"]

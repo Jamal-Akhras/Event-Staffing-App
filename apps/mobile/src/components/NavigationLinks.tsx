@@ -5,7 +5,6 @@ import { COLORS } from "../theme/colors";
 type Props = {
   latitude: number;
   longitude: number;
-  label?: string;
 };
 
 const NAV_APPS = [
@@ -26,10 +25,10 @@ const NAV_APPS = [
   },
 ];
 
-export function NavigationLinks({ latitude, longitude, label = "Get directions" }: Props) {
+export function NavigationLinks({ latitude, longitude }: Props) {
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>{label}</Text>
+      <Text style={styles.heading}>Get directions</Text>
       <View style={styles.row}>
         {NAV_APPS.map((app) => (
           <Pressable

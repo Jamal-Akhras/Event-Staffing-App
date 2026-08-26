@@ -11,8 +11,7 @@ import {
 } from "react-native";
 
 import { MarketPicker } from "../components/MarketPicker";
-import { useAuth } from "../contexts/AuthContext";
-import { putWorker } from "../lib/api";
+import { getWorkerId, putWorker } from "../lib/api";
 import { COLORS } from "../theme/colors";
 import type { Market } from "../types";
 
@@ -21,7 +20,7 @@ type Props = { onComplete: () => void };
 const ROLES = ["Bar Staff", "Waiter / Waitress", "Host / Hostess", "Security", "Kitchen", "Event Staff", "Other"];
 
 export function OnboardingScreen({ onComplete }: Props) {
-  const { user } = useAuth();
+  const workerId = getWorkerId();
   const [step, setStep] = useState(0);
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState("");
@@ -30,8 +29,6 @@ export function OnboardingScreen({ onComplete }: Props) {
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const workerId = user?.worker_profile_id ?? "";
 
   const canContinue = step === 0
     ? displayName.trim().length > 0 && role.trim().length > 0 && market !== null
@@ -76,7 +73,7 @@ export function OnboardingScreen({ onComplete }: Props) {
 
         {step === 0 ? (
           <View style={styles.fields}>
-            <Field label="Display name" placeholder="e.g. Alex Johnson">
+            <Field label="Display name">
               <TextInput
                 style={styles.input}
                 value={displayName}
@@ -157,7 +154,7 @@ export function OnboardingScreen({ onComplete }: Props) {
   );
 }
 
-function Field({ label, placeholder: _p, children }: { label: string; placeholder?: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>

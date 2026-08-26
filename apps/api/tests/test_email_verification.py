@@ -1,5 +1,3 @@
-"""Tests for the email-verification flow and operator shift-create gating."""
-
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -17,7 +15,7 @@ from apps.api.src.repositories.in_memory_user_repository import InMemoryUserRepo
 from apps.api.src.repositories.in_memory_worker_profile_repository import (
     InMemoryWorkerProfileRepository,
 )
-from apps.api.src.routes.shifts import _require_verified_operator
+from apps.api.src.auth.dependencies import require_verified_actor
 
 client = TestClient(app)
 
@@ -117,13 +115,13 @@ def test_unverified_operator_cannot_create_shift(user_repo, monkeypatch):
     actor = ActorContext(user_id="op-1", role=ActorRole.OPERATOR, account_id="acct-1")
 
     with pytest.raises(HTTPException) as exc:
-        _require_verified_operator(actor, user_repo)
+        require_verified_actor(actor, "posting shifts")
     assert exc.value.status_code == 403
 
 
 def test_verified_operator_can_create_shift(user_repo, monkeypatch):
     monkeypatch.setenv("DEV_MODE", "false")
     user_repo.save(_operator_user(email_verified=True))
-    actor = ActorContext(user_id="op-1", role=ActorRole.OPERATOR, account_id="acct-1")
+    actor = ActorContext(user_id="op-1", role=ActorRole.OPERATOR, account_id="acct-1", email_verified=True)
 
-    _require_verified_operator(actor, user_repo)
+    require_verified_actor(actor, "posting shifts")

@@ -1,10 +1,8 @@
 import { FormEvent, useState } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
-import { API_BASE, getAuthHeaders } from "../lib/api";
+import { postJson } from "../lib/api";
 import "./ShiftCreateForm.css";
-
-const resolvedApiBase = API_BASE;
 
 const CURRENCY_SYMBOL: Record<string, string> = {
   GBP: "£",
@@ -15,7 +13,7 @@ const CURRENCY_SYMBOL: Record<string, string> = {
 
 type ShiftCreateFormProps = {
   onCreated: () => Promise<void>;
-  onError: (message: string | null) => void;
+  onError: (message: string) => void;
 };
 
 export function ShiftCreateForm({ onCreated, onError }: ShiftCreateFormProps) {
@@ -34,26 +32,18 @@ export function ShiftCreateForm({ onCreated, onError }: ShiftCreateFormProps) {
 
   const handleCreateShift = async (event: FormEvent) => {
     event.preventDefault();
-    onError(null);
 
     try {
-      const response = await fetch(`${resolvedApiBase}/shifts`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          role: shiftForm.role,
-          location: shiftForm.location,
-          start_time: new Date(shiftForm.start_time).toISOString(),
-          end_time: new Date(shiftForm.end_time).toISOString(),
-          pay_rate: Number(shiftForm.pay_rate),
-          workers_needed: Number(shiftForm.workers_needed),
-          notes: shiftForm.notes || null,
-          now: new Date().toISOString(),
-        }),
+      await postJson("/shifts", {
+        role: shiftForm.role,
+        location: shiftForm.location,
+        start_time: new Date(shiftForm.start_time).toISOString(),
+        end_time: new Date(shiftForm.end_time).toISOString(),
+        pay_rate: Number(shiftForm.pay_rate),
+        workers_needed: Number(shiftForm.workers_needed),
+        notes: shiftForm.notes || null,
+        now: new Date().toISOString(),
       });
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
       await onCreated();
       setShiftForm({ ...shiftForm, start_time: "", end_time: "", notes: "" });
     } catch (err) {

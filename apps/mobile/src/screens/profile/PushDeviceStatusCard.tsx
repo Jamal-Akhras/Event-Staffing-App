@@ -1,23 +1,13 @@
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { usePushNotifications } from "../../contexts/PushNotificationContext";
 import type { PushRegistrationStatus } from "../../lib/pushRegistration";
 import { COLORS } from "../../theme/colors";
 
-type PushDeviceStatusCardProps = {
-  status: PushRegistrationStatus;
-  message: string;
-  onEnable: () => Promise<void>;
-  onRetry: () => Promise<void>;
-};
-
-export function PushDeviceStatusCard({
-  status,
-  message,
-  onEnable,
-  onRetry,
-}: PushDeviceStatusCardProps) {
+export function PushDeviceStatusCard() {
+  const { status, message, enable, retry } = usePushNotifications();
   const busy = status === "checking" || status === "registering";
-  const action = getAction(status, onEnable, onRetry);
+  const action = getAction(status, enable, retry);
 
   return (
     <View style={[styles.card, status === "registered" && styles.cardReady]}>

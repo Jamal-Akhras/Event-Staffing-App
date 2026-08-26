@@ -1,18 +1,3 @@
-"""slowapi rate limiter wired to a shared Redis store with proxy-aware client IPs.
-
-Storage:
-- Outside development, REDIS_URL must be set (see config.get_redis_url) and the
-  limiter uses Redis so limits are shared across replicas and survive restarts.
-- In development with no REDIS_URL, slowapi's in-memory store is used and a
-  warning is logged. This is per-process and lost on restart — never use in prod.
-
-Client IP:
-- The limiter keys on the real client IP. When TRUST_FORWARDED_FOR is enabled
-  (API behind a known proxy/load balancer), the left-most X-Forwarded-For entry
-  is used. Otherwise the socket peer IP is used, because an untrusted client can
-  forge X-Forwarded-For and either evade or poison rate limits.
-"""
-
 from __future__ import annotations
 
 import logging

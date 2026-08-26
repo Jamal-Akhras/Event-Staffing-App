@@ -29,7 +29,7 @@ export function LocationAutocomplete({ value, onChange, placeholder }: Props) {
         const data: Suggestion[] = await res.json();
         setSuggestions(data);
         setOpen(data.length > 0);
-      } catch { /* network error — fail silently */ }
+      } catch {  }
     }, 350);
   }, [query]);
 

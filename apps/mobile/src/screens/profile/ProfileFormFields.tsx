@@ -1,58 +1,12 @@
 import { ProfileField } from "./ProfileField";
 import type { ProfileForm } from "./profileForm";
 
-type ProfileFormFieldsProps = {
+type ProfileFieldsProps = {
   form: ProfileForm;
   onChange: (form: ProfileForm) => void;
-  privateFields?: boolean;
 };
 
-export function ProfileFormFields({
-  form,
-  onChange,
-  privateFields = false,
-}: ProfileFormFieldsProps) {
-  if (privateFields) {
-    return (
-      <>
-        <ProfileField
-          placeholder="Email"
-          value={form.email}
-          keyboardType="email-address"
-          onChangeText={(email) => onChange({ ...form, email })}
-        />
-        <ProfileField
-          placeholder="Phone"
-          value={form.phone}
-          keyboardType="phone-pad"
-          onChangeText={(phone) => onChange({ ...form, phone })}
-        />
-        <ProfileField
-          placeholder="Address"
-          value={form.address}
-          onChangeText={(address) => onChange({ ...form, address })}
-        />
-        <ProfileField
-          placeholder="Emergency contact"
-          value={form.emergency_contact}
-          onChangeText={(emergency_contact) => onChange({ ...form, emergency_contact })}
-        />
-        <ProfileField
-          placeholder="Preferred pay rate"
-          value={form.pay_rate}
-          keyboardType="numeric"
-          onChangeText={(pay_rate) => onChange({ ...form, pay_rate })}
-        />
-        <ProfileField
-          placeholder="Private notes"
-          value={form.notes}
-          multiline
-          onChangeText={(notes) => onChange({ ...form, notes })}
-        />
-      </>
-    );
-  }
-
+export function PublicProfileFields({ form, onChange }: ProfileFieldsProps) {
   return (
     <>
       <ProfileField
@@ -86,6 +40,47 @@ export function ProfileFormFields({
         value={form.bio}
         multiline
         onChangeText={(bio) => onChange({ ...form, bio })}
+      />
+    </>
+  );
+}
+
+export function PrivateProfileFields({ form, onChange }: ProfileFieldsProps) {
+  return (
+    <>
+      <ProfileField
+        placeholder="Email"
+        value={form.email}
+        keyboardType="email-address"
+        onChangeText={(email) => onChange({ ...form, email })}
+      />
+      <ProfileField
+        placeholder="Phone"
+        value={form.phone}
+        keyboardType="phone-pad"
+        onChangeText={(phone) => onChange({ ...form, phone })}
+      />
+      <ProfileField
+        placeholder="Address"
+        value={form.address}
+        onChangeText={(address) => onChange({ ...form, address })}
+      />
+      <ProfileField
+        placeholder="Emergency contact"
+        value={form.emergency_contact}
+        onChangeText={(emergency_contact) => onChange({ ...form, emergency_contact })}
+      />
+      <ProfileField
+        placeholder="Preferred pay rate"
+        value={form.pay_rate}
+        keyboardType="numeric"
+        onChangeText={(pay_rate) => onChange({ ...form, pay_rate })}
+      />
+      <ProfileField
+        placeholder="Private notes"
+        value={form.notes}
+        multiline
+        onChangeText={(notes) => onChange({ ...form, notes })}
       />
     </>
   );

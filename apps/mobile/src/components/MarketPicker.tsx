@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { fetchPublicJson } from "../lib/api";
 import { COLORS } from "../theme/colors";
 import type { Market } from "../types";
+import { LoadFailure, loadStateStyles } from "./LoadFailure";
 
 type MarketPickerProps = {
   selectedMarketId: string | null;
@@ -32,22 +33,15 @@ export function MarketPicker({ selectedMarketId, onSelect }: MarketPickerProps) 
   }, [load]);
 
   if (loading) {
-    return <Text style={styles.stateText}>Loading cities…</Text>;
+    return <Text style={loadStateStyles.stateText}>Loading cities…</Text>;
   }
 
   if (error || markets === null) {
-    return (
-      <View style={styles.stateBlock}>
-        <Text style={styles.errorText}>{error ?? "Couldn't load cities."}</Text>
-        <Pressable style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Try again</Text>
-        </Pressable>
-      </View>
-    );
+    return <LoadFailure message={error ?? "Couldn't load cities."} onRetry={load} />;
   }
 
   if (markets.length === 0) {
-    return <Text style={styles.stateText}>No launch cities are available yet.</Text>;
+    return <Text style={loadStateStyles.stateText}>No launch cities are available yet.</Text>;
   }
 
   return (
@@ -85,16 +79,4 @@ const styles = StyleSheet.create({
   chipActive: { borderColor: COLORS.primary, backgroundColor: "rgba(14,90,58,0.08)" },
   chipText: { color: COLORS.inkMuted, fontWeight: "700", fontSize: 13 },
   chipTextActive: { color: COLORS.primary },
-  stateText: { color: COLORS.inkMuted, fontWeight: "600", fontSize: 13 },
-  stateBlock: { gap: 8 },
-  errorText: { color: COLORS.error, fontWeight: "700", fontSize: 13 },
-  retryBtn: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-  },
-  retryText: { color: COLORS.primary, fontWeight: "800", fontSize: 13 },
 });

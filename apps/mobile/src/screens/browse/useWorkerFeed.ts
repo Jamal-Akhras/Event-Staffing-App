@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError, fetchWorker } from "../../lib/api";
+import { appendUnique } from "../../lib/collections";
 import type { FeedShift, Market, WorkerFeedPage } from "../../types";
 import type { ShiftFilter } from "./browseUtils";
 
@@ -46,7 +47,7 @@ export function useWorkerFeed() {
         buildFeedPath(filtersRef.current, null, marketRef.current)
       );
       if (seq !== requestSeq.current) return;
-      setItems(dedupeById(page.items));
+      setItems(appendUnique([], page.items, getShiftId));
       nextCursorRef.current = page.next_cursor;
       setHasMore(page.next_cursor !== null);
       marketRef.current = page.market;
@@ -91,7 +92,7 @@ export function useWorkerFeed() {
         buildFeedPath(filtersRef.current, nextCursorRef.current, marketRef.current)
       );
       if (seq !== requestSeq.current) return;
-      setItems((current) => appendUnique(current, page.items));
+      setItems((current) => appendUnique(current, page.items, getShiftId));
       nextCursorRef.current = page.next_cursor;
       setHasMore(page.next_cursor !== null);
       marketRef.current = page.market;
@@ -111,11 +112,8 @@ export function useWorkerFeed() {
     setItems((current) => current.filter((item) => item.shift_id !== shiftId));
   }, []);
 
-  const clearError = useCallback(() => setError(null), []);
-
   return {
     activeFilter,
-    clearError,
     error,
     hasMore,
     isLoadingMore,
@@ -147,17 +145,6 @@ function buildFeedPath(filters: FeedFilters, cursor: string | null, market: Mark
   return `/workers/me/feed?${params.join("&")}`;
 }
 
-function dedupeById(items: FeedShift[]): FeedShift[] {
-  return appendUnique([], items);
-}
-
-function appendUnique(current: FeedShift[], added: FeedShift[]): FeedShift[] {
-  const seen = new Set(current.map((item) => item.shift_id));
-  const merged = [...current];
-  for (const item of added) {
-    if (seen.has(item.shift_id)) continue;
-    seen.add(item.shift_id);
-    merged.push(item);
-  }
-  return merged;
+function getShiftId(shift: FeedShift): string {
+  return shift.shift_id;
 }

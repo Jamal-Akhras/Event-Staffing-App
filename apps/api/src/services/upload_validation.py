@@ -8,7 +8,7 @@ from starlette.concurrency import run_in_threadpool
 from apps.api.src.services.image_processing import ProcessedImage, process_image
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+MAX_BYTES = 10 * 1024 * 1024
 _CHUNK_SIZE = 64 * 1024
 
 

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { WorkerProfile } from "./ApplicationReviewCard";
+import type { WorkerProfile } from "../types/operations";
 import "./WorkerProfilePanel.css";
 
 type WorkerProfilePanelProps = {

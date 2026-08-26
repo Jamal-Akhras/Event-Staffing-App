@@ -100,6 +100,7 @@ class SqlAlchemyRatingRepository:
             UnratedBooking(
                 booking_id=b.booking_id,
                 shift_id=b.shift_id,
+                worker_id=b.worker_id,
                 start_time=b.start_time,
                 role=s.role,
                 location=s.location,
@@ -120,6 +121,7 @@ class SqlAlchemyRatingRepository:
             UnratedBooking(
                 booking_id=b.booking_id,
                 shift_id=b.shift_id,
+                worker_id=b.worker_id,
                 start_time=b.start_time,
                 role=s.role,
                 location=s.location,

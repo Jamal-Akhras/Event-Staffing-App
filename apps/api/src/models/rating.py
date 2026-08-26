@@ -8,8 +8,8 @@ from datetime import datetime
 class Rating:
     rating_id: str
     booking_id: str
-    rated_by_role: str  # "worker" | "operator"
+    rated_by_role: str
     rater_id: str
-    stars: int          # 1–5
+    stars: int
     comment: str | None
     created_at: datetime

@@ -45,10 +45,6 @@ export function getWorkerStats(applications: Application[], workerId: string): W
   };
 }
 
-export function uniqueWorkerIds(applications: Application[]) {
-  return Array.from(new Set(applications.map((item) => item.worker_id)));
-}
-
 function countByStatus(applications: Application[], status: string) {
   return applications.filter((item) => item.status === status).length;
 }

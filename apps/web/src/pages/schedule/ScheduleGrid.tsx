@@ -43,7 +43,7 @@ export function ScheduleGrid({
                   <span className="schedule-shift-time">{formatTime(shift.start_time)}</span>
                   <strong>{shift.role}</strong>
                   <span>{shift.location}</span>
-                  <StatusBadge status={shift.status} variant="shift" />
+                  <StatusBadge status={shift.status} />
                 </button>
               ))}
             </div>

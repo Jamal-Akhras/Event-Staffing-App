@@ -43,7 +43,7 @@ class ApplicationDecisionRepository(Protocol):
         now: datetime,
         booking_id: str,
     ) -> ApplicationApprovalResult:
-        raise NotImplementedError
+        ...
 
     def reject(self, application_id: str, now: datetime) -> Application:
-        raise NotImplementedError
+        ...

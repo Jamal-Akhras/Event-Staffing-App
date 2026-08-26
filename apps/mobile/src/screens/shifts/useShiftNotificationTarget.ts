@@ -69,7 +69,6 @@ export function useShiftNotificationTarget(options: Options) {
     navigation.setParams({
       application_id: undefined,
       booking_id: undefined,
-      focus: undefined,
       notification_key: undefined,
       open: undefined,
     });

@@ -1,7 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { MessageThread } from "../../components/MessageThread";
-import { useAuth } from "../../contexts/AuthContext";
 import { COLORS } from "../../theme/colors";
 import type { Application, Booking } from "../../types";
 
@@ -12,7 +11,6 @@ type MessagingModalProps = {
 };
 
 export function MessagingModal({ application, booking, onClose }: MessagingModalProps) {
-  const { user } = useAuth();
   const visible = application !== null || booking !== null;
   const shiftId = application?.shift_id ?? booking?.shift_id;
 
@@ -40,7 +38,6 @@ export function MessagingModal({ application, booking, onClose }: MessagingModal
             shiftId={shiftId}
             applicationId={application?.application_id}
             bookingId={booking?.booking_id}
-            currentUserRole="worker"
           />
         )}
       </View>

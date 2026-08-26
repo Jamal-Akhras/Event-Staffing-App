@@ -5,7 +5,7 @@ import { ShiftCreateForm } from "../components/ShiftCreateForm";
 import { SkeletonCard } from "../components/SkeletonCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { useToast } from "../components/Toast";
-import { formatMoney } from "../lib/format";
+import { formatDateTime, formatMoney } from "../lib/format";
 import { fetchJson } from "../lib/api";
 import type { Shift } from "../types/operations";
 import { ShiftManagementModal } from "./shifts/ShiftManagementModal";
@@ -74,9 +74,7 @@ export function ShiftsPage() {
       {!initialLoading && !loadError && <div className="workspace">
         <ShiftCreateForm
           onCreated={loadShifts}
-          onError={(message) => {
-            if (message) toast({ type: "error", message });
-          }}
+          onError={(message) => toast({ type: "error", message })}
         />
         <ShiftColumn title="Open Shifts" shifts={openShifts} emptyStatus="open" onManage={setSelectedShift} />
         {filledShifts.length > 0 && (
@@ -145,7 +143,7 @@ function ShiftCard({ shift, onManage }: { shift: Shift; onManage: () => void }) 
           <p className="booking-id">
             {shift.shift_id}
           </p>
-          <StatusBadge status={shift.status} variant="shift" />
+          <StatusBadge status={shift.status} />
         </div>
         <p className="booking-state">{shift.role}</p>
         <p className="booking-meta">{shift.location}</p>
@@ -169,14 +167,4 @@ function ShiftCard({ shift, onManage }: { shift: Shift; onManage: () => void }) 
       </div>
     </div>
   );
-}
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }

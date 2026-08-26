@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { WorkerProfile } from "../../components/ApplicationReviewCard";
+import type { WorkerProfile } from "../../types/operations";
 import { RatingModal } from "../workers/RatingModal";
 
 export type CompletedShift = {

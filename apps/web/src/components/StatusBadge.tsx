@@ -4,7 +4,6 @@ import "./StatusBadge.css";
 
 type StatusBadgeProps = {
   status: string;
-  variant?: "shift" | "booking" | "application";
 };
 
 type StatusConfig = {
@@ -30,14 +29,14 @@ const STATUS_CONFIGS: Record<string, StatusConfig> = {
   rejected: statusConfig("#EF4444", "rgba(239, 68, 68, 0.1)", "REJECTED"),
 };
 
-export function StatusBadge({ status, variant = "booking" }: StatusBadgeProps) {
+export function StatusBadge({ status }: StatusBadgeProps) {
   const config =
     STATUS_CONFIGS[status] ??
     statusConfig("#6B7785", "rgba(107, 119, 133, 0.1)", status.toUpperCase());
 
   return (
     <span
-      className={`status-badge status-badge-${variant}`}
+      className="status-badge"
       style={{
         "--status-color": config.color,
         "--status-bg": config.bgColor,

@@ -1,10 +1,3 @@
-"""Add allow_venue_recontact to worker_profiles
-
-Revision ID: 015
-Revises: 014
-Create Date: 2026-05-08
-"""
-
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect

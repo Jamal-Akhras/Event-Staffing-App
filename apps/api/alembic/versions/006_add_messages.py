@@ -10,7 +10,6 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create messages table
     op.create_table(
         "messages",
         sa.Column("message_id", sa.String(), nullable=False),
@@ -25,7 +24,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("message_id"),
     )
 
-    # Create indexes for faster lookups
+
     op.create_index("ix_messages_shift_id", "messages", ["shift_id"])
     op.create_index("ix_messages_application_id", "messages", ["application_id"])
     op.create_index("ix_messages_booking_id", "messages", ["booking_id"])

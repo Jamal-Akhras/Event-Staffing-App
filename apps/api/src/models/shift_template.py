@@ -28,9 +28,9 @@ class RecurringSchedule(BaseModel):
     schedule_id: str
     template_id: str
     operator_id: str
-    frequency: str  # "daily", "weekly", "monthly"
-    day_of_week: int | None  # 0-6 for weekly schedules
-    time_of_day: str  # "HH:MM" format (e.g., "18:00")
+    frequency: str
+    day_of_week: int | None
+    time_of_day: str
     start_date: datetime
     end_date: datetime | None
     is_active: bool

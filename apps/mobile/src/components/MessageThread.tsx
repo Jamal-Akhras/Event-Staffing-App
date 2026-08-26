@@ -28,15 +28,9 @@ type MessageThreadProps = {
   shiftId: string;
   applicationId?: string;
   bookingId?: string;
-  currentUserRole: "worker" | "operator";
 };
 
-export function MessageThread({
-  shiftId,
-  applicationId,
-  bookingId,
-  currentUserRole,
-}: MessageThreadProps) {
+export function MessageThread({ shiftId, applicationId, bookingId }: MessageThreadProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -49,7 +43,7 @@ export function MessageThread({
       setMessages(data);
       setError(null);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
-      if (data.some((message) => message.sender_role !== currentUserRole && message.read_at === null)) {
+      if (data.some((message) => message.sender_role !== "worker" && message.read_at === null)) {
         await postWorker(`/shifts/${shiftId}/messages/read`, buildThreadBody(applicationId, bookingId));
       }
     } catch (err) {
@@ -86,7 +80,7 @@ export function MessageThread({
               <MessageBubble
                 key={message.message_id}
                 message={message}
-                isCurrentUser={message.sender_role === currentUserRole}
+                isCurrentUser={message.sender_role === "worker"}
               />
             ))}
           </View>

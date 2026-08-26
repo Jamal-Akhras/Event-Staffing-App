@@ -1,12 +1,5 @@
 #!/usr/bin/env python
-"""Script to create an operator account.
 
-Usage:
-    python -m apps.api.scripts.create_operator <email> <password> <venue_name> <market_id>
-
-Example:
-    python -m apps.api.scripts.create_operator admin@example.com SecurePass123 "Bath Venue" bath-gb
-"""
 
 import sys
 from uuid import uuid4
@@ -27,19 +20,13 @@ from apps.api.src.repositories.sqlalchemy_user_repository import SqlAlchemyUserR
 
 
 def create_operator(email: str, password: str, venue_name: str, market_id: str) -> None:
-    """Create an operator account.
-
-    Args:
-        email: Email address for the operator account
-        password: Plain text password (will be hashed)
-    """
     session = SessionLocal()
     try:
         repo = SqlAlchemyUserRepository(session)
         organisation_repo = SqlAlchemyOrganisationRepository(session)
         market_repo = SqlAlchemyMarketRepository(session)
 
-        # Check if user already exists
+
         existing = repo.get_by_email(email)
         if existing:
             print(f"Error: User with email '{email}' already exists")
@@ -49,7 +36,7 @@ def create_operator(email: str, password: str, venue_name: str, market_id: str) 
         if market is None or not market.is_active:
             raise ValueError(f"Unknown or inactive market: {market_id}")
 
-        # Create operator user
+
         now = utc_now()
         organisation_id = str(uuid4())
         venue_id = str(uuid4())
@@ -97,7 +84,6 @@ def create_operator(email: str, password: str, venue_name: str, market_id: str) 
 
 
 def main() -> None:
-    """Main entry point for the script."""
     if len(sys.argv) != 5:
         print("Usage: python -m apps.api.scripts.create_operator <email> <password> <venue_name> <market_id>")
         print()

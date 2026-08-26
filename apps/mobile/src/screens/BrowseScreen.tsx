@@ -1,4 +1,5 @@
 import type { BottomSheetModal } from "@gorhom/bottom-sheet";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -11,8 +12,8 @@ import {
   View,
 } from "react-native";
 
-import { useAuth } from "../contexts/AuthContext";
 import { deleteWorker, getWorkerId, postWorker, putWorker } from "../lib/api";
+import type { RootTabParamList } from "../navigation/navigationTypes";
 import { COLORS } from "../theme/colors";
 import type { FeedShift } from "../types";
 import { ApplyPanel } from "./browse/ApplyPanel";
@@ -21,7 +22,7 @@ import { BrowseFilters } from "./browse/BrowseFilters";
 import { browseScreenStyles as styles } from "./browse/browseScreenStyles";
 import { buildQuickApplyMessage } from "./browse/browseUtils";
 import { FeedEmptyState } from "./browse/FeedEmptyState";
-import { addShiftId, removeShiftId, StatusCard } from "./browse/feedHelpers";
+import { StatusCard } from "./browse/feedHelpers";
 import { ShiftMapView } from "./browse/ShiftMapView";
 import { useWorkerFeed } from "./browse/useWorkerFeed";
 import { useNotificationShiftTarget } from "./browse/useNotificationShiftTarget";
@@ -29,9 +30,8 @@ import { useNotificationShiftTarget } from "./browse/useNotificationShiftTarget"
 type ViewMode = "feed" | "map";
 
 export function BrowseScreen() {
-  const { user } = useAuth();
-  const navigation = useNavigation();
-  const workerId = user?.worker_profile_id ?? getWorkerId();
+  const navigation = useNavigation<BottomTabNavigationProp<RootTabParamList>>();
+  const workerId = getWorkerId();
   const feed = useWorkerFeed();
   const [viewMode, setViewMode] = useState<ViewMode>("feed");
   const [selectedShift, setSelectedShift] = useState<FeedShift | null>(null);
@@ -78,7 +78,7 @@ export function BrowseScreen() {
   }, []);
 
   const goToProfile = useCallback(() => {
-    navigation.navigate("Profile" as never);
+    navigation.navigate("Profile");
   }, [navigation]);
 
   const highPayThreshold = feed.market ? Number(feed.market.high_pay_threshold) : null;
@@ -152,7 +152,7 @@ export function BrowseScreen() {
           shifts={feed.items}
           onApply={(shift) => {
             setViewMode("feed");
-            openApplySheet(shift as FeedShift);
+            openApplySheet(shift);
           }}
         />
       ) : (
@@ -243,7 +243,7 @@ export function BrowseScreen() {
   }
 
   async function applyToShift(shift: FeedShift, message: string) {
-    addShiftId(setApplyingShiftIds, shift.shift_id);
+    setApplyingShiftIds((current) => new Set(current).add(shift.shift_id));
     try {
       await postWorker("/applications", {
         shift_id: shift.shift_id,
@@ -258,7 +258,11 @@ export function BrowseScreen() {
     } catch (err) {
       setApplicationStatus((err as Error).message);
     } finally {
-      removeShiftId(setApplyingShiftIds, shift.shift_id);
+      setApplyingShiftIds((current) => {
+        const next = new Set(current);
+        next.delete(shift.shift_id);
+        return next;
+      });
     }
   }
 
