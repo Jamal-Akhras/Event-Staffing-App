@@ -24,6 +24,7 @@ RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels -r requ
     && adduser --disabled-password --gecos "" appuser
 
 COPY apps ./apps
+COPY packages ./packages
 RUN mkdir -p /app/apps/api/uploads \
     && chown -R appuser:appuser /app
 

@@ -3,14 +3,13 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { fetchJson } from "../lib/api";
 import { formatMoney } from "../lib/format";
-import type { Application, Booking, Shift } from "../types/operations";
+import type { Application, Shift } from "../types/operations";
 import "./AnalyticsPage.css";
 
 export function AnalyticsPage() {
   const { user } = useAuth();
   const currency = user?.currency ?? "GBP";
   const [shifts, setShifts] = useState<Shift[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,18 +17,15 @@ export function AnalyticsPage() {
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const [shiftData, bookingData, applicationData] = await Promise.all([
+      const [shiftData, applicationData] = await Promise.all([
         fetchJson<Shift[]>("/shifts"),
-        fetchJson<Booking[]>("/bookings"),
         fetchJson<Application[]>("/applications"),
       ]);
       setShifts(shiftData);
-      setBookings(bookingData);
       setApplications(applicationData);
       setError(null);
     } catch (err) {
       setShifts([]);
-      setBookings([]);
       setApplications([]);
       setError((err as Error).message);
     } finally {
@@ -42,8 +38,8 @@ export function AnalyticsPage() {
   }, []);
 
   const insights = useMemo(
-    () => buildInsights(shifts, bookings, applications),
-    [shifts, bookings, applications]
+    () => buildInsights(shifts, applications),
+    [shifts, applications]
   );
 
   return (
@@ -51,7 +47,7 @@ export function AnalyticsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Analytics</h1>
-          <p className="page-subtitle">Track fill health, response speed, and demand patterns.</p>
+          <p className="page-subtitle">See the coverage, candidate interest, and staffed hours Venue OS is delivering.</p>
         </div>
         <button className="btn secondary" type="button" onClick={loadAnalytics}>
           Refresh
@@ -74,11 +70,11 @@ export function AnalyticsPage() {
             <Metric token="FR" label="Fill Rate" value={`${insights.fillRate.toFixed(1)}%`}>
               {insights.filledShifts} of {insights.totalShifts} shifts filled
             </Metric>
-            <Metric token="NS" label="No-Show Rate" value={`${insights.noShowRate.toFixed(1)}%`}>
-              {insights.noShowCount} no-shows out of {insights.completedBookings} bookings
+            <Metric token="AP" label="Applications Received" value={String(insights.totalApplications)}>
+              Across {insights.applicationShiftCount} {insights.applicationShiftCount === 1 ? "shift" : "shifts"}
             </Metric>
-            <Metric token="RT" label="Avg Response" value={`${insights.avgResponseHours}h`}>
-              Time to approve or reject applications
+            <Metric token="HR" label="Staff Hours Booked" value={`${formatHours(insights.staffHoursBooked)}h`}>
+              {insights.filledPositions} filled {insights.filledPositions === 1 ? "position" : "positions"}
             </Metric>
             <Metric token="$" label="Avg Pay Rate" value={formatMoney(insights.avgPayRate, currency)}>
               Per hour across all shifts
@@ -182,17 +178,17 @@ function TopRoles({ roles }: { roles: [string, number][] }) {
 
 function PerformanceInsights({ insights }: { insights: AnalyticsInsights }) {
   const items = [
-    insights.fillRate < 70 && insights.totalShifts > 0
-      ? "Fill rate is below 70%. Consider raising pay or reposting hard-to-fill shifts."
+    insights.filledShifts > 0
+      ? `${insights.filledShifts} ${insights.filledShifts === 1 ? "shift has" : "shifts have"} reached full coverage through Venue OS.`
       : null,
-    insights.noShowRate > 15 && insights.completedBookings > 5
-      ? "No-show rate is above 15%. Review reliability scores before approving."
+    insights.totalApplications > 0
+      ? `${insights.totalApplications} ${insights.totalApplications === 1 ? "application has" : "applications have"} been received across ${insights.applicationShiftCount} ${insights.applicationShiftCount === 1 ? "shift" : "shifts"}.`
       : null,
-    insights.avgResponseHours > 24 && insights.decidedApplications > 3
-      ? "Average response time is above 24 hours. Faster decisions improve booking success."
+    insights.staffHoursBooked > 0
+      ? `${formatHours(insights.staffHoursBooked)} staff hours are booked across ${insights.filledPositions} filled ${insights.filledPositions === 1 ? "position" : "positions"}.`
       : null,
-    insights.fillRate >= 80 && insights.totalShifts > 5
-      ? "Fill rate is above 80%. Current staffing flow is performing well."
+    insights.totalShifts > 0 && insights.totalApplications === 0
+      ? "Your shifts are live. Candidate interest will appear here as applications arrive."
       : null,
     insights.totalShifts === 0
       ? "Create your first shift to start seeing analytics."
@@ -215,17 +211,15 @@ function PerformanceInsights({ insights }: { insights: AnalyticsInsights }) {
 
 type AnalyticsInsights = ReturnType<typeof buildInsights>;
 
-function buildInsights(shifts: Shift[], bookings: Booking[], applications: Application[]) {
+function buildInsights(shifts: Shift[], applications: Application[]) {
   const totalShifts = shifts.length;
   const filledShifts = shifts.filter((shift) => shift.status === "filled").length;
-  const noShowCount = bookings.filter((booking) => Boolean(booking.no_show_at)).length;
-  const completedBookings = bookings.filter((booking) =>
-    booking.state === "paid" || booking.state === "checked_out"
-  ).length;
-  const decidedApplications = applications.filter((app) => app.decided_at);
-  const avgResponseMs = decidedApplications.reduce((sum, app) => (
-    sum + new Date(app.decided_at!).getTime() - new Date(app.created_at).getTime()
+  const staffedShifts = shifts.filter((shift) => shift.status !== "cancelled");
+  const filledPositions = staffedShifts.reduce((sum, shift) => sum + shift.workers_filled, 0);
+  const staffHoursBooked = staffedShifts.reduce((sum, shift) => (
+    sum + ((new Date(shift.end_time).getTime() - new Date(shift.start_time).getTime()) / 3_600_000) * shift.workers_filled
   ), 0);
+  const applicationShiftCount = new Set(applications.map((application) => application.shift_id)).size;
   const roleCounts = shifts.reduce((accumulator, shift) => {
     accumulator[shift.role] = (accumulator[shift.role] || 0) + 1;
     return accumulator;
@@ -239,17 +233,18 @@ function buildInsights(shifts: Shift[], bookings: Booking[], applications: Appli
     totalShifts,
     filledShifts,
     fillRate: totalShifts > 0 ? (filledShifts / totalShifts) * 100 : 0,
-    noShowCount,
-    completedBookings,
-    noShowRate: completedBookings > 0 ? (noShowCount / completedBookings) * 100 : 0,
-    avgResponseHours: decidedApplications.length > 0
-      ? Math.round(avgResponseMs / decidedApplications.length / (1000 * 60 * 60))
-      : 0,
-    decidedApplications: decidedApplications.length,
+    totalApplications: applications.length,
+    applicationShiftCount,
+    filledPositions,
+    staffHoursBooked,
     topRoles: Object.entries(roleCounts).sort(([, left], [, right]) => right - left).slice(0, 5),
     dayOfWeekCounts,
     avgPayRate: shifts.length > 0
       ? shifts.reduce((sum, shift) => sum + Number(shift.pay_rate), 0) / shifts.length
       : 0,
   };
+}
+
+function formatHours(hours: number) {
+  return new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 }).format(hours);
 }

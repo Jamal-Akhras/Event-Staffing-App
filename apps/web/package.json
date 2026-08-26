@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:share": "vite --mode share",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },

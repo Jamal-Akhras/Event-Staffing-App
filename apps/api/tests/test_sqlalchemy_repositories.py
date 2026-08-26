@@ -5,6 +5,7 @@ import pytest
 from apps.api.src.db.models import BookingModel, ShiftModel
 from apps.api.src.models.application import Application
 from apps.api.src.models.shift import Shift
+from apps.api.src.models.user import User
 from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.repositories.application_repository import DuplicateApplicationError
 from apps.api.src.repositories.sqlalchemy_application_decision_repository import (
@@ -14,9 +15,31 @@ from apps.api.src.repositories.sqlalchemy_application_repository import (
     SqlAlchemyApplicationRepository,
 )
 from apps.api.src.repositories.sqlalchemy_shift_repository import SqlAlchemyShiftRepository
+from apps.api.src.repositories.sqlalchemy_user_repository import SqlAlchemyUserRepository
 from apps.api.src.repositories.sqlalchemy_worker_profile_repository import (
     SqlAlchemyWorkerProfileRepository,
 )
+
+
+def test_sqlalchemy_user_repository_email_lookup_is_case_insensitive(repo_session):
+    repo = SqlAlchemyUserRepository(repo_session)
+    now = datetime(2030, 1, 1, 8, 0, 0, tzinfo=UTC)
+    repo.save(User(
+        user_id="operator-email-case",
+        email="Venue@Temp.com",
+        hashed_password="hashed-password",
+        role="operator",
+        account_id=None,
+        worker_profile_id=None,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    ))
+
+    loaded = repo.get_by_email("VENUE@TEMP.COM")
+
+    assert loaded is not None
+    assert loaded.user_id == "operator-email-case"
 
 
 def test_sqlalchemy_shift_repository_round_trip(repo_session):

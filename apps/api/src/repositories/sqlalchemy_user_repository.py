@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from apps.api.src.db.models import UserModel
 from apps.api.src.models.user import User
@@ -18,7 +18,7 @@ class SqlAlchemyUserRepository:
         return _to_domain(model)
 
     def get_by_email(self, email: str) -> User | None:
-        stmt = select(UserModel).where(UserModel.email == email)
+        stmt = select(UserModel).where(func.lower(UserModel.email) == email.strip().lower())
         model = self._session.execute(stmt).scalar_one_or_none()
         if model is None:
             return None

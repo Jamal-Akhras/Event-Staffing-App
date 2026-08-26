@@ -1,17 +1,24 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, EmailStr, Field, model_validator
 
 from apps.api.src.validation_types import UtcTimestamp
 
 
+def _normalize_email(value: object) -> object:
+    return value.strip().lower() if isinstance(value, str) else value
+
+
+NormalizedEmail = Annotated[EmailStr, BeforeValidator(_normalize_email)]
+
+
 class UserRegisterRequest(BaseModel):
-    email: EmailStr
+    email: NormalizedEmail
     password: str = Field(min_length=8, max_length=128)
 
 
 class OperatorRegisterRequest(BaseModel):
-    email: EmailStr
+    email: NormalizedEmail
     password: str | None = Field(default=None, min_length=8, max_length=128)
     sso_token: str | None = Field(default=None, min_length=20, max_length=4096)
     venue_name: str = Field(min_length=1, max_length=160)
@@ -33,7 +40,7 @@ class SsoSignInRequest(BaseModel):
 
 
 class UserLoginRequest(BaseModel):
-    email: EmailStr
+    email: NormalizedEmail
     password: str = Field(min_length=1, max_length=128)
 
 
@@ -60,7 +67,7 @@ class VerifyEmailRequest(BaseModel):
 
 
 class ResendVerificationRequest(BaseModel):
-    email: EmailStr
+    email: NormalizedEmail
 
 
 class EmailVerificationResponse(BaseModel):
@@ -88,7 +95,7 @@ class UserResponse(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
+    email: NormalizedEmail
 
 
 class ResetPasswordRequest(BaseModel):

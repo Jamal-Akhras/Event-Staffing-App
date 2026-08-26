@@ -5,6 +5,19 @@ import { SsoButtons } from "../components/SsoButtons";
 import { useAuth } from "../contexts/AuthContext";
 import { SSO_ENABLED } from "../lib/clerk";
 import "./LoginPage.css";
+import "./LoginBrandLink.css";
+
+function AuthBrandLink() {
+  return (
+    <Link to="/" className="auth-left-logo" aria-label="Venue OS home">
+      <span className="auth-brand-mark">V</span>
+      <span>
+        <span className="auth-brand-name">Venue OS</span>
+        <span className="auth-brand-tagline">Reliability-first staffing</span>
+      </span>
+    </Link>
+  );
+}
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -34,13 +47,7 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <aside className="auth-panel-left">
-        <div className="auth-left-logo">
-          <div className="auth-brand-mark">V</div>
-          <div>
-            <p className="auth-brand-name">Venue OS</p>
-            <p className="auth-brand-tagline">Reliability-first staffing</p>
-          </div>
-        </div>
+        <AuthBrandLink />
 
         <div className="auth-left-body">
           <h2 className="auth-left-headline">

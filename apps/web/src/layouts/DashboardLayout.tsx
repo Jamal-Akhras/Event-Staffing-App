@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { NotificationBell } from "../components/NotificationBell";
 import { PostShiftRatingPrompt } from "../components/PostShiftRatingPrompt";
-import { useAuth } from "../contexts/AuthContext";
-import { initials, useVenue } from "../lib/useVenue";
+import { VenueRatingBadge } from "../components/VenueRatingBadge";
+import { initials, useVenue, useVenueRating } from "../lib/useVenue";
 import "./DashboardLayout.css";
 
 const NAV = [
@@ -19,11 +19,10 @@ const NAV = [
 
 export function DashboardLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { logout } = useAuth();
   const venue = useVenue();
   const [menuOpen, setMenuOpen] = useState(false);
   const venueName = venue.data?.name ?? "Your venue";
+  const rating = useVenueRating(venue.data?.venue_id);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -44,20 +43,21 @@ export function DashboardLayout() {
                 {item.label}
               </NavLink>
             ))}
-            <button
-              type="button"
-              className="topnav-link topnav-signout"
-              onClick={() => { logout(); navigate("/login"); }}
-            >
-              Sign out
-            </button>
           </nav>
 
           <div className="topbar-actions">
             <NotificationBell />
             <Link to="/app/settings" className="venue-chip" title={venueName}>
               <span className="venue-chip-mark">{initials(venueName)}</span>
-              <span className="venue-chip-name">{venueName}</span>
+              <span className="venue-chip-copy">
+                <span className="venue-chip-name">{venueName}</span>
+                <VenueRatingBadge
+                  average={rating.data?.avg_stars}
+                  total={rating.data?.total_ratings}
+                  loading={rating.isPending}
+                  unavailable={rating.isError}
+                />
+              </span>
             </Link>
             <button
               type="button"

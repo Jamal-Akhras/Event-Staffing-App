@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { ApiError, postPublicJson, setUnauthorizedHandler } from "../lib/api";
+import { ApiError, postJson, postPublicJson, setUnauthorizedHandler } from "../lib/api";
 
 type AuthUser = {
   user_id: string;
@@ -29,6 +29,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   loginWithSso: (ssoToken: string) => Promise<void>;
   acceptSession: (session: SessionPayload) => void;
+  logOff: () => Promise<void>;
   logout: () => void;
 };
 
@@ -116,6 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const logOff = useCallback(async () => {
+    await postJson("/auth/logout");
+    logout();
+  }, [logout]);
+
   useEffect(() => {
     setUnauthorizedHandler(() => {
       logout();
@@ -125,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [logout, navigate]);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, loginWithSso, acceptSession, logout }}>
+    <AuthContext.Provider value={{ user, token, login, loginWithSso, acceptSession, logOff, logout }}>
       {children}
     </AuthContext.Provider>
   );

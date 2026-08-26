@@ -1,4 +1,5 @@
-﻿.env.example
+﻿.dockerignore
+.env.example
 .env.production.example
 .env.sqlite.example
 .gitattributes
@@ -256,6 +257,7 @@ apps\api\tests\test_object_storage.py
 apps\api\tests\test_operator_invite_gating.py
 apps\api\tests\test_outbox_dispatcher.py
 apps\api\tests\test_password_reset_tokens.py
+apps\api\tests\test_postgres_billing.py
 apps\api\tests\test_postgres_concurrency.py
 apps\api\tests\test_postgres_flows.py
 apps\api\tests\test_postgres_market_schema.py
@@ -363,10 +365,14 @@ apps\mobile\src\theme\space.ts
 apps\mobile\src\theme\type.ts
 apps\mobile\src\types.ts
 apps\mobile\tsconfig.json
+apps\web\.dockerignore
 apps\web\.env.example
+apps\web\.env.share
+apps\web\Dockerfile.share
 apps\web\index.html
 apps\web\package.json
 apps\web\package-lock.json
+apps\web\public\favicon.svg
 apps\web\src\App.tsx
 apps\web\src\components\AppErrorFallback.tsx
 apps\web\src\components\ApplicationReviewCard.css

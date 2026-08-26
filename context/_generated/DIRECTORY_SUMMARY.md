@@ -1,21 +1,22 @@
 ﻿# Directory Summary
 
-Generated: 2026-08-26 21:28:11
+Generated: 2026-08-26 23:57:40
 
 | Directory | Files |
 |---|---:|
 | .github/ | 2 |
 |   .github/workflows/ | 1 |
-| apps/ | 489 |
-|   apps/api/ | 277 |
+| apps/ | 494 |
+|   apps/api/ | 278 |
 |     apps/api/alembic/ | 33 |
 |     apps/api/scripts/ | 7 |
 |     apps/api/src/ | 181 |
-|     apps/api/tests/ | 54 |
+|     apps/api/tests/ | 55 |
 |   apps/mobile/ | 79 |
 |     apps/mobile/assets/ | 4 |
 |     apps/mobile/src/ | 67 |
-|   apps/web/ | 132 |
+|   apps/web/ | 136 |
+|     apps/web/public/ | 1 |
 |     apps/web/src/ | 125 |
 | context/ | 12 |
 |   context/_generated/ | 6 |

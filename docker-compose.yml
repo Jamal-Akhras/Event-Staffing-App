@@ -1,4 +1,19 @@
 services:
+  web-share:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.share
+    container_name: event-staffing-web-share
+    restart: unless-stopped
+    environment:
+      SHARE_API_TARGET: http://api:8000
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    profiles: ["share"]
+
   api:
     build: .
     container_name: event-staffing-api

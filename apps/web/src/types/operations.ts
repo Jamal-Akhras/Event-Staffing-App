@@ -77,3 +77,9 @@ export type Venue = {
   avatar_url?: string | null;
   photos: string[];
 };
+
+export type VenueRatingSummary = {
+  venue_id: string;
+  avg_stars: number | null;
+  total_ratings: number;
+};

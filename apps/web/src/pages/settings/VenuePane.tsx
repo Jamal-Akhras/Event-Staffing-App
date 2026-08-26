@@ -5,6 +5,7 @@ import { MarketSelect } from "../../components/MarketSelect";
 import { API_BASE } from "../../lib/api";
 import { useMarkets } from "../../lib/useMarkets";
 import { initials } from "../../lib/useVenue";
+import { LogOffButton } from "./LogOffButton";
 import { Group } from "./SettingsRows";
 import type { VenueSettings } from "./useVenueSettings";
 
@@ -109,6 +110,17 @@ export function VenuePane({ settings }: { settings: VenueSettings }) {
         rows={[
           { key: "email", label: "Email", control: <input className="st-input" type="email" value={draft.contact_email} onChange={(event) => update({ contact_email: event.target.value })} placeholder="manager@venue.com" /> },
           { key: "phone", label: "Phone", control: <input className="st-input" type="tel" value={draft.contact_phone} onChange={(event) => update({ contact_phone: event.target.value })} placeholder="+44 7700 900000" /> },
+        ]}
+      />
+      <Group
+        title="Session"
+        rows={[
+          {
+            key: "log-off",
+            label: "Log off",
+            hint: "Ends the current session on this device",
+            control: <LogOffButton />,
+          },
         ]}
       />
     </>

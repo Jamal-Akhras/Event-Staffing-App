@@ -84,10 +84,6 @@
   color: var(--ocean-500);
 }
 
-.topnav-signout {
-  display: none;
-}
-
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -109,7 +105,7 @@
   align-items: center;
   gap: 10px;
   max-width: 260px;
-  padding: 4px 12px 4px 4px;
+  padding: 4px 14px 4px 4px;
   border: 1px solid rgba(15, 23, 32, 0.12);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.7);
@@ -117,6 +113,12 @@
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
+}
+
+.venue-chip-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
 }
 
 .venue-chip-mark {
@@ -140,8 +142,41 @@
   white-space: nowrap;
 }
 
+.venue-chip-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--ink-500);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.venue-chip-star {
+  color: var(--sun-500);
+  font-size: 12px;
+}
+
+.venue-chip-rating-count {
+  font-weight: 500;
+}
+
 .menu-toggle {
   display: none;
+}
+
+@media (max-width: 1200px) and (min-width: 901px) {
+  .topbar-inner {
+    gap: 24px;
+  }
+
+  .topnav {
+    gap: 18px;
+  }
+
+  .venue-chip {
+    max-width: 190px;
+  }
 }
 
 .main-content {
@@ -184,18 +219,13 @@
     text-align: left;
   }
 
-  .topnav-signout {
-    display: block;
-    margin-top: 8px;
-    color: var(--rose-400);
-  }
-
   .venue-chip-name {
     display: none;
   }
 
   .venue-chip {
-    padding: 4px;
+    gap: 7px;
+    padding: 4px 9px 4px 4px;
   }
 
   .menu-toggle {

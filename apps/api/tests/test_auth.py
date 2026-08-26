@@ -136,6 +136,29 @@ def test_login_success(user_repo):
     assert "access_token" in data
 
 
+def test_login_email_is_case_insensitive(user_repo):
+    now = datetime.now(UTC)
+    user_repo.save(User(
+        user_id=str(uuid4()),
+        email="venue@temp.com",
+        hashed_password=hash_password("correctpassword"),
+        role="operator",
+        account_id=None,
+        worker_profile_id=None,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    ))
+
+    response = client.post(
+        "/auth/login",
+        json={"email": "  VENUE@TEMP.COM  ", "password": "correctpassword"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["email"] == "venue@temp.com"
+
+
 def test_login_rate_limit_response():
     for _ in range(5):
         response = client.post(
