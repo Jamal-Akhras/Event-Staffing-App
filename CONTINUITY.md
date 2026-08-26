@@ -14,7 +14,7 @@
 - 2026-08-20 [USER] Clarified that a founding-venue “free” offer must still fund worker wages; only the platform/service fee is proposed to be waived.
 - 2026-08-20 [TOOL] Indeed Flex is a direct UK hospitality competitor with shift posting, verified workers, timesheets, ratings, talent pools, payroll-related services, and a published 15% wage markup.
 - 2026-08-20 [USER] Long-term ambition includes becoming a major competitor to national flexible-staffing platforms such as Indeed Flex.
-- 2026-08-20 [CODE] Account ownership and completed-booking queries exist, but accounts have no billing-plan/trial fields and the web has no billing surface.
+- 2026-08-26 [CODE] Organisation/venue ownership and a reusable environment-level operator invite gate exist, but there is no persisted partner-code redemption, billing plan/trial/entitlement, fee enforcement, or account UI status.
 - 2026-08-24 [CODE] The unmounted quote-only processor prototype is not part of the launch contract; current bookings record externally paid wages with authenticated audit fields.
 - 2026-08-20 [USER] Considering an employer-paid platform business model while venues employ and pay workers directly.
 - 2026-08-21 [USER] Before further app work, create a cofounder-facing document covering the product thesis, Indeed Flex analysis, differentiated offer and commercial model; plan the document before drafting.
@@ -73,17 +73,20 @@
 - 2026-08-24 D043 ACTIVE [CODE] Production disables API documentation, fails closed on unsafe DB/CORS/email/storage configuration, checks schema/readiness, and serves transport/browser security headers.
 - 2026-08-24 D044 SUPERSEDED [ASSUMPTION] Decode/re-encode uploads with Pillow only after explicit dependency approval; upgrade Expo SDK 54 to 57 as a separately planned breaking migration, not an audit-force side effect.
 - 2026-08-24 D045 ACTIVE [USER] Pillow (`pillow==12.3.0`) is approved: every upload is decoded, header-checked against a 40M-pixel ceiling before decode, EXIF-orientation-corrected, downscaled to a 2048px edge, stripped of metadata and re-encoded in its source format (JPEG/PNG/WebP); the Expo 57 migration stays a separately planned breaking change.
+- 2026-08-26 D046 ACTIVE [USER] Defer the founding-partner feature for a later build. Keep it separate from `OPERATOR_INVITE_CODES`; use auditable, rate-limited partner codes that grant organisation-scoped entitlements with expiry/redemption limits and dashboard status. Begin with a secure management command until a staff admin plane exists; fix case-insensitive PostgreSQL email identity before public signup, and treat automatic fee enforcement as a separate billing slice.
+- 2026-08-26 D047 ACTIVE [USER] Use one canonical whole-app documentation library for founders and engineers; do not maintain separate cofounder and technical versions. Split by subject for maintainability, but explain jargon, consequences, trade-offs and open decisions in the same documents so non-technical review informs product decisions.
 
 ## Done (recent)
+- 2026-08-26 [CODE] Canonical whole-app documentation library completed under `documentation/`: 23 linked Markdown files cover product, decisions, architecture, clients, domains, database, APIs, flows, operations, testing/readiness, future designs and visual-asset governance with 42 Mermaid diagrams.
 - 2026-08-24 [CODE] Upload re-encoding slice completed: `services/image_processing.py` (Pillow) sits behind `read_processed_image`; the three upload routes store only re-encoded bytes with server-derived extension/content type; endpoint tests use real generated images.
 - 2026-08-24 [CODE] Security/privacy/API slice completed: migrations 026-029 add session revocation, account anonymisation/reporting, direct-payment audit and idempotency; stable errors, bounded inputs, actor rate limits and verified mutations ship.
 - 2026-08-24 [CODE] Operations slice completed: real readiness, worker heartbeat/outbox health, schema guard, request IDs/security headers, production config fail-closed behavior, pre-deploy migrations, dependency gates and exact Python pins.
-- 2026-08-22 [CODE] Phase 4 completed: provider-portable S3 storage plus local dev adapter, production fail-fast configuration, transaction-aware object cleanup, venue-photo retirement, safer content/extension validation, live upload route-order repair, and absolute-CDN client compatibility.
 - 2026-08-23 [CODE] First security/recovery slice completed: rating identity/eligibility/venue ownership are enforced, pending prompts are personalised, automatic post-shift modals ship on both clients, and unsafe direct booking creation is no longer public.
 - 2026-08-23 [CODE] Operational recovery slice completed: venue shift edit/close/cancel and individual booking cancellation, worker application withdrawal/booking cancellation, audit fields, atomic notifications and explicit confirmation UX ship across API/web/mobile.
 - 2026-08-24 [CODE] Notification improvements completed: inbox and system taps target exact shifts/applications/bookings/messages; native permission, Expo token registration/refresh, foreground handling and logout revocation are wired.
 
 ## Now
+- 2026-08-26 [TOOL] `main` is synchronized with `origin/main` at `39cf8fb`; review of incoming range `0bd6875..39cf8fb` found no actionable defects.
 - 2026-08-23 [CODE] Migration 023 adds immutable rater identity and valid-role enforcement; existing ratings backfill identity from their booking participant.
 - 2026-08-24 [CODE] Account deletion/export, reporting/disputes, worker-facing venue reputation, production observability, session revocation, stable errors, bounded inputs and mutation rate limits are implemented.
 - 2026-08-24 [CODE] Red-team findings patched: cross-venue object deletion confused-deputy, direct avatar URL injection, encoded storage traversal, JWT claim escalation tests, and geocoding-before-commit ordering.
@@ -91,12 +94,14 @@
 - 2026-08-24 [TOOL] Final backend verification: in-memory 160 passed + 44 PostgreSQL skips; PostgreSQL 204 passed with zero skips; full PostgreSQL base-to-029 rebuild passed.
 
 ## Next
+- 2026-08-26 [USER] Later founding-partner slice: add partner-code and organisation-entitlement persistence, atomic owner redemption, account/dashboard status, audit fields and PostgreSQL concurrency/isolation tests; preserve manual grants and defer invoice calculation to the billing engine.
 - 2026-08-24 [ASSUMPTION] Proceed to UI polish while preserving the now-frozen auth/privacy/report/reputation/direct-payment/error/upload contracts; merge Dependabot patch/minor bumps only after CI is green.
 - 2026-08-24 [ASSUMPTION] Two deferred dependency slices: the Expo SDK 57 migration (carries react-native, react, screens, safe-area-context, expo-status-bar) and a web toolchain slice (React 19, Vite 8, plugin-react 6, TypeScript 7); bcrypt stays at 4.0.1 until passlib is replaced.
 - 2026-08-24 [ASSUMPTION] Phase 7 load validation and a planned Expo SDK 57 migration follow against the release candidate; production EAS credentials remain external setup.
 - 2026-08-21 [ASSUMPTION] Web stream: finalise brand and marketing copy, then connect real store/waitlist destinations when distribution details exist.
 
 ## Open questions
+- 2026-08-26 [USER] UNCONFIRMED: founding-partner offer duration, completed-shift cap, redemption limit, whether it covers every venue in the organisation, and the standard fee displayed alongside the waiver.
 - 2026-08-19 [USER] UNCONFIRMED: final confirmation of Bath and the legal entity/jurisdiction.
 - 2026-08-19 [USER] UNCONFIRMED: initial hospitality roles and venue types.
 - 2026-08-19 [USER] UNCONFIRMED: which product decisions the prospective partner should help shape during the walkthrough.
@@ -111,6 +116,8 @@
 - 2026-08-24 [USER] UNCONFIRMED: Expo/EAS project ID plus iOS APNs and Android FCM credentials; native registration code is ready but remote delivery requires these external credentials and a development/release build.
 
 ## Working set
+- 2026-08-26 [CODE] `documentation/{README.md,00-product,10-architecture,20-domain,30-data,40-api,50-flows,60-operations,70-quality,80-future}/`, `CONTINUITY.md`
+- 2026-08-26 [CODE] `apps/api/src/{routes/auth,routes/tenancy,services/operator_invites,auth/dependencies}.py`, `apps/api/src/db/tenancy_models.py`
 - 2026-08-24 [CODE] `apps/api/alembic/versions/{026_auth_session_version,027_account_privacy_and_reports,028_direct_payment_attestation,029_idempotency_records}.py`
 - 2026-08-24 [CODE] `apps/api/src/routes/{auth_account,reports,ratings,payments,shifts,accounts,uploads}.py`
 - 2026-08-24 [CODE] `apps/api/src/services/{image_processing,upload_validation,account_privacy,idempotency,health,stored_upload}.py`
@@ -121,6 +128,9 @@
 - 2026-08-24 [CODE] `apps/web/package.json`, `apps/web/package-lock.json`, `apps/mobile/package-lock.json`
 
 ## Receipts
+- 2026-08-26 [TOOL] Documentation validation: 23 Markdown files, 2,391 lines and 42 Mermaid diagrams; all local Markdown links resolve, all diagram blocks use supported starts, code fences are balanced, sensitive-email/stale-encoding scan is empty and `git diff --check` reports no whitespace errors (only pre-existing generated-context CRLF notices). Browser-local capture failed and two privacy-redaction image generations altered unrelated UI text, so no misleading or personal-data screenshot was admitted; the docs include a demo-capture catalogue instead.
+- 2026-08-26 [CODE] Founding-partner/account audit: `OPERATOR_INVITE_CODES` is a reusable comma-separated environment allow-list used only before operator registration; it has no expiry, redemption limit, audit record, organisation link, entitlement, or UI. Registration atomically creates one organisation, venue, owner membership, user, and verification outbox event; PostgreSQL tests cover rollback and cross-organisation isolation. Production gaps include case-sensitive SQL email identity despite case-insensitive in-memory behavior, no membership-management/active-venue-switching API, no staff admin plane, and no commercial entitlement/billing model.
+- 2026-08-26 [TOOL] Pull/review verification: exact Python pins passed `pip check` and 168 in-memory tests with 44 PostgreSQL-only skips; Pillow upload tests passed 15/15; exact web Sentry 10.70.0 production build passed (481 modules, 336.04 kB); exact mobile Reanimated 4.1.7 TypeScript and Expo SDK checks passed; `git diff --check` clean. PostgreSQL was not rerun because the incoming range has no schema change; FastAPI 0.141.1/Starlette 1.6.0 emits a non-blocking TestClient `httpx` deprecation warning.
 - 2026-08-24 [TOOL] Dependabot triage: 26 PRs (three waves) reviewed against CI and Expo SDK 54 `bundledNativeModules.json`; 11 bumps landed on `main` (uvicorn 0.52.4, alembic 1.19.1, pytest 9.1.1, boto3 1.43.77, sqlalchemy 2.0.52, pydantic 2.13.4, python-multipart 0.0.32, python-dotenv 1.2.3, fastapi 0.141.1, @sentry/react 10.70.0, react-native-reanimated 4.1.7), 15 closed; the full pinned set passed 168 in-memory tests together locally; `.github/dependabot.yml` ignore rules now exclude Expo-pinned packages, web-toolchain majors, bcrypt and Docker Python; `gh` CLI 2.98.0 installed and authenticated on this PC.
 - 2026-08-24 [TOOL] Pillow slice verification on the second PC (miniconda Python 3.13): in-memory suite 168 passed + 44 PostgreSQL skips; 7 new image-processing tests cover EXIF stripping, PNG alpha/text-chunk removal, WebP round-trip, 2048px downscale, garbage-after-magic rejection, decompression-bomb header rejection and unsupported-format rejection; PostgreSQL leg not re-run (no schema change). A stray untracked `apps/api/nul` file that broke `update-context.ps1` was deleted.
 - 2026-08-24 [USER] Repository-wide handoff requested: commit all legitimate source, client, migration, tests, deployment, documentation and generated context changes for continuation on another PC; exclude machine-only caches and secrets.
@@ -138,5 +148,3 @@
 - 2026-08-23 [TOOL] Recovery client verification: web production build passed (446 modules, 326.99 kB JS), mobile TypeScript and Python compileall passed, diff check was clean, all touched code files remain below 300 lines, and the local PostgreSQL server was stopped.
 - 2026-08-22 [TOOL] Phase 2B migration verification passed SQLite legacy backfill/downgrade, PostgreSQL 021-to-020-to-021, and a complete PostgreSQL base-to-head rebuild through revision 021.
 - 2026-08-22 [TOOL] Phase 2B final verification: PostgreSQL 129 passed, in-memory 90 passed + 20 PostgreSQL skips, web production build 435 modules, mobile TypeScript clean; all touched code modules are below 300 lines.
-- 2026-08-22 [TOOL] Phase 3 PostgreSQL verification: 134 passed; migration 022 reverses to 021 and the complete chain rebuilds successfully from base through 022.
-- 2026-08-22 [TOOL] Phase 3 lightweight/client verification: in-memory 91 passed + 24 PostgreSQL skips; web production build passed (438 modules, 315.27 kB JS); mobile TypeScript passed; all touched code files are at most 300 lines.
