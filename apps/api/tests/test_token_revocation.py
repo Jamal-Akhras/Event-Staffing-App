@@ -1,12 +1,9 @@
-"""Tests for JWT revocation and the logout endpoint."""
-
 from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from jose import JWTError
 
-from apps.api.src.auth.jwt import create_access_token, decode_access_token, revoke_access_token
+from apps.api.src.auth.jwt import JWTError, create_access_token, decode_access_token, revoke_access_token
 from apps.api.src.auth.token_denylist import get_token_denylist
 from apps.api.src.deps import get_user_repo, get_worker_profile_repo
 from apps.api.src.main import app

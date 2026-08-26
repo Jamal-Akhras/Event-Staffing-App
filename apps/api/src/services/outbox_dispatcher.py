@@ -13,6 +13,7 @@ from apps.api.src.db.notification_models import (
     NotificationDeliveryModel,
     NotificationModel,
     OutboxEventModel,
+    PushTokenModel,
 )
 from apps.api.src.services.email import Email, EmailTransport, get_email_transport
 from apps.api.src.services.expo_push import send_expo_push
@@ -151,8 +152,8 @@ def _deliver(
     email_transport: EmailTransport,
 ) -> None:
     with session_factory() as session:
-        delivery = session.get(NotificationDeliveryModel, delivery_id)
-        if delivery is None or delivery.status != "pending" or delivery.locked_by != worker_id:
+        delivery = _claimed_delivery(session, delivery_id, worker_id)
+        if delivery is None:
             return
         event = session.get(OutboxEventModel, delivery.event_id)
         if event is None:
@@ -173,8 +174,18 @@ def _deliver(
         email_transport.send(Email(recipient_id, content["subject"], content["body"]))
     elif channel == "push":
         content = payload["notification"]
-        send_expo_push(tokens, content["title"], content["body"], content.get("action") or {})
+        dead_tokens = send_expo_push(tokens, content["title"], content["body"], content.get("action") or {})
+        if dead_tokens:
+            _revoke_push_tokens(session_factory, dead_tokens)
     _mark_delivery_success(session_factory, delivery_id, worker_id)
+
+
+def _revoke_push_tokens(session_factory: sessionmaker, tokens: list[str]) -> None:
+    with session_factory() as session, session.begin():
+        session.query(PushTokenModel).filter(
+            PushTokenModel.token.in_(tokens),
+            PushTokenModel.revoked_at.is_(None),
+        ).update({"revoked_at": utc_now()}, synchronize_session=False)
 
 
 def _deliver_in_app(
@@ -186,8 +197,8 @@ def _deliver_in_app(
     payload: dict,
 ) -> None:
     with session_factory() as session, session.begin():
-        delivery = session.get(NotificationDeliveryModel, delivery_id)
-        if delivery is None or delivery.status != "pending" or delivery.locked_by != worker_id:
+        delivery = _claimed_delivery(session, delivery_id, worker_id)
+        if delivery is None:
             return
         existing = (
             session.query(NotificationModel.notification_id)
@@ -218,9 +229,16 @@ def _deliver_in_app(
 
 def _mark_delivery_success(session_factory: sessionmaker, delivery_id: str, worker_id: str) -> None:
     with session_factory() as session, session.begin():
-        delivery = session.get(NotificationDeliveryModel, delivery_id)
-        if delivery and delivery.status == "pending" and delivery.locked_by == worker_id:
+        delivery = _claimed_delivery(session, delivery_id, worker_id)
+        if delivery is not None:
             _mark_delivered(delivery)
+
+
+def _claimed_delivery(session, delivery_id: str, worker_id: str) -> NotificationDeliveryModel | None:
+    delivery = session.get(NotificationDeliveryModel, delivery_id)
+    if delivery is None or delivery.status != "pending" or delivery.locked_by != worker_id:
+        return None
+    return delivery
 
 
 def _mark_delivered(delivery: NotificationDeliveryModel) -> None:
@@ -236,11 +254,7 @@ def _record_event_failure(session_factory: sessionmaker, event_id: str, worker_i
         event = session.get(OutboxEventModel, event_id)
         if event is None or event.locked_by != worker_id:
             return
-        event.attempt_count += 1
-        event.last_error = str(exc)[:1000]
-        event.locked_at = None
-        event.locked_by = None
-        if event.attempt_count >= MAX_ATTEMPTS:
+        if _release_with_failure(event, exc):
             event.dead_lettered_at = utc_now()
         else:
             event.available_at = utc_now() + _retry_delay(event.attempt_count)
@@ -256,14 +270,18 @@ def _record_delivery_failure(
         delivery = session.get(NotificationDeliveryModel, delivery_id)
         if delivery is None or delivery.locked_by != worker_id:
             return
-        delivery.attempt_count += 1
-        delivery.last_error = str(exc)[:1000]
-        delivery.locked_at = None
-        delivery.locked_by = None
-        if delivery.attempt_count >= MAX_ATTEMPTS:
+        if _release_with_failure(delivery, exc):
             delivery.status = "dead_letter"
         else:
             delivery.next_attempt_at = utc_now() + _retry_delay(delivery.attempt_count)
+
+
+def _release_with_failure(row, exc: Exception) -> bool:
+    row.attempt_count += 1
+    row.last_error = str(exc)[:1000]
+    row.locked_at = None
+    row.locked_by = None
+    return row.attempt_count >= MAX_ATTEMPTS
 
 
 def _retry_delay(attempt_count: int) -> timedelta:

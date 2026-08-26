@@ -3,9 +3,8 @@ from __future__ import annotations
 from dataclasses import replace
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from jose import JWTError
 
-from apps.api.src.auth.jwt import create_reset_token, decode_reset_token
+from apps.api.src.auth.jwt import JWTError, create_reset_token, decode_reset_token
 from apps.api.src.auth.password import hash_password
 from apps.api.src.auth.schemas import (
     ForgotPasswordRequest,

@@ -5,9 +5,6 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    ignore:
-      # bcrypt 5 removes the API passlib 1.7.4 relies on; stays at 4.0.1 until passlib is replaced.
-      - dependency-name: bcrypt
   - package-ecosystem: npm
     directory: /apps/web
     schedule:
