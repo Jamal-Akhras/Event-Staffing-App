@@ -3,13 +3,14 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 
 from apps.api.src import main
-from apps.api.src.deps import get_application_repo, get_booking_repo, get_message_repo, get_shift_repo
+from apps.api.src.deps import get_application_repo, get_booking_charge_repo, get_booking_repo, get_booking_transition_repo, get_message_repo, get_shift_repo
 from apps.api.src.models.application import Application
 from apps.api.src.models.shift import Shift
 from apps.api.src.repositories.in_memory_application_repository import InMemoryApplicationRepository
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
 from apps.api.src.repositories.in_memory_message_repository import InMemoryMessageRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
+from apps.api.src.repository_dependencies import shared_booking_charge_repository, shared_booking_transition_repository
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
 
@@ -76,6 +77,8 @@ def _client() -> TestClient:
     main.app.dependency_overrides[get_application_repo] = lambda: application_repo
     main.app.dependency_overrides[get_message_repo] = lambda: message_repo
     main.app.dependency_overrides[get_booking_repo] = lambda: booking_repo
+    main.app.dependency_overrides[get_booking_transition_repo] = shared_booking_transition_repository
+    main.app.dependency_overrides[get_booking_charge_repo] = shared_booking_charge_repository
     return TestClient(main.app)
 
 

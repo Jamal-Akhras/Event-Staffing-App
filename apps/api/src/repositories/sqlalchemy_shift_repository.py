@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
@@ -53,6 +55,23 @@ class SqlAlchemyShiftRepository:
             .limit(limit)
             .all()
         )
+        return [_to_domain(row) for row in rows]
+
+    def list_in_range(self, account_id: str, start: datetime, end: datetime) -> list[Shift]:
+        rows = (
+            self._session.query(ShiftModel)
+            .filter(ShiftModel.account_id == account_id)
+            .filter(ShiftModel.start_time >= start)
+            .filter(ShiftModel.start_time < end)
+            .order_by(ShiftModel.start_time)
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
+    def list_by_ids(self, shift_ids: list[str]) -> list[Shift]:
+        if not shift_ids:
+            return []
+        rows = self._session.query(ShiftModel).filter(ShiftModel.shift_id.in_(shift_ids)).all()
         return [_to_domain(row) for row in rows]
 
     def list_by_worker(self, worker_id: str, limit: int = 50) -> list[Shift]:

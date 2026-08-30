@@ -9,14 +9,12 @@ import { StatRow } from "./dashboard/StatRow";
 import { TonightCard } from "./dashboard/TonightCard";
 import { WeekStrip } from "./dashboard/WeekStrip";
 import {
-  attendance,
-  buildCoverageDays,
   completedCounts,
+  coverageDays,
   describeOldest,
   describeOpenSeats,
-  liveShifts,
-  pendingApplications,
   regulars,
+  sortedPending,
   tonightRows,
 } from "./dashboard/dashboardUtils";
 import { useDecideApplication, useOverviewData } from "./dashboard/useOverviewData";
@@ -26,7 +24,8 @@ import "./dashboard/OverviewCards.css";
 export function DashboardPage() {
   const { toast } = useToast();
   const venue = useVenue();
-  const data = useOverviewData();
+  const now = new Date();
+  const data = useOverviewData(now);
   const decide = useDecideApplication(
     (message) => toast({ type: "success", message }),
     (message) => toast({ type: "error", message })
@@ -35,19 +34,18 @@ export function DashboardPage() {
   if (data.error) {
     return <ErrorCard message={data.error.message} />;
   }
-  if (data.loading || venue.isPending) {
+  if (data.loading || venue.isPending || !data.overview) {
     return <OverviewSkeleton />;
   }
 
-  const now = new Date();
-  const shifts = liveShifts(data.shifts);
-  const days = buildCoverageDays(shifts, now);
-  const pending = pendingApplications(data.applications);
-  const turnout = attendance(data.bookings, now);
-  const tonight = tonightRows(shifts, data.bookings, data.workers, now);
+  const overview = data.overview;
+  const days = coverageDays(overview.days);
+  const pending = sortedPending(data.pending);
+  const turnout = overview.attendance;
+  const tonight = tonightRows(overview.tonight, data.workers);
   const tonightMissing = tonight.reduce((sum, row) => sum + row.missing, 0);
   const nextGap = days.slice(1).find((day) => day.openSeats > 0);
-  const openSeats = days.reduce((sum, day) => sum + day.openSeats, 0);
+  const openSeats = overview.open_seats;
 
   const lead = tonight.length === 0
     ? "No shifts tonight."
@@ -70,8 +68,8 @@ export function DashboardPage() {
           },
           {
             label: "Applications to review",
-            value: String(pending.length),
-            note: describeOldest(pending, now),
+            value: String(overview.pending_applications.count),
+            note: describeOldest(overview.pending_applications.oldest_created_at, now),
           },
           {
             label: "Regulars turned up",
@@ -90,13 +88,13 @@ export function DashboardPage() {
         <div className="ov-column">
           <DecisionList
             pending={pending}
-            shifts={shifts}
+            shifts={overview.tonight.map((row) => row.shift)}
             workers={data.workers}
-            completedCounts={completedCounts(data.bookings)}
+            completedCounts={completedCounts(data.activity)}
             busyId={decide.isPending ? decide.variables?.applicationId ?? null : null}
             onDecide={(applicationId, action) => decide.mutate({ applicationId, action })}
           />
-          <RegularsCard regulars={regulars(data.bookings, data.workers)} />
+          <RegularsCard regulars={regulars(data.activity, data.workers)} />
         </div>
       </div>
     </div>

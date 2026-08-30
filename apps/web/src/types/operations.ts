@@ -83,3 +83,13 @@ export type VenueRatingSummary = {
   avg_stars: number | null;
   total_ratings: number;
 };
+
+export type CompletedShift = {
+  booking_id: string;
+  shift_id: string;
+  worker_id: string;
+  start_time: string;
+  role: string;
+  location: string;
+  operator_rating: number | null;
+};

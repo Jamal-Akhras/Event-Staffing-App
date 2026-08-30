@@ -1,4 +1,4 @@
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from apps.api.src.auth.actor import ActorContext, ActorRole
@@ -46,6 +46,7 @@ async def get_current_user(
 
 
 async def get_actor_context(
+    request: Request,
     x_actor_role: str | None = Header(default=None),
     x_actor_id: str | None = Header(default=None),
     x_account_id: str | None = Header(default=None),
@@ -58,14 +59,14 @@ async def get_actor_context(
         role = _role_of(x_actor_role)
         if not x_actor_id:
             raise HTTPException(status_code=401, detail="X-Actor-Id header is required.")
-        return ActorContext(
+        return _remember(request, ActorContext(
             user_id=x_actor_id,
             role=role,
             account_id=x_account_id or (x_actor_id if role == ActorRole.OPERATOR else None),
             worker_profile_id=x_actor_id if role == ActorRole.WORKER else None,
             organisation_id=x_organisation_id,
             email_verified=True,
-        )
+        ))
 
     user = _authenticated_user(credentials, user_repo)
     role = _role_of(user.role)
@@ -79,14 +80,19 @@ async def get_actor_context(
         if organisation_repo.get_membership(venue.organisation_id, user.user_id) is None:
             raise HTTPException(status_code=403, detail="Operator is not a member of this organisation.")
         organisation_id = venue.organisation_id
-    return ActorContext(
+    return _remember(request, ActorContext(
         user_id=user.user_id,
         role=role,
         account_id=user.account_id,
         worker_profile_id=user.worker_profile_id,
         organisation_id=organisation_id,
         email_verified=user.email_verified,
-    )
+    ))
+
+
+def _remember(request: Request, actor: ActorContext) -> ActorContext:
+    request.state.actor = actor
+    return actor
 
 
 def require_verified_actor(actor: ActorContext, action: str) -> None:

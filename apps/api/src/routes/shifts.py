@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
@@ -33,6 +34,8 @@ from apps.api.src.services.shift_lifecycle_service import ShiftLifecycleService
 from apps.api.src.unit_of_work import RequestUnitOfWork
 
 router = APIRouter(tags=["shifts"])
+
+MAX_SHIFT_RANGE = timedelta(days=186)
 
 
 @router.post("/shifts", response_model=ShiftResponse, responses={400: {"model": ErrorResponse}})
@@ -74,12 +77,25 @@ def list_shifts(
     limit: int = Query(default=50, ge=1, le=100),
     role: str | None = None,
     location: str | None = None,
+    starts_from: datetime | None = Query(default=None),
+    starts_before: datetime | None = Query(default=None),
     service: ShiftService = Depends(get_shift_service),
     actor: ActorContext = Depends(get_actor_context),
 ) -> list[ShiftResponse]:
     require_role(actor.role, {ActorRole.OPERATOR, ActorRole.WORKER})
+    if (starts_from is None) != (starts_before is None):
+        raise HTTPException(status_code=400, detail="Provide both starts_from and starts_before, or neither.")
+    if starts_from and starts_before and starts_before - starts_from > MAX_SHIFT_RANGE:
+        raise HTTPException(status_code=400, detail="Shift ranges are limited to 186 days.")
     account_id = actor.account_id if actor.role == ActorRole.OPERATOR else None
-    shifts = service.list_shifts(limit, role, location, account_id=account_id)
+    shifts = service.list_shifts(
+        limit,
+        role,
+        location,
+        account_id=account_id,
+        starts_from=starts_from,
+        starts_before=starts_before,
+    )
     if actor.role == ActorRole.WORKER:
         shifts = [item for item in shifts if item.status == "open"]
     return [_shift_view(item) for item in shifts]

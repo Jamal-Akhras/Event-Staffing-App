@@ -4,8 +4,9 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from apps.api.src import main
-from apps.api.src.deps import get_booking_repo
+from apps.api.src.deps import get_booking_charge_repo, get_booking_repo, get_booking_transition_repo
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
+from apps.api.src.repository_dependencies import shared_booking_charge_repository, shared_booking_transition_repository
 from packages.domain.src.booking import Booking
 
 OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-1"}
@@ -41,6 +42,8 @@ def _client() -> TestClient:
         )
     )
     main.app.dependency_overrides[get_booking_repo] = lambda: repo
+    main.app.dependency_overrides[get_booking_transition_repo] = shared_booking_transition_repository
+    main.app.dependency_overrides[get_booking_charge_repo] = shared_booking_charge_repository
     main.app.dependency_overrides[get_shift_repo] = lambda: shift_repo
     return TestClient(main.app)
 

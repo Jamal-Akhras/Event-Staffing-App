@@ -4,6 +4,9 @@ from datetime import UTC, datetime, timedelta
 
 from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
+from apps.api.src.repositories.in_memory_booking_transition_repository import (
+    InMemoryBookingTransitionRepository,
+)
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 from apps.api.src.repositories.in_memory_worker_profile_repository import (
     InMemoryWorkerProfileRepository,
@@ -75,6 +78,9 @@ def test_scheduler_run_no_show_sweep_end_to_end(monkeypatch):
     monkeypatch.setattr(job, "SqlAlchemyBookingRepository", lambda session: booking_repo)
     monkeypatch.setattr(job, "SqlAlchemyWorkerProfileRepository", lambda session: worker_repo)
     monkeypatch.setattr(job, "SqlAlchemyShiftRepository", lambda session: shift_repo)
+    monkeypatch.setattr(
+        job, "SqlAlchemyBookingTransitionRepository", lambda session: InMemoryBookingTransitionRepository()
+    )
 
     scheduler.run_no_show_sweep()
 
@@ -93,6 +99,9 @@ def test_job_run_no_show_sweep_end_to_end(monkeypatch):
     monkeypatch.setattr(job, "SqlAlchemyBookingRepository", lambda session: booking_repo)
     monkeypatch.setattr(job, "SqlAlchemyWorkerProfileRepository", lambda session: worker_repo)
     monkeypatch.setattr(job, "SqlAlchemyShiftRepository", lambda session: shift_repo)
+    monkeypatch.setattr(
+        job, "SqlAlchemyBookingTransitionRepository", lambda session: InMemoryBookingTransitionRepository()
+    )
 
     count = job.run(now)
 

@@ -1,3 +1,5 @@
+import { appVersion, sessionId } from "./session";
+
 const envBase = import.meta.env.VITE_API_BASE ?? "";
 export const API_BASE = envBase || (import.meta.env.DEV ? "http://127.0.0.1:8001" : "");
 
@@ -48,7 +50,14 @@ export function getAuthHeaders(): Record<string, string> {
   return {
     Authorization: `Bearer ${getAuthToken()}`,
     "Content-Type": "application/json",
+    ...clientHeaders(),
   };
+}
+
+export function clientHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "X-Client": "web", "X-Session-Id": sessionId() };
+  if (appVersion) headers["X-App-Version"] = appVersion;
+  return headers;
 }
 
 export async function fetchJson<T>(path: string): Promise<T> {

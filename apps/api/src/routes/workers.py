@@ -6,13 +6,22 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException
 
 from apps.api.src.auth import ActorContext, ActorRole, get_actor_context, require_role, require_worker_owner
-from apps.api.src.deps import get_booking_repo, get_market_repo, get_shift_repo, get_worker_profile_repo
+from apps.api.src.deps import (
+    get_booking_charge_repo,
+    get_booking_repo,
+    get_market_repo,
+    get_organisation_repo,
+    get_shift_repo,
+    get_worker_profile_repo,
+)
 from apps.api.src.datetime_utils import utc_now
 from apps.api.src.helpers import _get_worker_profile, _now_or, _worker_private_view, _worker_public_view
 from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.money import money
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.market_repository import MarketRepository
+from apps.api.src.repositories.booking_charge_repository import BookingChargeRepository
+from apps.api.src.repositories.organisation_repository import OrganisationRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
 from apps.api.src.schemas import (
@@ -22,10 +31,17 @@ from apps.api.src.schemas import (
     WorkerProfilePrivateResponse,
     WorkerProfileUpdateRequest,
 )
+from apps.api.src.services.billing_math import worked_hours
+from apps.api.src.services.shift_summary import summarise_shifts
 from packages.domain.src.booking_state import BookingState
 
 router = APIRouter(tags=["workers"])
 _EARNING_STATES = {BookingState.PAID, BookingState.APPROVED, BookingState.CHECKED_OUT}
+_PERIOD_WINDOWS = {
+    "week": timedelta(days=7),
+    "month": timedelta(days=30),
+    "year": timedelta(days=365),
+}
 
 
 @router.get("/workers", response_model=list[WorkerProfilePrivateResponse])
@@ -62,52 +78,63 @@ def get_worker_earnings(
     period: str = "week",
     repo: BookingRepository = Depends(get_booking_repo),
     shift_repo: ShiftRepository = Depends(get_shift_repo),
+    charge_repo: BookingChargeRepository = Depends(get_booking_charge_repo),
+    venues: OrganisationRepository = Depends(get_organisation_repo),
     actor: ActorContext = Depends(get_actor_context),
 ) -> EarningsSummaryResponse:
     require_worker_owner(actor, worker_id)
-    worker_bookings = repo.list_by_worker(worker_id, 500)
-    shifts_by_id = {shift.shift_id: shift for shift in shift_repo.list_by_worker(worker_id, 500)}
+    cutoff = utc_now() - _PERIOD_WINDOWS.get(period, _PERIOD_WINDOWS["week"])
+    bookings = [
+        booking
+        for booking in repo.list_by_worker(worker_id, 500)
+        if booking.state in _EARNING_STATES and booking.start_time >= cutoff
+    ]
+    charges = {charge.booking_id: charge for charge in charge_repo.list_for_worker(worker_id)}
+    summaries = summarise_shifts([booking.shift_id for booking in bookings], shift_repo, venues)
 
-    now = utc_now()
-    if period == "month":
-        cutoff = now - timedelta(days=30)
-    elif period == "year":
-        cutoff = now - timedelta(days=365)
-    else:
-        cutoff = now - timedelta(days=7)
+    entries = [
+        _earnings_entry(booking, charges.get(booking.booking_id), summaries.get(booking.shift_id))
+        for booking in bookings
+    ]
+    entries = [entry for entry in entries if entry is not None]
+    entries.sort(key=lambda entry: entry.start_time, reverse=True)
 
-    entries: list[EarningsEntryResponse] = []
-
-    for booking in worker_bookings:
-        if booking.state not in _EARNING_STATES or booking.start_time < cutoff:
-            continue
-        shift = shifts_by_id.get(booking.shift_id)
-        if shift is None:
-            continue
-        hours_value = Decimal(str((booking.end_time - booking.start_time).total_seconds())) / Decimal("3600")
-        hours = round(float(hours_value), 2)
-        entries.append(EarningsEntryResponse(
-            booking_id=booking.booking_id,
-            shift_id=booking.shift_id,
-            role=shift.role,
-            location=shift.location,
-            start_time=booking.start_time,
-            end_time=booking.end_time,
-            hours=hours,
-            pay_rate=shift.pay_rate,
-            total=money(hours_value * shift.pay_rate),
-            status="paid" if booking.state == BookingState.PAID else "pending",
-            currency=shift.currency,
-        ))
-
-    entries.sort(key=lambda e: e.start_time, reverse=True)
-    summary_currency = entries[0].currency if entries else "GBP"
     return EarningsSummaryResponse(
         period=period,
         total_paid=money(sum((e.total for e in entries if e.status == "paid"), Decimal("0"))),
         total_pending=money(sum((e.total for e in entries if e.status == "pending"), Decimal("0"))),
-        currency=summary_currency,
+        currency=entries[0].currency if entries else "GBP",
         entries=entries,
+    )
+
+
+def _earnings_entry(booking, charge, summary) -> EarningsEntryResponse | None:
+    if charge is None and summary is None:
+        return None
+    status = "paid" if booking.state == BookingState.PAID else "pending"
+    if charge is not None:
+        hours, rate, total, currency = charge.hours, charge.pay_rate, charge.wages, charge.currency
+        role, location = charge.role, summary.location if summary else ""
+    else:
+        hours = worked_hours(booking)
+        rate = summary.pay_rate
+        total = money(hours * rate)
+        currency = summary.currency
+        role, location = summary.role, summary.location
+    return EarningsEntryResponse(
+        booking_id=booking.booking_id,
+        shift_id=booking.shift_id,
+        role=role,
+        location=location,
+        start_time=booking.start_time,
+        end_time=booking.end_time,
+        hours=round(float(hours), 2),
+        pay_rate=rate,
+        total=total,
+        status=status,
+        currency=currency,
+        venue_name=summary.venue_name if summary else None,
+        frozen=charge is not None,
     )
 
 

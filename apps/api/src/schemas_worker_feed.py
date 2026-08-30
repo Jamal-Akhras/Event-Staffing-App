@@ -18,5 +18,6 @@ class WorkerFeedItemResponse(ShiftResponse):
 
 class WorkerFeedPageResponse(BaseModel):
     items: list[WorkerFeedItemResponse]
+    slate_id: str
     next_cursor: str | None
     market: MarketResponse

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from apps.api.src.schemas_shift_summary import ShiftSummaryResponse
 from apps.api.src.validation_types import MoneyAmount, UtcTimestamp
 
 
@@ -34,6 +35,7 @@ class BookingResponse(BaseModel):
     payment_recorded_by_user_id: str | None = None
     check_in_code: str | None = None
     completion_code: str | None = None
+    shift: ShiftSummaryResponse | None = None
 
 
 class ShiftCreateRequest(BaseModel):
@@ -106,6 +108,7 @@ class ApplicationResponse(BaseModel):
     decided_at: UtcTimestamp | None = None
     withdrawn_at: UtcTimestamp | None = None
     withdrawal_reason: str | None = None
+    shift: ShiftSummaryResponse | None = None
 
 
 class ApplicationMessageHistoryResponse(BaseModel):
@@ -269,6 +272,8 @@ class EarningsEntryResponse(BaseModel):
     total: MoneyAmount
     status: str
     currency: str = "GBP"
+    venue_name: str | None = None
+    frozen: bool = False
 
 
 class EarningsSummaryResponse(BaseModel):

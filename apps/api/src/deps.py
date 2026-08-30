@@ -18,6 +18,9 @@ from apps.api.src.repository_dependencies import (
     get_application_message_history_repo,
     get_application_repo,
     get_booking_repo,
+    get_booking_charge_repo,
+    get_booking_transition_repo,
+    get_event_repo,
     get_message_repo,
     get_market_repo,
     get_notification_repo,
@@ -38,7 +41,14 @@ from apps.api.src.repository_dependencies import (
 from apps.api.src.config import get_platform_fee_percent
 from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
 from apps.api.src.services.application_service import ApplicationService
+from apps.api.src.repositories.booking_charge_repository import BookingChargeRepository
+from apps.api.src.repositories.booking_transition_repository import BookingTransitionRepository
+from apps.api.src.repositories.event_repository import EventRepository
 from apps.api.src.services.billing_service import BillingService
+from apps.api.src.services.charge_recorder import ChargeRecorder
+from apps.api.src.services.venue_analytics_service import VenueAnalyticsService
+from apps.api.src.services.venue_insights_service import VenueInsightsService
+from apps.api.src.services.event_recorder import EventRecorder
 from apps.api.src.services.booking_lifecycle_service import BookingLifecycleService
 from apps.api.src.services.message_service import MessageService
 from apps.api.src.services.shift_service import ShiftService
@@ -58,6 +68,10 @@ __all__ = [
     "get_billing_service",
     "get_booking_lifecycle_service",
     "get_booking_repo",
+    "get_booking_charge_repo",
+    "get_booking_transition_repo",
+    "get_event_repo",
+    "get_event_recorder",
     "get_message_repo",
     "get_message_service",
     "get_idempotency_service",
@@ -83,17 +97,29 @@ __all__ = [
 ]
 
 
+def get_event_recorder(repo: EventRepository = Depends(get_event_repo)) -> EventRecorder:
+    return EventRecorder(repo)
+
+
 def get_shift_service(repo: ShiftRepository = Depends(get_shift_repo)) -> ShiftService:
     return ShiftService(repo)
 
 
 def get_billing_service(
     booking_repo: BookingRepository = Depends(get_booking_repo),
+    charge_repo: BookingChargeRepository = Depends(get_booking_charge_repo),
+    partner_code_repo: PartnerCodeRepository = Depends(get_partner_code_repo),
+) -> BillingService:
+    return BillingService(booking_repo, charge_repo, partner_code_repo, get_platform_fee_percent())
+
+
+def get_charge_recorder(
+    charge_repo: BookingChargeRepository = Depends(get_booking_charge_repo),
     shift_repo: ShiftRepository = Depends(get_shift_repo),
     worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     partner_code_repo: PartnerCodeRepository = Depends(get_partner_code_repo),
-) -> BillingService:
-    return BillingService(booking_repo, shift_repo, worker_repo, partner_code_repo, get_platform_fee_percent())
+) -> ChargeRecorder:
+    return ChargeRecorder(charge_repo, shift_repo, worker_repo, partner_code_repo, get_platform_fee_percent())
 
 
 def get_idempotency_service(
@@ -126,8 +152,25 @@ def get_booking_lifecycle_service(
     worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     shift_repo: ShiftRepository = Depends(get_shift_repo),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
+    transitions: BookingTransitionRepository = Depends(get_booking_transition_repo),
 ) -> BookingLifecycleService:
-    return BookingLifecycleService(booking_repo, worker_repo, shift_repo, outbox)
+    return BookingLifecycleService(booking_repo, worker_repo, shift_repo, outbox, transitions)
+
+
+def get_venue_insights_service(
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    booking_repo: BookingRepository = Depends(get_booking_repo),
+    application_repo: ApplicationRepository = Depends(get_application_repo),
+) -> VenueInsightsService:
+    return VenueInsightsService(shift_repo, booking_repo, application_repo)
+
+
+def get_venue_analytics_service(
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    booking_repo: BookingRepository = Depends(get_booking_repo),
+    application_repo: ApplicationRepository = Depends(get_application_repo),
+) -> VenueAnalyticsService:
+    return VenueAnalyticsService(shift_repo, booking_repo, application_repo)
 
 
 def get_template_service(

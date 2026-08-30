@@ -8,7 +8,9 @@ from apps.api.src import main
 from apps.api.src.deps import (
     get_application_decision_repo,
     get_application_repo,
+    get_booking_charge_repo,
     get_booking_repo,
+    get_booking_transition_repo,
     get_notification_repo,
     get_outbox_publisher,
     get_shift_repo,
@@ -20,6 +22,7 @@ from apps.api.src.repositories.in_memory_application_repository import InMemoryA
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
 from apps.api.src.repositories.in_memory_notification_repository import InMemoryNotificationRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
+from apps.api.src.repository_dependencies import shared_booking_charge_repository, shared_booking_transition_repository
 from apps.api.src.services.email import LoggingEmailTransport
 from apps.api.src.services.outbox_publisher import InMemoryOutboxPublisher
 from packages.domain.src.booking_state import BookingState
@@ -41,6 +44,8 @@ def _client():
     decisions = InMemoryApplicationDecisionRepository(applications, bookings, shifts)
     main.app.dependency_overrides[get_application_repo] = lambda: applications
     main.app.dependency_overrides[get_booking_repo] = lambda: bookings
+    main.app.dependency_overrides[get_booking_transition_repo] = shared_booking_transition_repository
+    main.app.dependency_overrides[get_booking_charge_repo] = shared_booking_charge_repository
     main.app.dependency_overrides[get_shift_repo] = lambda: shifts
     main.app.dependency_overrides[get_notification_repo] = lambda: notifications
     publisher = InMemoryOutboxPublisher(notifications, LoggingEmailTransport())

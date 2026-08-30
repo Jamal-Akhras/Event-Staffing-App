@@ -1,81 +1,292 @@
-.templates-grid {
+.tp-kicker {
+  color: var(--ocean-500);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.tp-run {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  padding: 24px 26px;
+  border: 1px solid rgba(14, 90, 58, 0.24);
+  border-radius: 18px;
+  background: rgba(14, 90, 58, 0.05);
 }
 
-.template-card {
-  display: grid;
-  gap: 16px;
-  border-left: 4px solid var(--ocean-500);
+.tp-run h2 {
+  margin: 4px 0 4px;
+  color: var(--ink-900);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.template-card-header h3 {
-  margin: 0 0 4px;
-  font-size: 1.2rem;
-}
-
-.template-card-header p,
-.template-card-note {
-  margin: 0;
+.tp-run > div > p {
+  margin: 0 0 18px;
+  max-width: 60ch;
   color: var(--ink-500);
-  font-size: 0.9rem;
+  font-size: 14px;
 }
 
-.template-card-meta {
-  display: grid;
-  gap: 8px;
-}
-
-.template-card-note {
-  font-style: italic;
-}
-
-.template-card-actions {
+.tp-fields {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 16px 20px;
 }
 
-.template-card-actions .btn:first-child {
-  flex: 1;
+.tp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.templates-loading {
-  padding: 48px;
-  text-align: center;
+.tp-field-wide {
+  min-width: 240px;
 }
 
-.templates-loading p {
+.tp-field > span {
   color: var(--ink-500);
-  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.template-form-grid {
-  display: grid;
-  gap: 14px;
+.tp-field input,
+.tp-field select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--paper-0);
+  color: var(--ink-900);
+  font: inherit;
 }
 
-.template-form-grid.two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.tp-field select {
+  appearance: none;
+  padding-right: 32px;
+  background: var(--paper-0) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2.5'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 12px center;
 }
 
-.template-form-grid.three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.tp-field input:focus,
+.tp-field select:focus {
+  outline: none;
+  border-color: rgba(14, 90, 58, 0.55);
+  box-shadow: var(--focus-ring);
 }
 
-.template-notes {
-  border: 1px solid rgba(15, 23, 32, 0.14);
+.tp-days {
+  display: flex;
+  gap: 6px;
+}
+
+.tp-days button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--paper-0);
+  color: var(--ink-500);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tp-days button.on {
+  border-color: transparent;
+  background: var(--ocean-500);
+  color: #fffaf2;
+}
+
+.tp-preview {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
   border-radius: 14px;
-  font-family: inherit;
-  font-size: 0.95rem;
-  padding: 12px 14px;
-  resize: vertical;
+  background: var(--ocean-500);
+  color: #fffaf2;
 }
 
-@media (max-width: 760px) {
-  .templates-grid,
-  .template-form-grid.two,
-  .template-form-grid.three {
+.tp-preview .tp-kicker {
+  color: rgba(255, 250, 242, 0.6);
+}
+
+.tp-preview b {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.tp-preview p {
+  margin: 0;
+  color: rgba(255, 250, 242, 0.74);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tp-warn {
+  color: var(--sun-300) !important;
+  font-weight: 600;
+}
+
+.tp-go {
+  margin-top: 6px;
+  border-color: transparent;
+  background: #fffaf2;
+  color: var(--ocean-500);
+}
+
+.tp-go:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.tp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 18px;
+}
+
+.tp-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: rgba(255, 252, 247, 0.94);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tp-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+
+.tp-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 22px 14px;
+}
+
+.tp-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(14, 90, 58, 0.1);
+  color: var(--ocean-500);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.tp-card-top h3 {
+  margin: 0 0 2px;
+  color: var(--ink-900);
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.tp-card-top p {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: 13px;
+}
+
+.tp-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 22px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--border-soft);
+  overflow: hidden;
+}
+
+.tp-facts div {
+  padding: 10px 12px;
+  background: var(--paper-0);
+}
+
+.tp-facts span {
+  display: block;
+  color: var(--ink-300);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tp-facts b {
+  color: var(--ink-900);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-note {
+  margin: 14px 22px 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--paper-2);
+  color: var(--ink-500);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.tp-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding: 16px 22px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.tp-cost {
+  color: var(--ink-700);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tp-cost em {
+  color: var(--ink-300);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.tp-card-acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.tp-delete {
+  color: var(--ink-300);
+}
+
+.tp-delete:hover {
+  color: #b42318;
+}
+
+@media (max-width: 960px) {
+  .tp-run {
     grid-template-columns: 1fr;
   }
 }

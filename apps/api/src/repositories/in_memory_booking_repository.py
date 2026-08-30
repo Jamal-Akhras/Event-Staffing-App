@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Dict
 
+from apps.api.src.models.insights import AttendanceSummary, WorkerActivity
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
+
+COMPLETED_STATES = (BookingState.CHECKED_OUT, BookingState.APPROVED, BookingState.PAID)
+BROKEN_STATES = (BookingState.NO_SHOW, BookingState.CANCELLED_BY_WORKER)
 
 
 class InMemoryBookingRepository:
@@ -63,6 +68,49 @@ class InMemoryBookingRepository:
 
     def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Booking]:
         return [booking for booking in self._bookings.values() if booking.shift_id == shift_id]
+
+    def list_for_shifts(self, shift_ids: list[str]) -> list[Booking]:
+        wanted = set(shift_ids)
+        items = [booking for booking in self._bookings.values() if booking.shift_id in wanted]
+        items.sort(key=lambda item: item.start_time)
+        return items
+
+    def attendance_summary(self, account_id: str, since: datetime, until: datetime) -> AttendanceSummary:
+        window = [
+            booking
+            for booking in self._account_bookings(account_id)
+            if since <= booking.start_time <= until
+        ]
+        return AttendanceSummary(
+            completed=sum(1 for booking in window if booking.state in COMPLETED_STATES),
+            no_shows=sum(1 for booking in window if booking.state == BookingState.NO_SHOW),
+        )
+
+    def worker_activity(self, account_id: str, broken_since: datetime) -> list[WorkerActivity]:
+        activity: dict[str, list[Booking]] = {}
+        for booking in self._account_bookings(account_id):
+            activity.setdefault(booking.worker_id, []).append(booking)
+        rows = []
+        for worker_id, bookings in activity.items():
+            done = [booking for booking in bookings if booking.state in COMPLETED_STATES]
+            rows.append(
+                WorkerActivity(
+                    worker_id=worker_id,
+                    completed=len(done),
+                    last_worked=max((booking.start_time for booking in done), default=None),
+                    recently_broken=any(
+                        booking.state in BROKEN_STATES and booking.start_time >= broken_since
+                        for booking in bookings
+                    ),
+                )
+            )
+        return sorted(rows, key=lambda row: row.worker_id)
+
+    def _account_bookings(self, account_id: str) -> list[Booking]:
+        if self._shift_repo is None:
+            raise RuntimeError("InMemoryBookingRepository requires a shift repo to aggregate by account.")
+        shift_ids = {shift.shift_id for shift in self._shift_repo.list_for_account(account_id, limit=10_000)}
+        return [booking for booking in self._bookings.values() if booking.shift_id in shift_ids]
 
     def clear(self) -> None:
         self._bookings.clear()

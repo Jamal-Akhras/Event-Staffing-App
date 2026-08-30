@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol
 
+from apps.api.src.models.insights import AttendanceSummary, WorkerActivity
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
 
@@ -44,4 +46,13 @@ class BookingRepository(Protocol):
         ...
 
     def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Booking]:
+        ...
+
+    def list_for_shifts(self, shift_ids: list[str]) -> list[Booking]:
+        ...
+
+    def attendance_summary(self, account_id: str, since: datetime, until: datetime) -> AttendanceSummary:
+        ...
+
+    def worker_activity(self, account_id: str, broken_since: datetime) -> list[WorkerActivity]:
         ...

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Protocol
 
 from apps.api.src.models.application import Application
+from apps.api.src.models.insights import PendingSummary
 
 
 class DuplicateApplicationError(Exception):
@@ -58,4 +59,10 @@ class ApplicationRepository(Protocol):
         ...
 
     def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Application]:
+        ...
+
+    def list_for_shifts(self, shift_ids: list[str]) -> list[Application]:
+        ...
+
+    def pending_summary(self, account_id: str) -> PendingSummary:
         ...

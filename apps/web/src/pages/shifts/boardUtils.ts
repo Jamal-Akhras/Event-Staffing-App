@@ -42,6 +42,12 @@ export function shiftsOn(day: Date, shifts: Shift[]) {
     .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime());
 }
 
+export function nextDay(day: Date) {
+  const next = new Date(day);
+  next.setDate(next.getDate() + 1);
+  return next;
+}
+
 export function shiftsWithin(days: Date[], shifts: Shift[]) {
   return shifts.filter((shift) => days.some((day) => sameDay(day, new Date(shift.start_time))));
 }

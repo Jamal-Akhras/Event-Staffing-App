@@ -32,6 +32,9 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
         "push_tokens",
         "reports",
         "idempotency_records",
+        "events",
+        "booking_transitions",
+        "booking_charges",
     }
     assert expected_tables.issubset(set(inspector.get_table_names()))
 
@@ -89,7 +92,7 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "032"
+        assert version == "036"
 
     command.downgrade(config, "022")
     downgraded_rating_columns = {

@@ -1,0 +1,144 @@
+.pg {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pg-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.pg-head-copy h1 {
+  margin: 0 0 6px;
+  color: var(--ink-900);
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.pg-head-copy p {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.pg-head-copy em {
+  color: var(--ocean-500);
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.pg-head-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.pg-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 280px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--paper-0);
+  color: var(--ink-300);
+}
+
+.pg-search:focus-within {
+  border-color: rgba(14, 90, 58, 0.55);
+  box-shadow: var(--focus-ring);
+}
+
+.pg-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  color: var(--ink-900);
+  font: inherit;
+}
+
+.pg-search button {
+  border: 0;
+  background: none;
+  color: var(--ink-300);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pg-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-strong);
+  overflow-x: auto;
+}
+
+.pg-tabs button {
+  position: relative;
+  height: 40px;
+  padding: 0 14px;
+  border: 0;
+  background: none;
+  color: var(--ink-500);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pg-tabs button.on {
+  color: var(--ocean-500);
+}
+
+.pg-tabs button.on::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ocean-500);
+}
+
+.pg-tabs small {
+  margin-left: 7px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink-700);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pg-tabs button.on small {
+  background: rgba(14, 90, 58, 0.12);
+  color: var(--ocean-500);
+}
+
+@media (max-width: 760px) {
+  .pg-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pg-head-copy h1 {
+    font-size: 27px;
+  }
+
+  .pg-search {
+    width: 100%;
+  }
+}

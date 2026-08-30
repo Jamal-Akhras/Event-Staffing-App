@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from dataclasses import replace
 from uuid import uuid4
 
@@ -50,8 +52,15 @@ class ShiftService:
         role: str | None = None,
         location: str | None = None,
         account_id: str | None = None,
+        starts_from: datetime | None = None,
+        starts_before: datetime | None = None,
     ) -> list[Shift]:
-        items = self._repo.list_for_account(account_id, limit) if account_id else self._repo.list_recent(limit)
+        if account_id and starts_from and starts_before:
+            items = self._repo.list_in_range(account_id, starts_from, starts_before)
+        elif account_id:
+            items = self._repo.list_for_account(account_id, limit)
+        else:
+            items = self._repo.list_recent(limit)
         if role:
             items = [item for item in items if item.role == role]
         if location:

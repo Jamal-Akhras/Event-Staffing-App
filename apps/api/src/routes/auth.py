@@ -12,10 +12,13 @@ from apps.api.src.auth.schemas import (
     UserLoginRequest,
     UserRegisterRequest,
 )
+from apps.api.src.services.durable_events import record_durable
+from apps.api.src.services.event_recorder import EventRecorder
 from apps.api.src.auth.session_tokens import issue_session, resolve_session_context
 from apps.api.src.config import get_bool_env
 from apps.api.src.datetime_utils import utc_now
 from apps.api.src.deps import (
+    get_event_recorder,
     get_market_repo,
     get_organisation_repo,
     get_outbox_publisher,
@@ -185,13 +188,33 @@ def login(
     credentials: UserLoginRequest,
     user_repo: UserRepository = Depends(get_user_repo),
     organisation_repo: OrganisationRepository = Depends(get_organisation_repo),
+    recorder: EventRecorder = Depends(get_event_recorder),
 ) -> TokenResponse:
     user = user_repo.get_by_email(credentials.email)
     if user is None or not verify_password(credentials.password, user.hashed_password):
+        record_durable("auth.login_failed", "auth", subject_type="email", context={"reason": "invalid_credentials"})
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
+        record_durable(
+            "auth.login_failed",
+            "auth",
+            actor_user_id=user.user_id,
+            subject_type="user",
+            subject_id=user.user_id,
+            context={"reason": "inactive"},
+        )
         raise HTTPException(status_code=401, detail="Account is inactive")
     organisation_id, currency = resolve_session_context(user, organisation_repo)
+    recorder.record(
+        "auth.login",
+        "auth",
+        actor_user_id=user.user_id,
+        actor_role=user.role,
+        organisation_id=organisation_id,
+        venue_id=user.account_id,
+        subject_type="user",
+        subject_id=user.user_id,
+    )
     return issue_session(user, organisation_id=organisation_id, currency=currency)
 
 

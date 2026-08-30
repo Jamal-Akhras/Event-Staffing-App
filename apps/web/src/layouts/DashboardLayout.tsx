@@ -5,6 +5,7 @@ import { NotificationBell } from "../components/NotificationBell";
 import { PostShiftRatingPrompt } from "../components/PostShiftRatingPrompt";
 import { VenueRatingBadge } from "../components/VenueRatingBadge";
 import { initials, useVenue, useVenueRating } from "../lib/useVenue";
+import { usePageViews } from "../lib/usePageViews";
 import "./DashboardLayout.css";
 
 const NAV = [
@@ -20,6 +21,7 @@ const NAV = [
 export function DashboardLayout() {
   const location = useLocation();
   const venue = useVenue();
+  usePageViews();
   const [menuOpen, setMenuOpen] = useState(false);
   const venueName = venue.data?.name ?? "Your venue";
   const rating = useVenueRating(venue.data?.venue_id);

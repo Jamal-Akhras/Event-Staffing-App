@@ -1,8 +1,5 @@
-import type { Application, Booking, Shift, WorkerProfile } from "../../types/operations";
-
-const COMPLETED = new Set(["checked_out", "approved", "paid"]);
-const ACTIVE = new Set(["requested", "confirmed", "checked_in", "checked_out", "approved", "paid"]);
-const DAY_MS = 24 * 60 * 60 * 1000;
+import type { DayCoverage, TonightShift, WorkerActivity } from "../../types/insights";
+import type { Application, Shift, WorkerProfile } from "../../types/operations";
 
 export type CoverageDay = {
   label: string;
@@ -24,26 +21,15 @@ export type Regular = {
   completed: number;
 };
 
-export function liveShifts(shifts: Shift[]) {
-  return shifts.filter((shift) => shift.status !== "cancelled");
-}
-
-export function getOpenSeats(shifts: Shift[]) {
-  return shifts.reduce((sum, shift) => sum + Math.max(shift.workers_needed - shift.workers_filled, 0), 0);
-}
-
-export function buildCoverageDays(shifts: Shift[], now: Date): CoverageDay[] {
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(now);
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() + index);
-    const dayShifts = shifts.filter((shift) => isSameDay(new Date(shift.start_time), date));
+export function coverageDays(days: DayCoverage[]): CoverageDay[] {
+  return days.map((day) => {
+    const date = new Date(`${day.day}T00:00:00`);
     return {
       label: date.toLocaleDateString("en-GB", { weekday: "short" }),
       dayNumber: String(date.getDate()),
       longLabel: date.toLocaleDateString("en-GB", { weekday: "long" }),
-      totalShifts: dayShifts.length,
-      openSeats: getOpenSeats(dayShifts.filter((shift) => shift.status === "open")),
+      totalShifts: day.total_shifts,
+      openSeats: day.open_seats,
     };
   });
 }
@@ -53,64 +39,39 @@ export function describeOpenSeats(days: CoverageDay[]) {
   return parts.length ? parts.join(", ") : "Everything this week is covered";
 }
 
-export function pendingApplications(applications: Application[]) {
-  return applications
-    .filter((application) => application.status === "applied")
-    .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime());
+export function describeOldest(oldest: string | null, now: Date) {
+  if (!oldest) return "Nothing waiting";
+  return `Oldest arrived ${relativeTime(new Date(oldest), now)}`;
 }
 
-export function describeOldest(pending: Application[], now: Date) {
-  if (!pending.length) return "Nothing waiting";
-  return `Oldest arrived ${relativeTime(new Date(pending[0].created_at), now)}`;
+export function tonightRows(tonight: TonightShift[], workers: Record<string, WorkerProfile>): TonightRow[] {
+  return tonight.map((row) => ({
+    shift: row.shift,
+    names: row.workers.map((worker) => workers[worker.worker_id]?.display_name ?? "Booked worker"),
+    codes: row.workers.map((worker) => worker.check_in_code ?? ""),
+    missing: row.missing,
+  }));
 }
 
-export function attendance(bookings: Booking[], now: Date) {
-  const since = now.getTime() - 30 * DAY_MS;
-  const recent = bookings.filter((booking) => {
-    const start = new Date(booking.start_time).getTime();
-    return start >= since && start <= now.getTime();
-  });
-  const completed = recent.filter((booking) => COMPLETED.has(booking.state)).length;
-  const noShows = recent.filter((booking) => booking.state === "no_show").length;
-  const total = completed + noShows;
-  return { rate: total ? Math.round((completed / total) * 100) : null, total };
+export function completedCounts(activity: Record<string, WorkerActivity>) {
+  return Object.fromEntries(Object.values(activity).map((row) => [row.worker_id, row.completed]));
 }
 
-export function tonightRows(
-  shifts: Shift[],
-  bookings: Booking[],
-  workers: Record<string, WorkerProfile>,
-  now: Date
-): TonightRow[] {
-  return shifts
-    .filter((shift) => isSameDay(new Date(shift.start_time), now))
-    .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime())
-    .map((shift) => {
-      const booked = bookings.filter((booking) => booking.shift_id === shift.shift_id && ACTIVE.has(booking.state));
-      return {
-        shift,
-        names: booked.map((booking) => workers[booking.worker_id]?.display_name ?? "Booked worker"),
-        codes: booked.map((booking) => (booking.state === "confirmed" ? booking.check_in_code ?? "" : "")),
-        missing: Math.max(shift.workers_needed - booked.length, 0),
-      };
-    });
-}
-
-export function completedCounts(bookings: Booking[]) {
-  const counts: Record<string, number> = {};
-  for (const booking of bookings) {
-    if (COMPLETED.has(booking.state)) counts[booking.worker_id] = (counts[booking.worker_id] ?? 0) + 1;
-  }
-  return counts;
-}
-
-export function regulars(bookings: Booking[], workers: Record<string, WorkerProfile>): Regular[] {
-  const counts = completedCounts(bookings);
-  return Object.entries(counts)
-    .filter(([, completed]) => completed >= 3)
-    .map(([workerId, completed]) => ({ worker: workers[workerId], completed }))
+export function regulars(
+  activity: Record<string, WorkerActivity>,
+  workers: Record<string, WorkerProfile>
+): Regular[] {
+  return Object.values(activity)
+    .filter((row) => row.completed >= 3)
+    .map((row) => ({ worker: workers[row.worker_id], completed: row.completed }))
     .filter((entry): entry is Regular => Boolean(entry.worker))
     .sort((left, right) => right.completed - left.completed);
+}
+
+export function sortedPending(applications: Application[]) {
+  return [...applications].sort(
+    (left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+  );
 }
 
 export function greetingFor(now: Date) {

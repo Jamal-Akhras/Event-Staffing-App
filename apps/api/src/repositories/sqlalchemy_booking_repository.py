@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from sqlalchemy import desc
+from datetime import datetime
+
+from sqlalchemy import case, desc, func, select
 from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import BookingModel, ShiftModel
+from apps.api.src.models.insights import AttendanceSummary, WorkerActivity
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
+
+COMPLETED_STATES = (BookingState.CHECKED_OUT, BookingState.APPROVED, BookingState.PAID)
+BROKEN_STATES = (BookingState.NO_SHOW, BookingState.CANCELLED_BY_WORKER)
 
 
 class SqlAlchemyBookingRepository:
@@ -74,6 +80,59 @@ class SqlAlchemyBookingRepository:
         if for_update:
             query = query.with_for_update()
         return [_to_domain(row) for row in query.all()]
+
+    def list_for_shifts(self, shift_ids: list[str]) -> list[Booking]:
+        if not shift_ids:
+            return []
+        rows = (
+            self._session.query(BookingModel)
+            .filter(BookingModel.shift_id.in_(shift_ids))
+            .order_by(BookingModel.start_time)
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
+    def attendance_summary(self, account_id: str, since: datetime, until: datetime) -> AttendanceSummary:
+        completed = func.count(case((BookingModel.state.in_(COMPLETED_STATES), 1)))
+        no_shows = func.count(case((BookingModel.state == BookingState.NO_SHOW, 1)))
+        row = self._session.execute(
+            select(completed, no_shows)
+            .select_from(BookingModel)
+            .join(ShiftModel, ShiftModel.shift_id == BookingModel.shift_id)
+            .where(ShiftModel.account_id == account_id)
+            .where(BookingModel.start_time >= since)
+            .where(BookingModel.start_time <= until)
+        ).one()
+        return AttendanceSummary(completed=row[0], no_shows=row[1])
+
+    def worker_activity(self, account_id: str, broken_since: datetime) -> list[WorkerActivity]:
+        completed = func.count(case((BookingModel.state.in_(COMPLETED_STATES), 1)))
+        last_worked = func.max(case((BookingModel.state.in_(COMPLETED_STATES), BookingModel.start_time)))
+        broken = func.count(
+            case(
+                (
+                    BookingModel.state.in_(BROKEN_STATES) & (BookingModel.start_time >= broken_since),
+                    1,
+                )
+            )
+        )
+        rows = self._session.execute(
+            select(BookingModel.worker_id, completed, last_worked, broken)
+            .select_from(BookingModel)
+            .join(ShiftModel, ShiftModel.shift_id == BookingModel.shift_id)
+            .where(ShiftModel.account_id == account_id)
+            .group_by(BookingModel.worker_id)
+            .order_by(BookingModel.worker_id)
+        ).all()
+        return [
+            WorkerActivity(
+                worker_id=row[0],
+                completed=row[1],
+                last_worked=row[2],
+                recently_broken=row[3] > 0,
+            )
+            for row in rows
+        ]
 
     def _list(
         self,

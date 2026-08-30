@@ -13,10 +13,13 @@ from apps.api.src.db.models import (
     ShiftTemplateModel,
     WorkerProfileModel,
 )
+from apps.api.src.db.tenancy_models import VenueModel
 from packages.domain.src.booking_state import BookingState
 
 
 OPERATOR_ID = "venue-default"
+VENUE_ID = "demo-venue-account"
+DEMO_WORKER_ID = "demo-worker-profile"
 WORKERS = ["worker-1", "worker-2", "worker-3", "worker-4"]
 SHIFT_IDS = [
     "demo-shift-checkin",
@@ -32,6 +35,8 @@ APPLICATION_IDS = [
     "demo-app-worker-3-bar",
     "demo-app-worker-4-floor",
     "demo-app-rejected",
+    "demo-app-waiting-bar",
+    "demo-app-waiting-floor",
     "demo-app-paid",
     "demo-app-pending-pay",
 ]
@@ -55,6 +60,7 @@ def main() -> None:
     Base.metadata.create_all(bind=engine)
     now = datetime.now(UTC).replace(microsecond=0)
     with SessionLocal() as session:
+        require_demo_venue(session)
         delete_demo_data(session)
         seed_workers(session, now)
         seed_shifts(session, now)
@@ -66,7 +72,15 @@ def main() -> None:
         seed_templates(session, now)
         seed_messages(session, now)
         session.commit()
-    print("Seeded demo data for venue-default and worker-1.")
+    print(f"Seeded demo data for venue {VENUE_ID} and worker-1.")
+
+
+def require_demo_venue(session) -> None:
+    if session.get(VenueModel, VENUE_ID) is None:
+        raise RuntimeError(
+            f"Venue {VENUE_ID} is missing. Run apps.api.scripts.prepare_demo_accounts first "
+            "so demo shifts belong to the demo venue."
+        )
 
 
 def delete_demo_data(session) -> None:
@@ -138,6 +152,7 @@ def seed_shifts(session, now: datetime) -> None:
         session.add(ShiftModel(
             shift_id=shift_id,
             operator_id=OPERATOR_ID,
+            venue_id=VENUE_ID,
             role=role,
             location=location,
             start_time=start,
@@ -153,13 +168,15 @@ def seed_shifts(session, now: datetime) -> None:
 
 def seed_applications(session, now: datetime) -> None:
     rows = [
-        ("demo-app-checkin", "demo-shift-checkin", "worker-1", "approved", "demo-booking-checkin", now - timedelta(hours=2)),
+        ("demo-app-checkin", "demo-shift-checkin", DEMO_WORKER_ID, "approved", "demo-booking-checkin", now - timedelta(hours=2)),
         ("demo-app-worker-2-bar", "demo-shift-open-bar", "worker-2", "applied", None, None),
         ("demo-app-worker-3-bar", "demo-shift-open-bar", "worker-3", "applied", None, None),
         ("demo-app-worker-4-floor", "demo-shift-open-floor", "worker-4", "applied", None, None),
         ("demo-app-rejected", "demo-shift-open-floor", "worker-3", "rejected", None, now - timedelta(hours=1)),
-        ("demo-app-paid", "demo-shift-paid", "worker-1", "approved", "demo-booking-paid", now - timedelta(days=2)),
-        ("demo-app-pending-pay", "demo-shift-pending-pay", "worker-1", "approved", "demo-booking-pending-pay", now - timedelta(days=1)),
+        ("demo-app-waiting-bar", "demo-shift-open-bar", DEMO_WORKER_ID, "applied", None, None),
+        ("demo-app-waiting-floor", "demo-shift-open-floor", DEMO_WORKER_ID, "applied", None, None),
+        ("demo-app-paid", "demo-shift-paid", DEMO_WORKER_ID, "approved", "demo-booking-paid", now - timedelta(days=2)),
+        ("demo-app-pending-pay", "demo-shift-pending-pay", DEMO_WORKER_ID, "approved", "demo-booking-pending-pay", now - timedelta(days=1)),
     ]
     shifts = {shift.shift_id: shift for shift in session.query(ShiftModel).all()}
     for app_id, shift_id, worker_id, status, booking_id, decided_at in rows:
@@ -183,10 +200,10 @@ def seed_applications(session, now: datetime) -> None:
 def seed_bookings(session, now: datetime) -> None:
     shifts = {shift.shift_id: shift for shift in session.query(ShiftModel).all()}
     rows = [
-        ("demo-booking-checkin", "demo-shift-checkin", "worker-1", BookingState.CONFIRMED, now - timedelta(hours=2), None, None, None),
+        ("demo-booking-checkin", "demo-shift-checkin", DEMO_WORKER_ID, BookingState.CONFIRMED, now - timedelta(hours=2), None, None, None),
         ("demo-booking-filled", "demo-shift-filled", "worker-2", BookingState.CONFIRMED, now - timedelta(hours=1), None, None, None),
-        ("demo-booking-paid", "demo-shift-paid", "worker-1", BookingState.PAID, now - timedelta(days=3), now - timedelta(days=2, minutes=5), now - timedelta(days=2) + timedelta(hours=6, minutes=5), now - timedelta(days=1)),
-        ("demo-booking-pending-pay", "demo-shift-pending-pay", "worker-1", BookingState.APPROVED, now - timedelta(days=2), now - timedelta(days=1, minutes=5), now - timedelta(days=1) + timedelta(hours=5, minutes=5), None),
+        ("demo-booking-paid", "demo-shift-paid", DEMO_WORKER_ID, BookingState.PAID, now - timedelta(days=3), now - timedelta(days=2, minutes=5), now - timedelta(days=2) + timedelta(hours=6, minutes=5), now - timedelta(days=1)),
+        ("demo-booking-pending-pay", "demo-shift-pending-pay", DEMO_WORKER_ID, BookingState.APPROVED, now - timedelta(days=2), now - timedelta(days=1, minutes=5), now - timedelta(days=1) + timedelta(hours=5, minutes=5), None),
     ]
     for booking_id, shift_id, worker_id, state, created_at, checked_in_at, checked_out_at, paid_at in rows:
         shift = shifts[shift_id]
@@ -217,6 +234,7 @@ def seed_templates(session, now: datetime) -> None:
         session.add(ShiftTemplateModel(
             template_id=template_id,
             operator_id=OPERATOR_ID,
+            venue_id=VENUE_ID,
             name=name,
             role=role,
             location=location,

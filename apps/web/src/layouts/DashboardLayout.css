@@ -1,10 +1,38 @@
 .app-shell {
   --shell-gutter: 20px;
   --shell-max: 1680px;
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: var(--paper-1);
+  background: linear-gradient(180deg, #f2ebdf 0%, var(--paper-1) 46%);
+  background-attachment: fixed;
+}
+
+.app-shell::before,
+.app-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.app-shell::before {
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.28'/%3E%3C/svg%3E");
+}
+
+.app-shell::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'%3E%3Cg fill='none' stroke='%230f1720' stroke-width='0.9' opacity='0.09'%3E%3Cpath d='M17 1 33 17 17 33 1 17z'/%3E%3Ccircle cx='17' cy='17' r='4.4'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 34px 34px;
+  -webkit-mask-image: radial-gradient(120% 90% at 85% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(120% 90% at 85% 0%, #000 0%, transparent 72%);
+}
+
+.app-shell > * {
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 900px) {

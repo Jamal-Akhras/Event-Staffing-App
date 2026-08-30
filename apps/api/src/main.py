@@ -20,10 +20,11 @@ from apps.api.src.api_errors import (
 from apps.api.src.config import get_cors_origins, is_development
 from apps.api.src.observability import init_sentry
 from apps.api.src.rate_limit import limiter
+from apps.api.src.audit_middleware import AuditMiddleware
 from apps.api.src.request_middleware import RequestContextMiddleware
 from apps.api.src.routes import auth, bookings, shifts, applications, workers, templates, messages, worker_feed
 from apps.api.src.routes import uploads, accounts, notifications, ratings, auth_account, auth_password, markets, tenancy
-from apps.api.src.routes import reports, auth_sso, billing
+from apps.api.src.routes import reports, auth_sso, billing, events, insights
 from apps.api.src.storage.config import get_storage_settings
 from apps.api.src.services.health import readiness_snapshot
 from apps.api.src.db.schema_guard import ensure_schema_current
@@ -66,6 +67,7 @@ async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSON
 
 
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(AuditMiddleware)
 app.add_middleware(RequestContextMiddleware)
 
 app.add_middleware(
@@ -96,6 +98,8 @@ app.include_router(notifications.router)
 app.include_router(ratings.router)
 app.include_router(reports.router)
 app.include_router(billing.router)
+app.include_router(events.router)
+app.include_router(insights.router)
 
 if storage_settings.backend == "local":
     storage_settings.local_directory.mkdir(parents=True, exist_ok=True)

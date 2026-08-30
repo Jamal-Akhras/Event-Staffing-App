@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from uuid import uuid4
+
 from apps.api.src.helpers import _now_or
+from apps.api.src.models.booking_transition import BookingTransition
+from apps.api.src.repositories.booking_transition_repository import BookingTransitionRepository
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
@@ -31,11 +35,13 @@ class BookingLifecycleService:
         worker_repo: WorkerProfileRepository,
         shift_repo: ShiftRepository,
         outbox: OutboxPublisher,
+        transitions: BookingTransitionRepository,
     ) -> None:
         self._bookings = booking_repo
         self._workers = worker_repo
         self._shifts = shift_repo
         self._outbox = outbox
+        self._transitions = transitions
 
     def get_booking(self, booking_id: str) -> Booking:
         booking = self._bookings.get(booking_id)
@@ -69,9 +75,11 @@ class BookingLifecycleService:
         request: BookingTransitionRequest | CancellationRequest | PaymentRecordRequest,
         actor_user_id: str,
         refresh_worker_reliability: bool = False,
+        actor_role: str | None = None,
     ) -> Booking:
         now = _now_or(request.now)
         booking = self.get_booking(booking_id)
+        previous_state = booking.state.value
         submitted = request.code if isinstance(request, BookingTransitionRequest) else None
         if target == BookingState.CHECKED_IN and not code_matches(submitted, booking.check_in_code):
             raise ValidationError("That check-in code doesn't match. Ask the manager for the code on their board.")
@@ -97,6 +105,21 @@ class BookingLifecycleService:
                 payment_recorded_by_user_id=actor_user_id,
             )
         booking = self._bookings.save(booking)
+        if booking.state.value != previous_state:
+            self._transitions.append(
+                BookingTransition(
+                    transition_id=str(uuid4()),
+                    booking_id=booking.booking_id,
+                    from_state=previous_state,
+                    to_state=booking.state.value,
+                    occurred_at=now,
+                    actor_user_id=actor_user_id,
+                    actor_role=actor_role,
+                    reason_code=getattr(request, "reason_code", None),
+                    reason_note=cancellation_reason,
+                    context={"shift_id": booking.shift_id, "worker_id": booking.worker_id},
+                )
+            )
         if target in _CANCELLATION_STATES:
             _decrement_workers_filled(self._shifts, booking.shift_id, now)
         if target == BookingState.CANCELLED_BY_OPERATOR:
@@ -128,8 +151,21 @@ class BookingLifecycleService:
         return booking
 
     def sweep_no_shows(self, request: BookingTransitionRequest) -> list[Booking]:
-        updated = sweep_no_shows(self._bookings, self._workers, self._shifts, _now_or(request.now))
+        now = _now_or(request.now)
+        updated = sweep_no_shows(self._bookings, self._workers, self._shifts, now)
         for booking in updated:
+            self._transitions.append(
+                BookingTransition(
+                    transition_id=str(uuid4()),
+                    booking_id=booking.booking_id,
+                    from_state=BookingState.CONFIRMED.value,
+                    to_state=booking.state.value,
+                    occurred_at=now,
+                    actor_role="system",
+                    reason_code="missed_check_in",
+                    context={"shift_id": booking.shift_id, "worker_id": booking.worker_id},
+                )
+            )
             shift = self._shifts.get(booking.shift_id)
             if shift and shift.account_id:
                 self._outbox.publish_notification(

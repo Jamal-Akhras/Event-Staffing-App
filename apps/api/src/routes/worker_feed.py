@@ -5,8 +5,10 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from uuid import uuid4
+
 from apps.api.src.auth import ActorContext, ActorRole, get_actor_context, require_role, require_worker_owner
-from apps.api.src.deps import get_worker_feed_service, get_worker_shift_feed_service
+from apps.api.src.deps import get_event_recorder, get_worker_feed_service, get_worker_shift_feed_service
 from apps.api.src.helpers import _shift_view
 from apps.api.src.routes.service_errors import raise_service_error
 from apps.api.src.schemas import (
@@ -16,6 +18,7 @@ from apps.api.src.schemas import (
 )
 from apps.api.src.services.errors import ServiceError
 from apps.api.src.schemas_market import MarketResponse
+from apps.api.src.services.event_recorder import EventRecorder
 from apps.api.src.schemas_worker_feed import (
     FeedVenueResponse,
     WorkerFeedItemResponse,
@@ -42,6 +45,7 @@ def list_worker_feed(
     ),
     service: WorkerShiftFeedService = Depends(get_worker_shift_feed_service),
     actor: ActorContext = Depends(get_actor_context),
+    recorder: EventRecorder = Depends(get_event_recorder),
 ) -> WorkerFeedPageResponse:
     require_role(actor.role, {ActorRole.WORKER})
     worker_id = actor.effective_worker_id
@@ -58,6 +62,19 @@ def list_worker_feed(
         raise HTTPException(status_code=409, detail=str(exc))
     except FeedCursorError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    slate_id = str(uuid4())
+    for position, item in enumerate(page.items):
+        recorder.record(
+            "shift.served",
+            "behaviour",
+            actor=actor,
+            subject_type="shift",
+            subject_id=item.shift.shift_id,
+            venue_id=item.venue.venue_id,
+            slate_id=slate_id,
+            position=position,
+            context={"market_id": page.market.market_id, "timing": timing},
+        )
     return WorkerFeedPageResponse(
         items=[
             WorkerFeedItemResponse(
@@ -70,6 +87,7 @@ def list_worker_feed(
             )
             for item in page.items
         ],
+        slate_id=slate_id,
         next_cursor=page.next_cursor,
         market=MarketResponse.from_domain(page.market),
     )

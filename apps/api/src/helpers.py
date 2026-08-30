@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 
@@ -15,11 +16,15 @@ from apps.api.src.schemas import (
     ApplicationResponse,
     BookingResponse,
     ShiftResponse,
+    ShiftSummaryResponse,
     WorkerProfilePrivateResponse,
 )
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
 from packages.domain.src.booking_state_machine import allowed_next_states
+
+if TYPE_CHECKING:
+    from apps.api.src.services.shift_summary import ShiftSummary
 
 def _now_or(request_time: datetime | None) -> datetime:
     return request_time or utc_now()
@@ -32,7 +37,15 @@ def _get_worker_profile(repo: WorkerProfileRepository, worker_id: str) -> Worker
     return profile
 
 
-def _booking_view(booking: Booking, viewer: ActorRole | None = None) -> BookingResponse:
+def _summary_view(summary: ShiftSummary | None) -> ShiftSummaryResponse | None:
+    return ShiftSummaryResponse(**asdict(summary)) if summary else None
+
+
+def _booking_view(
+    booking: Booking,
+    viewer: ActorRole | None = None,
+    summary: ShiftSummary | None = None,
+) -> BookingResponse:
     payload = asdict(booking)
     payload["state"] = booking.state.value
     payload["allowed_transitions"] = [
@@ -42,6 +55,7 @@ def _booking_view(booking: Booking, viewer: ActorRole | None = None) -> BookingR
         payload["completion_code"] = None
     if viewer not in {ActorRole.OPERATOR, ActorRole.SYSTEM} or booking.state != BookingState.CONFIRMED:
         payload["check_in_code"] = None
+    payload["shift"] = _summary_view(summary)
     return BookingResponse(**payload)
 
 
@@ -50,8 +64,12 @@ def _shift_view(shift: Shift) -> ShiftResponse:
     return ShiftResponse(**payload)
 
 
-def _application_view(application: Application) -> ApplicationResponse:
+def _application_view(
+    application: Application,
+    summary: ShiftSummary | None = None,
+) -> ApplicationResponse:
     payload = asdict(application)
+    payload["shift"] = _summary_view(summary)
     return ApplicationResponse(**payload)
 
 

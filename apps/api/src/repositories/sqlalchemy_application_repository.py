@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from sqlalchemy import desc
+from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import ApplicationModel, ShiftModel
 from apps.api.src.models.application import Application
+from apps.api.src.models.insights import PendingSummary
 from apps.api.src.repositories.application_repository import DuplicateApplicationError
 
 
@@ -101,12 +102,28 @@ class SqlAlchemyApplicationRepository:
             return None
         return _to_domain(model)
 
+    def list_for_shifts(self, shift_ids: list[str]) -> list[Application]:
+        if not shift_ids:
+            return []
+        rows = self._session.query(ApplicationModel).filter(ApplicationModel.shift_id.in_(shift_ids)).all()
+        return [_to_domain(row) for row in rows]
+
     def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Application]:
         query = self._session.query(ApplicationModel).filter(ApplicationModel.shift_id == shift_id)
         if for_update:
             query = query.with_for_update()
         rows = query.order_by(desc(ApplicationModel.created_at)).all()
         return [_to_domain(row) for row in rows]
+
+    def pending_summary(self, account_id: str) -> PendingSummary:
+        row = self._session.execute(
+            select(func.count(), func.min(ApplicationModel.created_at))
+            .select_from(ApplicationModel)
+            .join(ShiftModel, ShiftModel.shift_id == ApplicationModel.shift_id)
+            .where(ShiftModel.account_id == account_id)
+            .where(ApplicationModel.status == "applied")
+        ).one()
+        return PendingSummary(count=row[0], oldest_created_at=row[1])
 
     def _list(
         self,

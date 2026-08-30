@@ -22,6 +22,15 @@ from apps.api.src.repositories.in_memory_market_repository import InMemoryMarket
 from apps.api.src.repositories.in_memory_notification_repository import InMemoryNotificationRepository
 from apps.api.src.repositories.in_memory_report_repository import InMemoryReportRepository
 from apps.api.src.repositories.in_memory_organisation_repository import InMemoryOrganisationRepository
+from apps.api.src.repositories.booking_charge_repository import BookingChargeRepository
+from apps.api.src.repositories.booking_transition_repository import BookingTransitionRepository
+from apps.api.src.repositories.in_memory_booking_charge_repository import InMemoryBookingChargeRepository
+from apps.api.src.repositories.in_memory_booking_transition_repository import InMemoryBookingTransitionRepository
+from apps.api.src.repositories.sqlalchemy_booking_charge_repository import SqlAlchemyBookingChargeRepository
+from apps.api.src.repositories.sqlalchemy_booking_transition_repository import SqlAlchemyBookingTransitionRepository
+from apps.api.src.repositories.in_memory_event_repository import InMemoryEventRepository
+from apps.api.src.repositories.event_repository import EventRepository
+from apps.api.src.repositories.sqlalchemy_event_repository import SqlAlchemyEventRepository
 from apps.api.src.repositories.in_memory_partner_code_repository import InMemoryPartnerCodeRepository
 from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
 from apps.api.src.repositories.sqlalchemy_partner_code_repository import SqlAlchemyPartnerCodeRepository
@@ -90,6 +99,9 @@ _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
 _NOTIFICATIONS = InMemoryNotificationRepository()
 _REPORTS = InMemoryReportRepository()
 _PARTNER_CODES = InMemoryPartnerCodeRepository()
+_EVENTS = InMemoryEventRepository()
+_BOOKING_CHARGES = InMemoryBookingChargeRepository()
+_BOOKING_TRANSITIONS = InMemoryBookingTransitionRepository()
 _DECISIONS = InMemoryApplicationDecisionRepository(_APPLICATIONS, _BOOKINGS, _SHIFTS)
 
 
@@ -210,3 +222,33 @@ def get_report_repo(session: Session | None = Depends(get_request_session)) -> R
 
 def get_partner_code_repo(session: Session | None = Depends(get_request_session)) -> PartnerCodeRepository:
     return _PARTNER_CODES if use_in_memory_repositories() else SqlAlchemyPartnerCodeRepository(_session(session))
+
+
+def shared_booking_charge_repository() -> InMemoryBookingChargeRepository:
+    return _BOOKING_CHARGES
+
+
+def get_booking_charge_repo(session: Session | None = Depends(get_request_session)) -> BookingChargeRepository:
+    if use_in_memory_repositories():
+        return _BOOKING_CHARGES
+    return SqlAlchemyBookingChargeRepository(_session(session))
+
+
+def shared_booking_transition_repository() -> InMemoryBookingTransitionRepository:
+    return _BOOKING_TRANSITIONS
+
+
+def get_booking_transition_repo(
+    session: Session | None = Depends(get_request_session),
+) -> BookingTransitionRepository:
+    if use_in_memory_repositories():
+        return _BOOKING_TRANSITIONS
+    return SqlAlchemyBookingTransitionRepository(_session(session))
+
+
+def shared_event_repository() -> InMemoryEventRepository:
+    return _EVENTS
+
+
+def get_event_repo(session: Session | None = Depends(get_request_session)) -> EventRepository:
+    return _EVENTS if use_in_memory_repositories() else SqlAlchemyEventRepository(_session(session))

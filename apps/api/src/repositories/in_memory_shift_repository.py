@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Dict
 
 from apps.api.src.models.shift import Shift
@@ -38,6 +39,18 @@ class InMemoryShiftRepository:
         items = [shift for shift in self._shifts.values() if shift.shift_id in shift_ids]
         items.sort(key=lambda item: item.created_at, reverse=True)
         return items[:limit]
+
+    def list_in_range(self, account_id: str, start: datetime, end: datetime) -> list[Shift]:
+        items = [
+            shift
+            for shift in self._shifts.values()
+            if shift.account_id == account_id and start <= shift.start_time < end
+        ]
+        items.sort(key=lambda item: item.start_time)
+        return items
+
+    def list_by_ids(self, shift_ids: list[str]) -> list[Shift]:
+        return [self._shifts[shift_id] for shift_id in shift_ids if shift_id in self._shifts]
 
     def clear(self) -> None:
         self._shifts.clear()

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Dict
 
 from apps.api.src.models.application import Application
+from apps.api.src.models.insights import PendingSummary
 from apps.api.src.repositories.application_repository import DuplicateApplicationError
 from apps.api.src.repositories.shift_repository import ShiftRepository
 
@@ -92,8 +93,19 @@ class InMemoryApplicationRepository:
                 return application
         return None
 
+    def list_for_shifts(self, shift_ids: list[str]) -> list[Application]:
+        wanted = set(shift_ids)
+        return [item for item in self._applications.values() if item.shift_id in wanted]
+
     def list_by_shift(self, shift_id: str, for_update: bool = False) -> list[Application]:
         return self._list(10_000, shift_id=shift_id)
+
+    def pending_summary(self, account_id: str) -> PendingSummary:
+        pending = self.list_for_account(account_id, limit=10_000, status="applied")
+        return PendingSummary(
+            count=len(pending),
+            oldest_created_at=min((item.created_at for item in pending), default=None),
+        )
 
     def clear(self) -> None:
         self._applications.clear()

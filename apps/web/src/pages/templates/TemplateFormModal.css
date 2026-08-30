@@ -1,0 +1,28 @@
+.tp-modal {
+  width: min(620px, 100%);
+}
+
+.tp-modal-hint {
+  margin: 4px 0 0;
+  color: var(--ink-500);
+  font-size: 13px;
+}
+
+.tp-form-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.tp-form-trio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 620px) {
+  .tp-form-pair,
+  .tp-form-trio {
+    grid-template-columns: 1fr;
+  }
+}

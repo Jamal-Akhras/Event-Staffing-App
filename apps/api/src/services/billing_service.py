@@ -2,22 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from uuid import uuid4
 
 from dateutil.relativedelta import relativedelta
 
+from apps.api.src.models.booking_charge import BookingCharge
 from apps.api.src.models.partner_code import PartnerCode, PartnerCodeRedemption
+from apps.api.src.repositories.booking_charge_repository import BookingChargeRepository
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
-from apps.api.src.repositories.shift_repository import ShiftRepository
-from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
+from apps.api.src.services.billing_math import money
 from apps.api.src.services.errors import ConflictError, NotFoundError, ValidationError
-from packages.domain.src.booking import Booking
-from packages.domain.src.booking_state import BookingState
 
-COMPLETED_STATES = {BookingState.APPROVED, BookingState.PAID}
-PENNY = Decimal("0.01")
 FOUNDING_WAIVER_MONTHS = 3
 FOUNDING_SHIFT_CAP = 20
 
@@ -68,25 +65,19 @@ class BillingService:
     def __init__(
         self,
         bookings: BookingRepository,
-        shifts: ShiftRepository,
-        workers: WorkerProfileRepository,
+        charges: BookingChargeRepository,
         partner_codes: PartnerCodeRepository,
         fee_percent: Decimal,
     ) -> None:
         self._bookings = bookings
-        self._shifts = shifts
-        self._workers = workers
+        self._charges = charges
         self._codes = partner_codes
         self._fee_percent = fee_percent
 
     def summary(self, account_id: str, month: str, now: datetime) -> BillingSummary:
-        completed = sorted(
-            (b for b in self._bookings.list_for_account(account_id, limit=10_000) if b.state in COMPLETED_STATES),
-            key=completed_at,
-        )
-        waiver = self._waiver(account_id, completed, now)
-        waived_ids = waiver.waived_booking_ids if waiver else frozenset()
-        lines = [self._line(b, b.booking_id in waived_ids) for b in completed if completed_at(b).strftime("%Y-%m") == month]
+        charges = self._charges.list_for_account(account_id)
+        waiver = self._waiver(account_id, charges, now)
+        lines = [self._line(charge) for charge in charges if charge.period == month]
         wages_total = money(sum((line.wages for line in lines), Decimal(0)))
         fee_total = money(sum((line.fee for line in lines), Decimal(0)))
         return BillingSummary(
@@ -98,7 +89,7 @@ class BillingService:
             wages_total=wages_total,
             fee_total=fee_total,
             grand_total=money(wages_total + fee_total),
-            completed_shifts_all_time=len(completed),
+            completed_shifts_all_time=len(charges),
         )
 
     def redeem(self, raw_code: str, account_id: str, user_id: str, now: datetime) -> Waiver:
@@ -124,15 +115,14 @@ class BillingService:
         )
         return self.summary(account_id, now.strftime("%Y-%m"), now).waiver
 
-    def _waiver(self, account_id: str, completed: list[Booking], now: datetime) -> Waiver | None:
+    def _waiver(self, account_id: str, charges: list[BookingCharge], now: datetime) -> Waiver | None:
         redemption = self._codes.get_redemption_for_account(account_id)
         if redemption is None:
             return None
         code = self._codes.get_code(redemption.code)
         if code is None:
             return None
-        eligible = [b for b in completed if redemption.redeemed_at <= completed_at(b) <= redemption.fee_waived_until]
-        waived = eligible[: redemption.shift_cap]
+        waived = [charge for charge in charges if charge.fee_waived]
         return Waiver(
             code=code.code,
             label=code.label,
@@ -140,49 +130,29 @@ class BillingService:
             shift_cap=redemption.shift_cap,
             shifts_used=len(waived),
             active=now <= redemption.fee_waived_until and len(waived) < redemption.shift_cap,
-            waived_booking_ids=frozenset(b.booking_id for b in waived),
+            waived_booking_ids=frozenset(charge.booking_id for charge in waived),
         )
 
-    def _line(self, booking: Booking, waived: bool) -> BillingLine:
-        shift = self._shifts.get(booking.shift_id)
-        if shift is None:
-            raise NotFoundError(f"Shift {booking.shift_id} is missing for booking {booking.booking_id}.")
-        worker = self._workers.get(booking.worker_id)
-        hours = worked_hours(booking)
-        wages = money(hours * Decimal(shift.pay_rate))
-        fee = Decimal("0.00") if waived else money(wages * self._fee_percent / Decimal(100))
+    def _line(self, charge: BookingCharge) -> BillingLine:
+        booking = self._bookings.get(charge.booking_id)
+        if booking is None:
+            raise NotFoundError(f"Booking {charge.booking_id} is missing for charge {charge.charge_id}.")
         return BillingLine(
-            booking_id=booking.booking_id,
-            shift_id=shift.shift_id,
-            worker_id=booking.worker_id,
-            worker_name=worker.display_name if worker and worker.display_name else "Worker",
-            role=shift.role,
-            start_time=booking.start_time,
-            end_time=booking.end_time,
-            completed_at=completed_at(booking),
-            hours=hours,
-            wages=wages,
-            fee=fee,
-            total=money(wages + fee),
-            waived=waived,
+            booking_id=charge.booking_id,
+            shift_id=charge.shift_id,
+            worker_id=charge.worker_id,
+            worker_name=charge.worker_name,
+            role=charge.role,
+            start_time=charge.start_time,
+            end_time=charge.end_time,
+            completed_at=charge.completed_at,
+            hours=charge.hours,
+            wages=charge.wages,
+            fee=charge.fee,
+            total=charge.total,
+            waived=charge.fee_waived,
             state=booking.state.value,
         )
-
-
-def completed_at(booking: Booking) -> datetime:
-    return booking.approved_at or booking.checked_out_at or booking.end_time
-
-
-def worked_hours(booking: Booking) -> Decimal:
-    if booking.checked_in_at and booking.checked_out_at:
-        start, end = booking.checked_in_at, booking.checked_out_at
-    else:
-        start, end = booking.start_time, booking.end_time
-    return (Decimal((end - start).total_seconds()) / Decimal(3600)).quantize(PENNY, rounding=ROUND_HALF_UP)
-
-
-def money(value: Decimal) -> Decimal:
-    return value.quantize(PENNY, rounding=ROUND_HALF_UP)
 
 
 def new_partner_code(prefix: str, label: str, max_redemptions: int, created_by: str, now: datetime, expires_at: datetime | None) -> PartnerCode:

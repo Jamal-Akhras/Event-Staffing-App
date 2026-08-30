@@ -6,8 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { AppErrorFallback } from "./components/AppErrorFallback";
 import { CLERK_PUBLISHABLE_KEY, SSO_ENABLED } from "./lib/clerk";
+import { startAnalytics } from "./lib/analytics";
 import { SentryErrorBoundary } from "./lib/observability";
 import "./styles.css";
+
+startAnalytics();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },

@@ -6,13 +6,24 @@ import pytest
 from fastapi.testclient import TestClient
 
 from apps.api.src import main
-from apps.api.src.deps import get_booking_repo, get_partner_code_repo, get_shift_repo, get_worker_profile_repo
+from apps.api.src.deps import (
+    get_booking_charge_repo,
+    get_booking_repo,
+    get_booking_transition_repo,
+    get_partner_code_repo,
+    get_shift_repo,
+    get_worker_profile_repo,
+)
 from apps.api.src.models.partner_code import PartnerCode
 from apps.api.src.models.shift import Shift
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
 from apps.api.src.repositories.in_memory_partner_code_repository import InMemoryPartnerCodeRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 from apps.api.src.repositories.in_memory_worker_profile_repository import InMemoryWorkerProfileRepository
+from apps.api.src.repository_dependencies import (
+    shared_booking_charge_repository,
+    shared_booking_transition_repository,
+)
 from apps.api.src.services.billing_service import new_partner_code
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
@@ -24,11 +35,19 @@ OTHER_VENUE = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-2", "X-Accoun
 WORKER = {"X-Actor-Role": "worker", "X-Actor-Id": "worker-1"}
 START = datetime(2030, 3, 12, 18, 0, tzinfo=UTC)
 CREATED = datetime(2030, 3, 1, tzinfo=UTC)
+APPROVED_AT = START + timedelta(hours=6)
 
 
 @pytest.fixture(autouse=True)
 def freeze_billing_clock(monkeypatch):
     monkeypatch.setattr("apps.api.src.routes.billing.utc_now", lambda: CREATED)
+
+
+@pytest.fixture(autouse=True)
+def clear_charges():
+    shared_booking_charge_repository().clear()
+    yield
+    shared_booking_charge_repository().clear()
 
 
 def _shift(shift_id: str, start: datetime) -> Shift:
@@ -49,7 +68,7 @@ def _shift(shift_id: str, start: datetime) -> Shift:
     )
 
 
-def _completed(booking_id: str, shift: Shift, worker_id: str = "worker-1") -> Booking:
+def _worked(booking_id: str, shift: Shift, worker_id: str = "worker-1") -> Booking:
     return Booking(
         booking_id=booking_id,
         shift_id=shift.shift_id,
@@ -57,13 +76,22 @@ def _completed(booking_id: str, shift: Shift, worker_id: str = "worker-1") -> Bo
         operator_id="operator-1",
         start_time=shift.start_time,
         end_time=shift.end_time,
-        state=BookingState.APPROVED,
+        state=BookingState.CHECKED_OUT,
         created_at=CREATED,
         confirmed_at=CREATED,
         checked_in_at=shift.start_time,
         checked_out_at=shift.end_time,
-        approved_at=shift.end_time + timedelta(hours=1),
+        completion_code="4821",
     )
+
+
+def _approve(client: TestClient, booking_id: str, approved_at: datetime) -> None:
+    response = client.post(
+        f"/bookings/{booking_id}/approve",
+        json={"code": "4821", "now": approved_at.isoformat()},
+        headers=VENUE,
+    )
+    assert response.status_code == 200, response.text
 
 
 def _client(extra_completed: int = 0):
@@ -75,7 +103,7 @@ def _client(extra_completed: int = 0):
 
     first = _shift("shift-1", START)
     shifts.save(first)
-    bookings.save(_completed("bk-1", first))
+    bookings.save(_worked("bk-1", first))
     bookings.save(
         Booking(
             booking_id="bk-open",
@@ -92,9 +120,11 @@ def _client(extra_completed: int = 0):
     for index in range(extra_completed):
         shift = _shift(f"shift-{index + 2}", START + timedelta(days=index + 1))
         shifts.save(shift)
-        bookings.save(_completed(f"bk-{index + 2}", shift))
+        bookings.save(_worked(f"bk-{index + 2}", shift))
 
     main.app.dependency_overrides[get_booking_repo] = lambda: bookings
+    main.app.dependency_overrides[get_booking_transition_repo] = shared_booking_transition_repository
+    main.app.dependency_overrides[get_booking_charge_repo] = shared_booking_charge_repository
     main.app.dependency_overrides[get_shift_repo] = lambda: shifts
     main.app.dependency_overrides[get_worker_profile_repo] = lambda: workers
     main.app.dependency_overrides[get_partner_code_repo] = lambda: codes
@@ -116,6 +146,7 @@ def _code(code: str, shift_cap: int = 20, max_redemptions: int = 1, expires_at: 
 
 def test_summary_charges_fee_on_completed_bookings_only():
     client, _ = _client()
+    _approve(client, "bk-1", APPROVED_AT)
     response = client.get("/billing/summary?month=2030-03", headers=VENUE)
     assert response.status_code == 200
     body = response.json()
@@ -131,6 +162,7 @@ def test_summary_charges_fee_on_completed_bookings_only():
 
 def test_summary_is_scoped_to_month_and_venue():
     client, _ = _client()
+    _approve(client, "bk-1", APPROVED_AT)
     assert client.get("/billing/summary?month=2030-04", headers=VENUE).json()["lines"] == []
     assert client.get("/billing/summary?month=2030-03", headers=OTHER_VENUE).json()["lines"] == []
     assert client.get("/billing/summary", headers=WORKER).status_code == 403
@@ -142,6 +174,7 @@ def test_redeeming_a_partner_code_waives_the_fee():
     response = client.post("/billing/partner-codes/redeem", json={"code": "bath-test-code"}, headers=VENUE)
     assert response.status_code == 200
     assert response.json()["active"] is True
+    _approve(client, "bk-1", APPROVED_AT)
     body = client.get("/billing/summary?month=2030-03", headers=VENUE).json()
     assert body["plan"] == "founding_partner"
     assert body["lines"][0]["waived"] is True
@@ -167,6 +200,8 @@ def test_waiver_stops_at_the_shift_cap():
     client, codes = _client(extra_completed=1)
     codes.save_code(_code("BATH-CAP-ONE", shift_cap=1))
     client.post("/billing/partner-codes/redeem", json={"code": "BATH-CAP-ONE"}, headers=VENUE)
+    _approve(client, "bk-1", APPROVED_AT)
+    _approve(client, "bk-2", APPROVED_AT + timedelta(days=1))
     body = client.get("/billing/summary?month=2030-03", headers=VENUE).json()
     assert [line["waived"] for line in body["lines"]] == [True, False]
     assert body["fee_total"] == "5.80"

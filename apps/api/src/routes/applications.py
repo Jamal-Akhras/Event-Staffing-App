@@ -10,11 +10,13 @@ from apps.api.src.auth import (
     require_verified_actor,
     require_worker_owner,
 )
-from apps.api.src.deps import get_application_service, get_idempotency_service
-from apps.api.src.helpers import _application_view
+from uuid import uuid4
+
+from apps.api.src.deps import get_application_service, get_booking_transition_repo, get_event_recorder, get_idempotency_service
 from apps.api.src.models.application import Application
 from apps.api.src.rate_limit import actor_or_ip, limiter
 from apps.api.src.routes.actor_scope import list_scope
+from apps.api.src.routes.presenters import ApplicationPresenter, get_application_presenter
 from apps.api.src.routes.idempotency_support import IdempotencyKeyHeader, replayed
 from apps.api.src.routes.service_errors import raise_service_error
 from apps.api.src.schemas import (
@@ -28,6 +30,10 @@ from apps.api.src.schemas import (
 from apps.api.src.schemas_recovery import CancellationRequest
 from apps.api.src.services.application_service import ApplicationService
 from apps.api.src.services.errors import ServiceError
+from apps.api.src.datetime_utils import utc_now
+from apps.api.src.models.booking_transition import BookingTransition
+from apps.api.src.repositories.booking_transition_repository import BookingTransitionRepository
+from apps.api.src.services.event_recorder import EventRecorder
 from apps.api.src.services.idempotency import IdempotencyConflict, IdempotencyService
 
 router = APIRouter(tags=["applications"])
@@ -43,6 +49,8 @@ def create_application(
     idempotency: IdempotencyService = Depends(get_idempotency_service),
     service: ApplicationService = Depends(get_application_service),
     actor: ActorContext = Depends(get_actor_context),
+    present: ApplicationPresenter = Depends(get_application_presenter),
+    recorder: EventRecorder = Depends(get_event_recorder),
 ) -> ApplicationResponse:
     require_verified_actor(actor, "applying for shifts")
     require_worker_owner(actor, payload.worker_id)
@@ -50,7 +58,17 @@ def create_application(
         started = idempotency.start(actor.user_id, "application.create", idempotency_key, payload.model_dump(mode="json"))
         if started.cached_response is not None:
             return replayed(response, ApplicationResponse, started.cached_response)
-        result = _application_view(service.create_application(payload))
+        created = service.create_application(payload)
+        recorder.record(
+            "application.created",
+            "lifecycle",
+            actor=actor,
+            subject_type="application",
+            subject_id=created.application_id,
+            worker_id=created.worker_id,
+            context={"shift_id": created.shift_id},
+        )
+        result = present.one(created)
         idempotency.finish(started.record_id, result.model_dump(mode="json"))
         return result
     except IdempotencyConflict as exc:
@@ -67,11 +85,12 @@ def list_applications(
     shift_id: str | None = None,
     service: ApplicationService = Depends(get_application_service),
     actor: ActorContext = Depends(get_actor_context),
+    present: ApplicationPresenter = Depends(get_application_presenter),
 ) -> list[ApplicationResponse]:
     require_role(actor.role, {ActorRole.OPERATOR, ActorRole.WORKER})
     worker_id, operator_id, account_id = list_scope(actor, worker_id, "applications")
     items = service.list_applications(limit, status, worker_id, operator_id, account_id, shift_id)
-    return [_application_view(item) for item in items]
+    return present.many(items)
 
 
 @router.post("/applications/{application_id}/approve", response_model=ApplicationResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
@@ -80,12 +99,37 @@ def approve_application(
     request: ApplicationDecisionRequest,
     service: ApplicationService = Depends(get_application_service),
     actor: ActorContext = Depends(get_actor_context),
+    present: ApplicationPresenter = Depends(get_application_presenter),
+    recorder: EventRecorder = Depends(get_event_recorder),
+    transitions: BookingTransitionRepository = Depends(get_booking_transition_repo),
 ) -> ApplicationResponse:
     require_role(actor.role, {ActorRole.OPERATOR})
     try:
         _require_application_access(actor, service.get_application(application_id), service)
         application = service.approve_application(application_id, request)
-        return _application_view(application)
+        if application.booking_id:
+            transitions.append(
+                BookingTransition(
+                    transition_id=str(uuid4()),
+                    booking_id=application.booking_id,
+                    from_state=None,
+                    to_state="confirmed",
+                    occurred_at=request.now or utc_now(),
+                    actor_user_id=actor.user_id,
+                    actor_role=actor.role.value,
+                    context={"shift_id": application.shift_id, "worker_id": application.worker_id},
+                )
+            )
+        recorder.record(
+            "application.approved",
+            "lifecycle",
+            actor=actor,
+            subject_type="application",
+            subject_id=application.application_id,
+            worker_id=application.worker_id,
+            context={"shift_id": application.shift_id, "booking_id": application.booking_id},
+        )
+        return present.one(application)
     except ServiceError as exc:
         raise_service_error(exc)
 
@@ -96,12 +140,23 @@ def reject_application(
     request: ApplicationDecisionRequest,
     service: ApplicationService = Depends(get_application_service),
     actor: ActorContext = Depends(get_actor_context),
+    present: ApplicationPresenter = Depends(get_application_presenter),
+    recorder: EventRecorder = Depends(get_event_recorder),
 ) -> ApplicationResponse:
     require_role(actor.role, {ActorRole.OPERATOR})
     try:
         _require_application_access(actor, service.get_application(application_id), service)
         application = service.reject_application(application_id, request)
-        return _application_view(application)
+        recorder.record(
+            "application.rejected",
+            "lifecycle",
+            actor=actor,
+            subject_type="application",
+            subject_id=application.application_id,
+            worker_id=application.worker_id,
+            context={"shift_id": application.shift_id, "booking_id": application.booking_id},
+        )
+        return present.one(application)
     except ServiceError as exc:
         raise_service_error(exc)
 
@@ -112,12 +167,24 @@ def withdraw_application(
     request: CancellationRequest,
     service: ApplicationService = Depends(get_application_service),
     actor: ActorContext = Depends(get_actor_context),
+    present: ApplicationPresenter = Depends(get_application_presenter),
+    recorder: EventRecorder = Depends(get_event_recorder),
 ) -> ApplicationResponse:
     require_role(actor.role, {ActorRole.WORKER})
     try:
         application = service.get_application(application_id)
         _require_application_access(actor, application, service)
-        return _application_view(service.withdraw(application_id, request))
+        withdrawn = service.withdraw(application_id, request)
+        recorder.record(
+            "application.withdrawn",
+            "lifecycle",
+            actor=actor,
+            subject_type="application",
+            subject_id=withdrawn.application_id,
+            worker_id=withdrawn.worker_id,
+            context={"shift_id": withdrawn.shift_id},
+        )
+        return present.one(withdrawn)
     except ServiceError as exc:
         raise_service_error(exc)
 
@@ -128,10 +195,11 @@ def update_application_message(
     request: ApplicationMessageUpdateRequest,
     service: ApplicationService = Depends(get_application_service),
     actor: ActorContext = Depends(get_actor_context),
+    present: ApplicationPresenter = Depends(get_application_presenter),
 ) -> ApplicationResponse:
     try:
         _require_application_access(actor, service.get_application(application_id), service)
-        return _application_view(service.update_message(application_id, request))
+        return present.one(service.update_message(application_id, request))
     except ServiceError as exc:
         raise_service_error(exc)
 
@@ -141,6 +209,7 @@ def get_application_message_history(
     application_id: str,
     service: ApplicationService = Depends(get_application_service),
     actor: ActorContext = Depends(get_actor_context),
+    present: ApplicationPresenter = Depends(get_application_presenter),
 ) -> list[ApplicationMessageHistoryResponse]:
     try:
         _require_application_access(actor, service.get_application(application_id), service)

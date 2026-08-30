@@ -4,10 +4,24 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from apps.api.src.models.booking_transition import ReasonCode
 from apps.api.src.validation_types import MoneyAmount, UtcTimestamp
 
 
+class BookingTransitionView(BaseModel):
+    transition_id: str
+    booking_id: str
+    from_state: str | None
+    to_state: str
+    occurred_at: UtcTimestamp
+    actor_user_id: str | None
+    actor_role: str | None
+    reason_code: str | None
+    reason_note: str | None
+
+
 class CancellationRequest(BaseModel):
+    reason_code: ReasonCode | None = None
     reason: str = Field(min_length=3, max_length=500)
     now: UtcTimestamp | None = None
 

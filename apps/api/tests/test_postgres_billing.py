@@ -10,10 +10,9 @@ from sqlalchemy import func, select
 from apps.api.src.db.billing_models import PartnerCodeRedemptionModel
 from apps.api.src.db.tenancy_models import OrganisationModel, VenueModel
 from apps.api.src.models.partner_code import PartnerCode
+from apps.api.src.repositories.sqlalchemy_booking_charge_repository import SqlAlchemyBookingChargeRepository
 from apps.api.src.repositories.sqlalchemy_booking_repository import SqlAlchemyBookingRepository
 from apps.api.src.repositories.sqlalchemy_partner_code_repository import SqlAlchemyPartnerCodeRepository
-from apps.api.src.repositories.sqlalchemy_shift_repository import SqlAlchemyShiftRepository
-from apps.api.src.repositories.sqlalchemy_worker_profile_repository import SqlAlchemyWorkerProfileRepository
 from apps.api.src.services.billing_service import BillingService
 from apps.api.src.services.errors import ConflictError
 
@@ -77,8 +76,7 @@ def test_partner_code_redemption_limit_is_atomic() -> None:
                 barrier.wait(timeout=10)
                 service = BillingService(
                     SqlAlchemyBookingRepository(session),
-                    SqlAlchemyShiftRepository(session),
-                    SqlAlchemyWorkerProfileRepository(session),
+                    SqlAlchemyBookingChargeRepository(session),
                     SqlAlchemyPartnerCodeRepository(session),
                     Decimal("8"),
                 )
