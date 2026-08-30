@@ -36,9 +36,23 @@ export type FeedShift = Shift & {
 };
 
 export type WorkerFeedPage = {
+  slate_id: string;
   items: FeedShift[];
   next_cursor: string | null;
   market: Market;
+};
+
+export type ShiftSummary = {
+  shift_id: string;
+  role: string;
+  location: string;
+  pay_rate: string;
+  currency: string;
+  start_time: string;
+  end_time: string;
+  venue_id?: string | null;
+  venue_name?: string | null;
+  venue_avatar_url?: string | null;
 };
 
 export type Booking = {
@@ -57,6 +71,7 @@ export type Booking = {
   cancellation_reason?: string | null;
   cancelled_by_user_id?: string | null;
   completion_code?: string | null;
+  shift?: ShiftSummary | null;
 };
 
 export type PendingRating = {
@@ -85,6 +100,7 @@ export type Application = {
   decided_at?: string | null;
   withdrawn_at?: string | null;
   withdrawal_reason?: string | null;
+  shift?: ShiftSummary | null;
 };
 
 export type WorkerProfile = {

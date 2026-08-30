@@ -1,10 +1,10 @@
 import * as Device from "expo-device";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Notifications from "expo-notifications";
-import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
 import { registerPushToken, unregisterPushToken } from "./notifications";
+import { deleteItem, getItem, setItem } from "./secureStorage";
 
 const DEVICE_ID_KEY = "push_device_id";
 const PUSH_TOKEN_ID_KEY = "push_token_id";
@@ -78,7 +78,7 @@ export async function syncPushRegistration(
   const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
   const deviceId = await getInstallationId();
   const saved = await registerPushToken({ token, platform: Platform.OS, device_id: deviceId });
-  await SecureStore.setItemAsync(PUSH_TOKEN_ID_KEY, saved.push_token_id);
+  await setItem(PUSH_TOKEN_ID_KEY, saved.push_token_id);
   const deviceLabel = Device.modelName?.trim() || "this device";
   return { status: "registered", message: `Alerts are active on ${deviceLabel}.` };
 }
@@ -91,12 +91,12 @@ export function remotePushRuntimeSupported(): boolean {
 }
 
 export async function unregisterStoredPushDevice(): Promise<void> {
-  const pushTokenId = await SecureStore.getItemAsync(PUSH_TOKEN_ID_KEY);
+  const pushTokenId = await getItem(PUSH_TOKEN_ID_KEY);
   if (!pushTokenId) return;
   try {
     await unregisterPushToken(pushTokenId);
   } finally {
-    await SecureStore.deleteItemAsync(PUSH_TOKEN_ID_KEY);
+    await deleteItem(PUSH_TOKEN_ID_KEY);
   }
 }
 
@@ -109,9 +109,9 @@ function permissionGranted(permission: Notifications.NotificationPermissionsStat
 }
 
 async function getInstallationId(): Promise<string> {
-  const stored = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+  const stored = await getItem(DEVICE_ID_KEY);
   if (stored) return stored;
   const generated = `device-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
-  await SecureStore.setItemAsync(DEVICE_ID_KEY, generated);
+  await setItem(DEVICE_ID_KEY, generated);
   return generated;
 }

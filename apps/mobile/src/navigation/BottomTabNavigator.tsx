@@ -2,13 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useNotifications } from "../contexts/NotificationContext";
 import { BrowseScreen } from "../screens/BrowseScreen";
 import EarningsScreen from "../screens/EarningsScreen";
 import { NotificationCenterScreen } from "../screens/NotificationCenterScreen";
-import { ProfileScreen } from "../screens/ProfileScreen";
+import { ApplicationsScreen } from "../screens/ApplicationsScreen";
 import { ShiftsScreen } from "../screens/ShiftsScreen";
 import { COLORS } from "../theme/colors";
+import { NotificationBell } from "./NotificationBell";
+import { ProfileStack } from "./ProfileStack";
 import type { RootTabParamList } from "./navigationTypes";
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -16,21 +17,21 @@ const Tab = createBottomTabNavigator<RootTabParamList>();
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
 const TAB_ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> = {
-  Browse: { active: "home", inactive: "home-outline" },
+  Browse: { active: "compass", inactive: "compass-outline" },
   Shifts: { active: "briefcase", inactive: "briefcase-outline" },
-  Alerts: { active: "notifications", inactive: "notifications-outline" },
-  Earnings: { active: "wallet", inactive: "wallet-outline" },
+  Applications: { active: "document-text", inactive: "document-text-outline" },
+  Earnings: { active: "receipt", inactive: "receipt-outline" },
   Profile: { active: "person", inactive: "person-outline" },
 };
 
 export function BottomTabNavigator() {
   const insets = useSafeAreaInsets();
-  const { unreadCount } = useNotifications();
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: true,
+        headerRight: () => <NotificationBell />,
         headerStyle: {
           backgroundColor: COLORS.surface,
           elevation: 0,
@@ -78,13 +79,9 @@ export function BottomTabNavigator() {
         options={{ title: "My Shifts", tabBarLabel: "Shifts" }}
       />
       <Tab.Screen
-        name="Alerts"
-        component={NotificationCenterScreen}
-        options={{
-          title: "Notifications",
-          tabBarLabel: "Alerts",
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
-        }}
+        name="Applications"
+        component={ApplicationsScreen}
+        options={{ title: "Applications", tabBarLabel: "Applications" }}
       />
       <Tab.Screen
         name="Earnings"
@@ -93,8 +90,13 @@ export function BottomTabNavigator() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
-        options={{ title: "Profile", tabBarLabel: "Profile" }}
+        component={ProfileStack}
+        options={{ title: "Profile", tabBarLabel: "Profile", headerShown: false }}
+      />
+      <Tab.Screen
+        name="Alerts"
+        component={NotificationCenterScreen}
+        options={{ title: "Notifications", tabBarButton: () => null }}
       />
     </Tab.Navigator>
   );

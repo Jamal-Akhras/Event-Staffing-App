@@ -10,6 +10,8 @@ export type EarningsEntry = {
   total: number;
   status: "paid" | "pending";
   currency: string;
+  venue_name?: string | null;
+  frozen?: boolean;
 };
 
 export type EarningsSummary = {

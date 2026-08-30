@@ -1,143 +1,126 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { EmptyState } from "../components/EmptyState";
+import { Money } from "../components/Money";
+import { SectionHeader } from "../components/SectionHeader";
+import { SegmentedTabs } from "../components/SegmentedTabs";
 import { fetchWorker, getWorkerId } from "../lib/api";
 import { COLORS } from "../theme/colors";
-import { EarningsRow } from "./earnings/EarningsRow";
-import { EarningsSummaryCard } from "./earnings/EarningsSummaryCard";
-import { PeriodSelector } from "./earnings/PeriodSelector";
-import type { EarningsSummary, Period } from "./earnings/earningsTypes";
+import { RADIUS, SPACE } from "../theme/space";
+import { NUMERIC, TYPE } from "../theme/type";
+import { EarningsEntryRow } from "./earnings/EarningsEntryRow";
+import { PERIOD_LABELS, type EarningsSummary, type Period } from "./earnings/earningsTypes";
+
+const PERIODS: { key: Period; label: string }[] = (
+  ["week", "month", "year"] as Period[]
+).map((key) => ({ key, label: PERIOD_LABELS[key] }));
+
+const HEADINGS: Record<Period, string> = {
+  week: "Earned this week",
+  month: "Earned this month",
+  year: "Earned this year",
+};
 
 export default function EarningsScreen() {
   const workerId = getWorkerId();
-  const [period, setPeriod] = useState<Period>("week");
+  const [period, setPeriod] = useState<Period>("month");
   const [summary, setSummary] = useState<EarningsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEarnings = useCallback(async (selectedPeriod: Period) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchWorker<EarningsSummary>(
-        `/workers/${workerId}/earnings?period=${selectedPeriod}`
-      );
-      setSummary(data);
-    } catch (err) {
-      setSummary(null);
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [workerId]);
+  const load = useCallback(
+    async (selected: Period) => {
+      setLoading(true);
+      setError(null);
+      try {
+        setSummary(await fetchWorker<EarningsSummary>(`/workers/${workerId}/earnings?period=${selected}`));
+      } catch (err) {
+        setSummary(null);
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [workerId]
+  );
 
   useEffect(() => {
-    fetchEarnings(period);
-  }, [period, fetchEarnings]);
+    load(period);
+  }, [period, load]);
 
-  const paidEntries = useMemo(
-    () => summary?.entries.filter((entry) => entry.status === "paid") ?? [],
-    [summary]
-  );
-  const pendingEntries = useMemo(
-    () => summary?.entries.filter((entry) => entry.status === "pending") ?? [],
-    [summary]
-  );
+  const total = useMemo(() => {
+    if (!summary) return 0;
+    return Number(summary.total_paid) + Number(summary.total_pending);
+  }, [summary]);
+
+  const entries = summary?.entries ?? [];
 
   return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={styles.scroll}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>Pay tracking</Text>
-        <Text style={styles.title}>Earnings</Text>
-        <Text style={styles.subtitle}>See paid and pending shift earnings by period.</Text>
-      </View>
+    <View style={styles.screen}>
+      <SegmentedTabs tabs={PERIODS} active={period} onChange={setPeriod} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <EarningsSummaryCard period={period} summary={summary} loading={loading} />
-      <PeriodSelector period={period} onChange={setPeriod} />
-
-      {error && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable onPress={() => fetchEarnings(period)} style={styles.retryButton}>
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
+        <View style={styles.panel}>
+          <Text style={styles.label}>{HEADINGS[period]}</Text>
+          <Money amount={total} currency={summary?.currency} style={styles.hero} />
+          <View style={styles.split}>
+            <View>
+              <Text style={styles.label}>Paid</Text>
+              <Money amount={summary?.total_paid ?? 0} currency={summary?.currency} style={styles.figure} />
+            </View>
+            <View style={styles.right}>
+              <Text style={styles.label}>Awaiting</Text>
+              <Money amount={summary?.total_pending ?? 0} currency={summary?.currency} style={styles.figure} />
+            </View>
+          </View>
+          <Text style={styles.note}>Each venue pays you directly</Text>
         </View>
-      )}
 
-      {!loading && !error && summary?.entries.length === 0 && (
-        <EmptyState
-          title="No earnings yet"
-          message="Completed and paid shifts will build your earnings history."
-        />
-      )}
-
-      <EarningsSection title="Paid" entries={paidEntries} />
-      <EarningsSection title="Pending" entries={pendingEntries} />
-    </ScrollView>
-  );
-}
-
-function EarningsSection({
-  title,
-  entries,
-}: {
-  title: string;
-  entries: NonNullable<EarningsSummary["entries"]>;
-}) {
-  if (entries.length === 0) return null;
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionHeader}>{title}</Text>
-      {entries.map((entry) => (
-        <EarningsRow key={entry.booking_id} entry={entry} />
-      ))}
+        {entries.length === 0 && !loading ? (
+          <EmptyState
+            title="Nothing yet"
+            message="Finished shifts show up here with what they paid and whether the venue has settled."
+          />
+        ) : (
+          <View>
+            <SectionHeader
+              title={PERIOD_LABELS[period]}
+              count={`${entries.length} ${entries.length === 1 ? "shift" : "shifts"}`}
+            />
+            {entries.map((entry) => (
+              <EarningsEntryRow key={entry.booking_id} entry={entry} />
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  scroll: { padding: 20, paddingBottom: 40 },
-  header: { marginBottom: 16 },
-  eyebrow: {
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  title: { color: COLORS.ink, fontSize: 26, fontWeight: "800", marginTop: 4, letterSpacing: -0.3 },
-  subtitle: { color: COLORS.inkMuted, fontSize: 14, lineHeight: 20, marginTop: 6 },
-  errorBox: {
-    alignItems: "center",
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.error,
-    borderRadius: 12,
+  screen: { flex: 1, backgroundColor: COLORS.canvas },
+  content: { padding: SPACE.s4, gap: SPACE.s5, paddingBottom: SPACE.s7 },
+  panel: {
     backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.lg,
+    padding: SPACE.s5,
   },
-  errorText: { color: COLORS.error, fontWeight: "600", marginBottom: 10 },
-  retryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
+  label: { ...TYPE.eyebrow, color: COLORS.inkSubtle },
+  hero: { ...NUMERIC, fontSize: 40, fontWeight: "400", letterSpacing: -1.4, color: COLORS.ink, marginTop: SPACE.s2 },
+  split: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: SPACE.s4,
+    paddingTop: SPACE.s4,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
-  retryText: { color: COLORS.onPrimary, fontWeight: "800" },
-  section: { marginBottom: 24 },
-  sectionHeader: {
-    marginBottom: 8,
-    color: COLORS.inkMuted,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
+  right: { alignItems: "flex-end" },
+  figure: { ...TYPE.number, ...NUMERIC, color: COLORS.ink, marginTop: 4 },
+  note: { ...TYPE.meta, color: COLORS.inkSubtle, marginTop: SPACE.s3 },
+  error: { ...TYPE.meta, color: COLORS.error },
 });

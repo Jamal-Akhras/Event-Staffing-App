@@ -1,7 +1,7 @@
-import * as SecureStore from "expo-secure-store";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { postPublicJson, setApiAuth, setUnauthorizedHandler } from "../lib/api";
+import { deleteItem, getItem, setItem } from "../lib/secureStorage";
 import { unregisterStoredPushDevice } from "../lib/pushRegistration";
 
 export type AuthUser = {
@@ -41,22 +41,22 @@ type TokenResponse = {
 
 async function saveSession(token: string, user: AuthUser): Promise<void> {
   await Promise.all([
-    SecureStore.setItemAsync(TOKEN_KEY, token),
-    SecureStore.setItemAsync(USER_KEY, JSON.stringify(user)),
+    setItem(TOKEN_KEY, token),
+    setItem(USER_KEY, JSON.stringify(user)),
   ]);
 }
 
 async function clearSession(): Promise<void> {
   await Promise.all([
-    SecureStore.deleteItemAsync(TOKEN_KEY),
-    SecureStore.deleteItemAsync(USER_KEY),
+    deleteItem(TOKEN_KEY),
+    deleteItem(USER_KEY),
   ]);
 }
 
 async function readSession(): Promise<{ token: string; rawUser: string } | null> {
   const [token, rawUser] = await Promise.all([
-    SecureStore.getItemAsync(TOKEN_KEY),
-    SecureStore.getItemAsync(USER_KEY),
+    getItem(TOKEN_KEY),
+    getItem(USER_KEY),
   ]);
   return token && rawUser ? { token, rawUser } : null;
 }

@@ -17,6 +17,8 @@ import type { RootTabParamList } from "../navigation/navigationTypes";
 import { COLORS } from "../theme/colors";
 import type { FeedShift } from "../types";
 import { ApplyPanel } from "./browse/ApplyPanel";
+import { track } from "../lib/analytics";
+import { useFeedViewability } from "./browse/useFeedViewability";
 import { BrowseFeedCard } from "./browse/BrowseFeedCard";
 import { BrowseFilters } from "./browse/BrowseFilters";
 import { browseScreenStyles as styles } from "./browse/browseScreenStyles";
@@ -40,6 +42,11 @@ export function BrowseScreen() {
   const [applyingShiftIds, setApplyingShiftIds] = useState<Set<string>>(() => new Set());
   const [lastPassedShift, setLastPassedShift] = useState<FeedShift | null>(null);
   const applySheetRef = useRef<BottomSheetModal>(null);
+  const detailOpenedAt = useRef<number | null>(null);
+  const { viewabilityConfigCallbackPairs, trackShiftEvent, trackDwell } = useFeedViewability(
+    feed.items,
+    feed.slateId
+  );
 
   const { refresh } = feed;
   useEffect(() => {
@@ -60,11 +67,16 @@ export function BrowseScreen() {
     }, [refresh])
   );
 
-  const openApplySheet = useCallback((shift: FeedShift) => {
-    setSelectedShift(shift);
-    setApplicationMessage("");
-    applySheetRef.current?.present();
-  }, []);
+  const openApplySheet = useCallback(
+    (shift: FeedShift) => {
+      detailOpenedAt.current = Date.now();
+      trackShiftEvent("shift.opened", shift);
+      setSelectedShift(shift);
+      setApplicationMessage("");
+      applySheetRef.current?.present();
+    },
+    [trackShiftEvent]
+  );
   const showFeed = useCallback(() => setViewMode("feed"), []);
   const notificationTargetError = useNotificationShiftTarget({
     items: feed.items,
@@ -73,9 +85,13 @@ export function BrowseScreen() {
   });
 
   const dismissApplySheet = useCallback(() => {
+    if (selectedShift && detailOpenedAt.current !== null) {
+      trackDwell(selectedShift, detailOpenedAt.current);
+    }
+    detailOpenedAt.current = null;
     setSelectedShift(null);
     setApplicationMessage("");
-  }, []);
+  }, [selectedShift, trackDwell]);
 
   const goToProfile = useCallback(() => {
     navigation.navigate("Profile");
@@ -169,6 +185,7 @@ export function BrowseScreen() {
           }
           onEndReached={() => void feed.loadMore()}
           onEndReachedThreshold={0.4}
+          viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs}
           refreshControl={
             <RefreshControl
               colors={[COLORS.primary]}
@@ -177,16 +194,24 @@ export function BrowseScreen() {
               onRefresh={() => void feed.refresh()}
             />
           }
-          renderItem={({ item }) => (
-            <BrowseFeedCard
-              highPayThreshold={highPayThreshold}
-              isApplying={applyingShiftIds.has(item.shift_id)}
-              shift={item}
-              onDetails={() => openApplySheet(item)}
-              onPass={() => void handlePass(item)}
-              onQuickApply={() => void handleQuickApply(item)}
-            />
-          )}
+          renderItem={({ item }) => {
+            return (
+              <BrowseFeedCard
+                highPayThreshold={highPayThreshold}
+                isApplying={applyingShiftIds.has(item.shift_id)}
+                shift={item}
+                onDetails={() => openApplySheet(item)}
+                onPass={() => {
+                  trackShiftEvent("shift.passed", item);
+                  void handlePass(item);
+                }}
+                onQuickApply={() => {
+                  trackShiftEvent("shift.quick_applied", item);
+                  void handleQuickApply(item);
+                }}
+              />
+            );
+          }}
           showsVerticalScrollIndicator={false}
         />
       )}

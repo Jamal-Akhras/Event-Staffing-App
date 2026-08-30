@@ -1,5 +1,9 @@
+import Constants from "expo-constants";
+
 export const API_BASE =
   process.env.EXPO_PUBLIC_API_BASE ?? "http://192.168.10.131:8001";
+
+const SESSION_ID = ((globalThis as { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID?.() ?? String(Date.now())).slice(0, 64);
 
 let _token: string | null = null;
 let _workerId: string | null = null;
@@ -52,10 +56,23 @@ function getAuthToken(): string {
 }
 
 function getHeaders(): Record<string, string> {
-  return {
+  return getClientHeaders();
+}
+
+export function isAuthenticated(): boolean {
+  return _token !== null;
+}
+
+export function getClientHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
     Authorization: `Bearer ${getAuthToken()}`,
     "Content-Type": "application/json",
+    "X-Client": "mobile",
+    "X-Session-Id": SESSION_ID,
   };
+  const version = Constants.expoConfig?.version;
+  if (version) headers["X-App-Version"] = version;
+  return headers;
 }
 
 export function getWorkerId(): string {

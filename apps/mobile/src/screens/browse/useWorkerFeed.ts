@@ -14,6 +14,7 @@ type FeedFilters = { query: string; filter: ShiftFilter };
 
 export function useWorkerFeed() {
   const [items, setItems] = useState<FeedShift[]>([]);
+  const [slateId, setSlateId] = useState<string | null>(null);
   const [market, setMarket] = useState<Market | null>(null);
   const [status, setStatus] = useState<FeedStatus>("loading");
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export function useWorkerFeed() {
       );
       if (seq !== requestSeq.current) return;
       setItems(appendUnique([], page.items, getShiftId));
+      setSlateId(page.slate_id);
       nextCursorRef.current = page.next_cursor;
       setHasMore(page.next_cursor !== null);
       marketRef.current = page.market;
@@ -93,6 +95,7 @@ export function useWorkerFeed() {
       );
       if (seq !== requestSeq.current) return;
       setItems((current) => appendUnique(current, page.items, getShiftId));
+      setSlateId(page.slate_id);
       nextCursorRef.current = page.next_cursor;
       setHasMore(page.next_cursor !== null);
       marketRef.current = page.market;
@@ -125,6 +128,7 @@ export function useWorkerFeed() {
     removeItem,
     retry,
     searchQuery,
+    slateId,
     setActiveFilter,
     setSearchQuery,
     status,
