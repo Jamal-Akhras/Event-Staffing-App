@@ -1,23 +1,23 @@
 ﻿# Directory Summary
 
-Generated: 2026-08-26 23:57:40
+Generated: 2026-09-03 01:28:27
 
 | Directory | Files |
 |---|---:|
 | .github/ | 2 |
 |   .github/workflows/ | 1 |
-| apps/ | 494 |
-|   apps/api/ | 278 |
-|     apps/api/alembic/ | 33 |
+| apps/ | 611 |
+|   apps/api/ | 359 |
+|     apps/api/alembic/ | 42 |
 |     apps/api/scripts/ | 7 |
-|     apps/api/src/ | 181 |
-|     apps/api/tests/ | 55 |
-|   apps/mobile/ | 79 |
+|     apps/api/src/ | 238 |
+|     apps/api/tests/ | 70 |
+|   apps/mobile/ | 93 |
 |     apps/mobile/assets/ | 4 |
-|     apps/mobile/src/ | 67 |
-|   apps/web/ | 136 |
+|     apps/mobile/src/ | 81 |
+|   apps/web/ | 158 |
 |     apps/web/public/ | 1 |
-|     apps/web/src/ | 125 |
+|     apps/web/src/ | 147 |
 | context/ | 12 |
 |   context/_generated/ | 6 |
 |   context/scripts/ | 5 |
@@ -29,8 +29,8 @@ Generated: 2026-08-26 23:57:40
 |   docs/40-future/ | 3 |
 |   docs/images/ | 1 |
 |   docs/legal/ | 1 |
-| documentation/ | 23 |
-|   documentation/00-product/ | 3 |
+| documentation/ | 26 |
+|   documentation/00-product/ | 6 |
 |   documentation/10-architecture/ | 4 |
 |   documentation/20-domain/ | 4 |
 |   documentation/30-data/ | 2 |
