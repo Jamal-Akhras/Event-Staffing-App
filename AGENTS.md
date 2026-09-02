@@ -4,9 +4,14 @@ This repository uses a context-first workflow to reduce token usage and broad co
 
 ## Important Rules
 
-- Build modular first. No code file may exceed 300 lines of code.
-- Think ahead. Keep entrypoints stable and isolate logic into smaller modules from the start.
-- If a task needs more code, split into multiple files/modules/functions.
+- Build modular first. Think ahead: keep entrypoints stable and isolate logic into cohesive modules from the start.
+- Prefer handwritten production files below 400 lines.
+- Files above 500 lines require a cohesion/responsibility review.
+- Handwritten production files may not exceed 800 lines without an explicit documented exception.
+- Tests may reach 1,000 lines when they cover one coherent subsystem.
+- Generated files, migrations, declarative schemas and data fixtures are exempt.
+- Never split a cohesive module solely to satisfy a line count.
+- Prefer functions below roughly 60 lines and components/services with one clear responsibility.
 - Do not add default fallbacks during development. If something fails, let it fail.
 - Do not leave empty try/catch blocks.
 - Do not reinvent the wheel. Prefer open source, self-hosted libraries when appropriate. Ask the user to confirm library choice.
