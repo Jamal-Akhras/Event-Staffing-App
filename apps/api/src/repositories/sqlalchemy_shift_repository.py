@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import desc
+from sqlalchemy import and_, desc, or_
 from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import BookingModel, ShiftModel
@@ -74,6 +74,30 @@ class SqlAlchemyShiftRepository:
         rows = self._session.query(ShiftModel).filter(ShiftModel.shift_id.in_(shift_ids)).all()
         return [_to_domain(row) for row in rows]
 
+    def list_due_for_escalation(self, now: datetime) -> list[Shift]:
+        rows = (
+            self._session.query(ShiftModel)
+            .filter(ShiftModel.status == "open")
+            .filter(ShiftModel.start_time > now)
+            .filter(ShiftModel.workers_filled < ShiftModel.workers_needed)
+            .filter(ShiftModel.origin != "market")
+            .filter(
+                or_(
+                    and_(
+                        ShiftModel.origin == "assigned",
+                        or_(
+                            ShiftModel.offer_pool_at <= now,
+                            and_(ShiftModel.offer_pool_at.is_(None), ShiftModel.publish_market_at <= now),
+                        ),
+                    ),
+                    and_(ShiftModel.origin == "pool", ShiftModel.publish_market_at <= now),
+                )
+            )
+            .order_by(ShiftModel.start_time)
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
     def list_by_worker(self, worker_id: str, limit: int = 50) -> list[Shift]:
         rows = (
             self._session.query(ShiftModel)
@@ -109,6 +133,11 @@ def _to_domain(model: ShiftModel) -> Shift:
         cancelled_at=getattr(model, "cancelled_at", None),
         cancellation_reason=getattr(model, "cancellation_reason", None),
         cancelled_by_user_id=getattr(model, "cancelled_by_user_id", None),
+        origin=model.origin,
+        assigned_worker_id=model.assigned_worker_id,
+        billable=model.billable,
+        offer_pool_at=model.offer_pool_at,
+        publish_market_at=model.publish_market_at,
     )
 
 
@@ -133,3 +162,8 @@ def _apply_domain(model: ShiftModel, shift: Shift) -> None:
     model.cancelled_at = shift.cancelled_at
     model.cancellation_reason = shift.cancellation_reason
     model.cancelled_by_user_id = shift.cancelled_by_user_id
+    model.origin = shift.origin
+    model.assigned_worker_id = shift.assigned_worker_id
+    model.billable = shift.billable
+    model.offer_pool_at = shift.offer_pool_at
+    model.publish_market_at = shift.publish_market_at

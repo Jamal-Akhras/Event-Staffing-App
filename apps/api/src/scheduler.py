@@ -21,6 +21,17 @@ def run_no_show_sweep() -> None:
         log.exception("no-show sweep failed")
 
 
+def run_escalation_sweep() -> None:
+    from apps.api.src.jobs.run_escalation_sweep import run
+
+    try:
+        moved = run()
+        if moved:
+            log.info("escalation sweep: %d shift(s) moved", moved)
+    except Exception:
+        log.exception("escalation sweep failed")
+
+
 def run_recurring_generation() -> None:
     from apps.api.src.db.database import SessionLocal
     from apps.api.src.db.models import RecurringScheduleModel
@@ -99,5 +110,6 @@ def create_scheduler() -> BackgroundScheduler:
         coalesce=True,
     )
     scheduler.add_job(run_no_show_sweep, "interval", minutes=15, id="no_show_sweep", replace_existing=True)
+    scheduler.add_job(run_escalation_sweep, "interval", minutes=5, id="escalation_sweep", replace_existing=True)
     scheduler.add_job(run_recurring_generation, "cron", hour=3, minute=0, id="recurring_gen", replace_existing=True)
     return scheduler

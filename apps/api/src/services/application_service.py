@@ -27,7 +27,9 @@ from apps.api.src.schemas import (
     ApplicationMessageUpdateRequest,
 )
 from apps.api.src.schemas_recovery import CancellationRequest
-from apps.api.src.services.errors import ConflictError, NotFoundError, ValidationError
+from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
+from apps.api.src.services.errors import ConflictError, ForbiddenError, NotFoundError, ValidationError
+from apps.api.src.services.shift_visibility import worker_can_see_shift
 from apps.api.src.services.outbox_publisher import OutboxPublisher
 
 
@@ -39,12 +41,14 @@ class ApplicationService:
         decision_repo: ApplicationDecisionRepository,
         history_repo: ApplicationMessageHistoryRepository,
         outbox: OutboxPublisher,
+        relationships: WorkerRelationshipRepository,
     ) -> None:
         self._applications = application_repo
         self._shifts = shift_repo
         self._decisions = decision_repo
         self._history = history_repo
         self._outbox = outbox
+        self._relationships = relationships
 
     def create_application(self, request: ApplicationCreateRequest) -> Application:
         shift = self._shifts.get(request.shift_id)
@@ -54,6 +58,8 @@ class ApplicationService:
             raise ValidationError("Shift is not accepting applications.")
         if shift.workers_filled >= shift.workers_needed:
             raise ValidationError("Shift is already fully staffed.")
+        if not worker_can_see_shift(shift, request.worker_id, self._relationships):
+            raise ForbiddenError("This shift is not open to you.")
         if self._applications.find_by_worker_and_shift(request.worker_id, request.shift_id):
             raise ValidationError("You have already applied to this shift. You can only apply once per shift.")
 

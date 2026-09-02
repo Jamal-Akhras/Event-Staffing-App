@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import ApplicationModel, ShiftModel, WorkerFeedStateModel
 from apps.api.src.db.tenancy_models import VenueModel
+from apps.api.src.db.workforce_models import WorkerRelationshipModel
 from apps.api.src.models.organisation import Venue
 from apps.api.src.models.worker_feed_query import WorkerFeedItem, WorkerFeedQuery
 from apps.api.src.repositories.sqlalchemy_organisation_repository import _venue
@@ -25,6 +26,7 @@ class SqlAlchemyWorkerFeedQueryRepository:
             .where(ShiftModel.workers_filled < ShiftModel.workers_needed)
             .where(~_passed_exists(query.worker_id))
             .where(~_application_exists(query.worker_id))
+            .where(_reaches_worker(query.worker_id))
         )
         if query.search:
             pattern = f"%{_escape_search(query.search)}%"
@@ -82,3 +84,22 @@ def _application_exists(worker_id: str):
 
 def _escape_search(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _reaches_worker(worker_id: str):
+    return or_(
+        ShiftModel.origin == "market",
+        and_(ShiftModel.origin == "assigned", ShiftModel.assigned_worker_id == worker_id),
+        and_(ShiftModel.origin == "pool", _pool_member_exists(worker_id)),
+    )
+
+
+def _pool_member_exists(worker_id: str):
+    return exists(
+        select(1).where(
+            WorkerRelationshipModel.venue_id == ShiftModel.venue_id,
+            WorkerRelationshipModel.worker_id == worker_id,
+            WorkerRelationshipModel.status.in_(("active", "invited")),
+            WorkerRelationshipModel.relationship_type != "one_off",
+        )
+    )

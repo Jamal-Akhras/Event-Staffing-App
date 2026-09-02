@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 from apps.api.src.models.booking_transition import ReasonCode
@@ -52,3 +54,8 @@ class ShiftUpdateRequest(BaseModel):
         if self.end_time <= self.start_time:
             raise ValueError("end_time must be after start_time")
         return self
+
+
+class ShiftAdvanceRequest(BaseModel):
+    target: Literal["pool", "market"]
+    now: UtcTimestamp | None = None

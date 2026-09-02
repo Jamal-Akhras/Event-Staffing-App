@@ -11,6 +11,7 @@ from apps.api.src.repository_dependencies import get_request_unit_of_work
 from apps.api.src.repositories.account_repository import AccountRepository
 from apps.api.src.repositories.market_repository import MarketRepository
 from apps.api.src.schemas_account import AccountResponse, AccountUpdateRequest
+from apps.api.src.services.escalation_policy import policy_from_venue
 from apps.api.src.services.notification_preferences import normalize_notification_preferences
 from apps.api.src.services.stored_upload import retire_objects_after_commit, venue_photo_prefix
 from apps.api.src.storage.object_storage import ObjectStorage
@@ -37,6 +38,7 @@ def _account_view(account: Account) -> AccountResponse:
         avatar_url=account.avatar_url,
         photos=list(account.photos),
         notification_preferences=dict(account.notification_preferences),
+        escalation_policy=account.escalation_policy,
     )
 
 
@@ -100,6 +102,11 @@ def update_my_account(
             else account.notification_preferences
         ),
         market_id=request.market_id if request.market_id is not None else account.market_id,
+        escalation_policy=(
+            _validated_escalation_policy(request.escalation_policy)
+            if request.escalation_policy is not None
+            else account.escalation_policy
+        ),
     )
     repo.save(updated)
     removed_urls = set(account.photos) - set(updated.photos)
@@ -110,3 +117,11 @@ def update_my_account(
         venue_photo_prefix(account.account_id),
     )
     return _account_view(updated)
+
+
+def _validated_escalation_policy(policy: dict) -> dict:
+    try:
+        policy_from_venue(policy)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return policy

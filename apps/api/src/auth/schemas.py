@@ -15,6 +15,7 @@ NormalizedEmail = Annotated[EmailStr, BeforeValidator(_normalize_email)]
 class UserRegisterRequest(BaseModel):
     email: NormalizedEmail
     password: str = Field(min_length=8, max_length=128)
+    join_code: str | None = Field(default=None, min_length=4, max_length=40)
 
 
 class OperatorRegisterRequest(BaseModel):

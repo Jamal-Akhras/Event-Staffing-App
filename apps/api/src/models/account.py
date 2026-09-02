@@ -24,6 +24,7 @@ class Account:
     notification_preferences: NotificationPreferences = field(default_factory=default_notification_preferences)
     organisation_id: str | None = None
     market_id: str | None = None
+    escalation_policy: dict | None = None
 
     @property
     def venue_id(self) -> str:

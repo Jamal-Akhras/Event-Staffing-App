@@ -11,15 +11,13 @@ from apps.api.src.auth import ActorContext, ActorRole, get_actor_context, requir
 from apps.api.src.deps import get_event_recorder, get_worker_feed_service, get_worker_shift_feed_service
 from apps.api.src.helpers import _shift_view
 from apps.api.src.routes.service_errors import raise_service_error
-from apps.api.src.schemas import (
-    ErrorResponse,
-    WorkerFeedStateResponse,
-    WorkerFeedStateUpdateRequest,
-)
+from apps.api.src.schemas import ErrorResponse
 from apps.api.src.services.errors import ServiceError
 from apps.api.src.schemas_market import MarketResponse
 from apps.api.src.services.event_recorder import EventRecorder
 from apps.api.src.schemas_worker_feed import (
+    WorkerFeedStateResponse,
+    WorkerFeedStateUpdateRequest,
     FeedVenueResponse,
     WorkerFeedItemResponse,
     WorkerFeedPageResponse,

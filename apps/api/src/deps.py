@@ -38,12 +38,27 @@ from apps.api.src.repository_dependencies import (
     get_worker_feed_query_repo,
     get_worker_profile_repo,
 )
+from apps.api.src.repository_dependencies_workforce import (
+    get_relationship_transition_repo,
+    get_venue_join_code_repo,
+    get_worker_relationship_repo,
+)
 from apps.api.src.config import get_platform_fee_percent
 from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
 from apps.api.src.services.application_service import ApplicationService
 from apps.api.src.repositories.booking_charge_repository import BookingChargeRepository
 from apps.api.src.repositories.booking_transition_repository import BookingTransitionRepository
 from apps.api.src.repositories.event_repository import EventRepository
+from apps.api.src.repositories.worker_relationship_repository import (
+    RelationshipTransitionRepository,
+    WorkerRelationshipRepository,
+)
+from apps.api.src.repositories.venue_join_code_repository import VenueJoinCodeRepository
+from apps.api.src.repositories.account_repository import AccountRepository
+from apps.api.src.services.join_code_service import JoinCodeService
+from apps.api.src.services.people_service import PeopleService
+from apps.api.src.services.escalation_service import EscalationService
+from apps.api.src.services.relationship_service import RelationshipService
 from apps.api.src.services.billing_service import BillingService
 from apps.api.src.services.charge_recorder import ChargeRecorder
 from apps.api.src.services.venue_analytics_service import VenueAnalyticsService
@@ -118,8 +133,49 @@ def get_charge_recorder(
     shift_repo: ShiftRepository = Depends(get_shift_repo),
     worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     partner_code_repo: PartnerCodeRepository = Depends(get_partner_code_repo),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
 ) -> ChargeRecorder:
-    return ChargeRecorder(charge_repo, shift_repo, worker_repo, partner_code_repo, get_platform_fee_percent())
+    return ChargeRecorder(
+        charge_repo,
+        shift_repo,
+        worker_repo,
+        partner_code_repo,
+        get_platform_fee_percent(),
+        relationship_repo,
+    )
+
+
+def get_relationship_service(
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    transition_repo: RelationshipTransitionRepository = Depends(get_relationship_transition_repo),
+    worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
+) -> RelationshipService:
+    return RelationshipService(relationship_repo, transition_repo, worker_repo)
+
+
+def get_people_service(
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
+    charge_repo: BookingChargeRepository = Depends(get_booking_charge_repo),
+) -> PeopleService:
+    return PeopleService(relationship_repo, worker_repo, charge_repo)
+
+
+def get_escalation_service(
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    account_repo: AccountRepository = Depends(get_account_repo),
+    outbox: OutboxPublisher = Depends(get_outbox_publisher),
+) -> EscalationService:
+    return EscalationService(shift_repo, relationship_repo, account_repo, outbox)
+
+
+def get_join_code_service(
+    code_repo: VenueJoinCodeRepository = Depends(get_venue_join_code_repo),
+    relationships: RelationshipService = Depends(get_relationship_service),
+    account_repo: AccountRepository = Depends(get_account_repo),
+) -> JoinCodeService:
+    return JoinCodeService(code_repo, relationships, account_repo)
 
 
 def get_idempotency_service(
@@ -143,8 +199,11 @@ def get_application_service(
     decision_repo: ApplicationDecisionRepository = Depends(get_application_decision_repo),
     history_repo: ApplicationMessageHistoryRepository = Depends(get_application_message_history_repo),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
 ) -> ApplicationService:
-    return ApplicationService(application_repo, shift_repo, decision_repo, history_repo, outbox)
+    return ApplicationService(
+        application_repo, shift_repo, decision_repo, history_repo, outbox, relationship_repo
+    )
 
 
 def get_booking_lifecycle_service(
@@ -153,8 +212,9 @@ def get_booking_lifecycle_service(
     shift_repo: ShiftRepository = Depends(get_shift_repo),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
     transitions: BookingTransitionRepository = Depends(get_booking_transition_repo),
+    escalations: EscalationService = Depends(get_escalation_service),
 ) -> BookingLifecycleService:
-    return BookingLifecycleService(booking_repo, worker_repo, shift_repo, outbox, transitions)
+    return BookingLifecycleService(booking_repo, worker_repo, shift_repo, outbox, transitions, escalations)
 
 
 def get_venue_insights_service(

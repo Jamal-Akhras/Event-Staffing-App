@@ -30,3 +30,6 @@ class ShiftRepository(Protocol):
 
     def list_by_ids(self, shift_ids: list[str]) -> list[Shift]:
         ...
+
+    def list_due_for_escalation(self, now: datetime) -> list[Shift]:
+        ...

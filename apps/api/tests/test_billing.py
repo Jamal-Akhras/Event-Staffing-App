@@ -27,6 +27,12 @@ from apps.api.src.repository_dependencies import (
 from apps.api.src.services.billing_service import new_partner_code
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
+from apps.api.src.repository_dependencies_workforce import (
+    get_relationship_transition_repo,
+    get_worker_relationship_repo,
+    shared_relationship_transition_repository,
+    shared_worker_relationship_repository,
+)
 
 os.environ["PLATFORM_FEE_PERCENT"] = "8"
 
@@ -125,6 +131,8 @@ def _client(extra_completed: int = 0):
     main.app.dependency_overrides[get_booking_repo] = lambda: bookings
     main.app.dependency_overrides[get_booking_transition_repo] = shared_booking_transition_repository
     main.app.dependency_overrides[get_booking_charge_repo] = shared_booking_charge_repository
+    main.app.dependency_overrides[get_worker_relationship_repo] = shared_worker_relationship_repository
+    main.app.dependency_overrides[get_relationship_transition_repo] = shared_relationship_transition_repository
     main.app.dependency_overrides[get_shift_repo] = lambda: shifts
     main.app.dependency_overrides[get_worker_profile_repo] = lambda: workers
     main.app.dependency_overrides[get_partner_code_repo] = lambda: codes

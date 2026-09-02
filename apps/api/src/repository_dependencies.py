@@ -90,11 +90,17 @@ _MESSAGE_HISTORY = InMemoryApplicationMessageHistoryRepository()
 _ACCOUNTS = InMemoryAccountRepository()
 _ORGANISATIONS = InMemoryOrganisationRepository(_ACCOUNTS)
 _MARKETS = InMemoryMarketRepository()
+from apps.api.src.repositories.in_memory_worker_relationship_repository import (
+    InMemoryWorkerRelationshipRepository as _RelationshipRepo,
+)
+
+_RELATIONSHIPS = _RelationshipRepo()
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
     _APPLICATIONS,
     _FEED_STATES,
+    _RELATIONSHIPS,
 )
 _NOTIFICATIONS = InMemoryNotificationRepository()
 _REPORTS = InMemoryReportRepository()

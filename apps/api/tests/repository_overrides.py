@@ -1,0 +1,55 @@
+from __future__ import annotations
+
+from typing import Any, Callable
+
+from apps.api.src import repository_dependencies as rd
+from apps.api.src import repository_dependencies_workforce as rdw
+
+
+def in_memory_repositories() -> dict[Callable[..., Any], Any]:
+    return {
+        rd.get_booking_repo: rd._BOOKINGS,
+        rd.get_application_repo: rd._APPLICATIONS,
+        rd.get_application_decision_repo: rd._DECISIONS,
+        rd.get_shift_repo: rd._SHIFTS,
+        rd.get_worker_profile_repo: rd._WORKERS,
+        rd.get_user_repo: rd._USERS,
+        rd.get_template_repo: rd._TEMPLATES,
+        rd.get_message_repo: rd._MESSAGES,
+        rd.get_application_message_history_repo: rd._MESSAGE_HISTORY,
+        rd.get_worker_feed_state_repo: rd._FEED_STATES,
+        rd.get_account_repo: rd._ACCOUNTS,
+        rd.get_organisation_repo: rd._ORGANISATIONS,
+        rd.get_market_repo: rd._MARKETS,
+        rd.get_worker_feed_query_repo: rd._FEED_QUERY,
+        rd.get_notification_repo: rd._NOTIFICATIONS,
+        rd.get_report_repo: rd._REPORTS,
+        rd.get_partner_code_repo: rd._PARTNER_CODES,
+        rd.get_event_repo: rd._EVENTS,
+        rd.get_booking_charge_repo: rd._BOOKING_CHARGES,
+        rd.get_booking_transition_repo: rd._BOOKING_TRANSITIONS,
+        rdw.get_worker_relationship_repo: rdw._RELATIONSHIPS,
+        rdw.get_relationship_transition_repo: rdw._RELATIONSHIP_TRANSITIONS,
+        rdw.get_venue_join_code_repo: rdw._JOIN_CODES,
+    }
+
+
+def _provide(repository: Any) -> Callable[[], Any]:
+    def provider() -> Any:
+        return repository
+
+    return provider
+
+
+def install_in_memory_repositories(app: Any) -> dict[Callable[..., Any], Any]:
+    repositories = in_memory_repositories()
+    for provider, repository in repositories.items():
+        app.dependency_overrides.setdefault(provider, _provide(repository))
+    return repositories
+
+
+def clear_in_memory_repositories() -> None:
+    for repository in in_memory_repositories().values():
+        clear = getattr(repository, "clear", None)
+        if clear is not None:
+            clear()

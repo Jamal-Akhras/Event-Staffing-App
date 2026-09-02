@@ -61,6 +61,7 @@ class VenueModel(Base):
     avatar_url = Column(String, nullable=True)
     photos = Column(JSON, nullable=True)
     notification_preferences = Column(JSON, nullable=True)
+    escalation_policy = Column(JSON, nullable=True)
 
 
 class OrganisationMembershipModel(Base):

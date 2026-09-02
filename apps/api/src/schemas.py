@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from apps.api.src.schemas_shift_summary import ShiftSummaryResponse
@@ -46,6 +47,7 @@ class ShiftCreateRequest(BaseModel):
     pay_rate: MoneyAmount
     notes: str | None = Field(default=None, max_length=2000)
     workers_needed: int = Field(default=1, ge=1, le=100)
+    assigned_worker_id: str | None = Field(default=None, max_length=100)
     now: UtcTimestamp | None = None
 
     @model_validator(mode="after")
@@ -76,6 +78,10 @@ class ShiftResponse(BaseModel):
     cancelled_at: UtcTimestamp | None = None
     cancellation_reason: str | None = None
     cancelled_by_user_id: str | None = None
+    origin: str = "market"
+    assigned_worker_id: str | None = None
+    offer_pool_at: UtcTimestamp | None = None
+    publish_market_at: UtcTimestamp | None = None
 
 
 class ApplicationCreateRequest(BaseModel):
@@ -282,16 +288,3 @@ class EarningsSummaryResponse(BaseModel):
     total_pending: MoneyAmount
     currency: str = "GBP"
     entries: list[EarningsEntryResponse]
-
-
-class WorkerFeedStateUpdateRequest(BaseModel):
-    action: str = Field(pattern="^passed$")
-    now: UtcTimestamp | None = None
-
-
-class WorkerFeedStateResponse(BaseModel):
-    worker_id: str
-    shift_id: str
-    action: str
-    created_at: UtcTimestamp
-    updated_at: UtcTimestamp

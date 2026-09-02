@@ -25,6 +25,7 @@ from apps.api.src.request_middleware import RequestContextMiddleware
 from apps.api.src.routes import auth, bookings, shifts, applications, workers, templates, messages, worker_feed
 from apps.api.src.routes import uploads, accounts, notifications, ratings, auth_account, auth_password, markets, tenancy
 from apps.api.src.routes import reports, auth_sso, billing, events, insights
+from apps.api.src.routes import venue_join_codes, venue_people, worker_invitations
 from apps.api.src.storage.config import get_storage_settings
 from apps.api.src.services.health import readiness_snapshot
 from apps.api.src.db.schema_guard import ensure_schema_current
@@ -100,6 +101,9 @@ app.include_router(reports.router)
 app.include_router(billing.router)
 app.include_router(events.router)
 app.include_router(insights.router)
+app.include_router(venue_join_codes.router)
+app.include_router(venue_people.router)
+app.include_router(worker_invitations.router)
 
 if storage_settings.backend == "local":
     storage_settings.local_directory.mkdir(parents=True, exist_ok=True)

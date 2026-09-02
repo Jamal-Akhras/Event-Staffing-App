@@ -38,3 +38,4 @@ class BookingChargeModel(Base):
     fee_waived = Column(Boolean, nullable=False, default=False)
     waiver_code = Column(String(40), nullable=True)
     recorded_at = Column(UtcDateTime(), nullable=False)
+    worker_relationship = Column(String(20), nullable=True)

@@ -8,9 +8,11 @@ from apps.api.src.deps import (
     get_booking_transition_repo,
     get_charge_recorder,
     get_event_recorder,
+    get_relationship_service,
 )
 from apps.api.src.rate_limit import actor_or_ip, limiter
 from apps.api.src.routes.actor_scope import list_scope
+from apps.api.src.routes.approval_effects import record_approval_effects
 from apps.api.src.routes.presenters import BookingPresenter, get_booking_presenter
 from apps.api.src.routes.service_errors import raise_service_error
 from apps.api.src.schemas import (
@@ -22,6 +24,7 @@ from apps.api.src.repositories.booking_transition_repository import BookingTrans
 from apps.api.src.schemas_recovery import BookingTransitionView, CancellationRequest, PaymentRecordRequest
 from apps.api.src.services.booking_lifecycle_service import BookingLifecycleService
 from apps.api.src.services.charge_recorder import ChargeRecorder
+from apps.api.src.services.relationship_service import RelationshipService
 from apps.api.src.services.errors import ServiceError
 from apps.api.src.services.event_recorder import EventRecorder
 from packages.domain.src.booking import Booking
@@ -128,10 +131,20 @@ def approve_booking(
     present: BookingPresenter = Depends(get_booking_presenter),
     recorder: EventRecorder = Depends(get_event_recorder),
     charges: ChargeRecorder = Depends(get_charge_recorder),
+    relationships: RelationshipService = Depends(get_relationship_service),
 ) -> BookingResponse:
     require_role(actor.role, {ActorRole.OPERATOR})
     return _transition(
-        service, booking_id, BookingState.APPROVED, payload, actor, True, recorder=recorder, present=present, charges=charges
+        service,
+        booking_id,
+        BookingState.APPROVED,
+        payload,
+        actor,
+        True,
+        recorder=recorder,
+        present=present,
+        charges=charges,
+        relationships=relationships,
     )
 
 
@@ -213,6 +226,7 @@ def _transition(
     recorder: EventRecorder,
     present: BookingPresenter,
     charges: ChargeRecorder | None = None,
+    relationships: RelationshipService | None = None,
 ) -> BookingResponse:
     try:
         _require_booking_access(actor, service.get_booking(booking_id), service)
@@ -234,24 +248,7 @@ def _transition(
             context={"shift_id": booking.shift_id, "operator_id": booking.operator_id},
         )
         if charges is not None:
-            charge = charges.freeze(booking, booking.approved_at)
-            recorder.record(
-                "billing.charge_frozen",
-                "lifecycle",
-                actor=actor,
-                subject_type="booking_charge",
-                subject_id=charge.charge_id,
-                worker_id=booking.worker_id,
-                context={
-                    "booking_id": charge.booking_id,
-                    "hours": str(charge.hours),
-                    "pay_rate": str(charge.pay_rate),
-                    "wages": str(charge.wages),
-                    "fee": str(charge.fee),
-                    "total": str(charge.total),
-                    "fee_waived": charge.fee_waived,
-                },
-            )
+            record_approval_effects(booking, actor, recorder, charges, relationships)
         return present.one(booking)
     except ServiceError as exc:
         raise_service_error(exc)

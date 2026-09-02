@@ -16,6 +16,7 @@ from apps.api.src.deps import (
 )
 from apps.api.src.models.shift import Shift
 from apps.api.src.models.worker_profile import WorkerProfile
+from apps.api.src.models.worker_relationship import WorkerRelationship
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
 from apps.api.src.repositories.in_memory_partner_code_repository import InMemoryPartnerCodeRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
@@ -24,6 +25,12 @@ from apps.api.src.repository_dependencies import (
     shared_booking_charge_repository,
     shared_booking_transition_repository,
     shared_event_repository,
+)
+from apps.api.src.repository_dependencies_workforce import (
+    get_relationship_transition_repo,
+    get_worker_relationship_repo,
+    shared_relationship_transition_repository,
+    shared_worker_relationship_repository,
 )
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
@@ -40,9 +47,12 @@ def clear_state():
     shared_booking_charge_repository().clear()
     shared_booking_transition_repository().clear()
     shared_event_repository().clear()
+    shared_worker_relationship_repository().clear()
+    shared_relationship_transition_repository().clear()
     yield
     shared_booking_charge_repository().clear()
     shared_booking_transition_repository().clear()
+    shared_worker_relationship_repository().clear()
     shared_event_repository().clear()
 
 
@@ -109,6 +119,8 @@ def _client():
     main.app.dependency_overrides[get_partner_code_repo] = InMemoryPartnerCodeRepository
     main.app.dependency_overrides[get_booking_transition_repo] = shared_booking_transition_repository
     main.app.dependency_overrides[get_booking_charge_repo] = shared_booking_charge_repository
+    main.app.dependency_overrides[get_worker_relationship_repo] = shared_worker_relationship_repository
+    main.app.dependency_overrides[get_relationship_transition_repo] = shared_relationship_transition_repository
     return TestClient(main.app), shifts, workers, shift
 
 
@@ -153,6 +165,105 @@ def test_renaming_the_worker_afterwards_does_not_rewrite_the_invoice():
     workers.save(replace(profile, display_name="Alexandra Worker"))
 
     assert _line(client)["worker_name"] == "Alex Worker"
+
+
+def test_the_charge_freezes_the_worker_relationship_at_the_time():
+    client, _, _, _ = _client()
+    relationships = shared_worker_relationship_repository()
+    relationships.save(
+        WorkerRelationship(
+            relationship_id="rel-1",
+            venue_id="venue-1",
+            worker_id="worker-1",
+            relationship_type="pool",
+            status="active",
+            created_at=CREATED,
+            updated_at=CREATED,
+        )
+    )
+    _approve(client)
+    charge = shared_booking_charge_repository().get_for_booking("bk-1")
+    assert charge.worker_relationship == "pool"
+
+    relationships.save(
+        replace(relationships.get("rel-1"), relationship_type="permanent")
+    )
+    assert shared_booking_charge_repository().get_for_booking("bk-1").worker_relationship == "pool"
+
+
+def test_a_worker_with_no_relationship_is_recorded_as_one_off():
+    client, _, _, _ = _client()
+    _approve(client)
+    assert shared_booking_charge_repository().get_for_booking("bk-1").worker_relationship == "one_off"
+
+
+def test_a_non_billable_shift_freezes_a_zero_fee():
+    client, shifts, _, shift = _client()
+    shifts.save(replace(shift, billable=False))
+    _approve(client)
+    charge = shared_booking_charge_repository().get_for_booking("bk-1")
+    assert (charge.fee, charge.fee_percent) == (Decimal("0.00"), Decimal("0.00"))
+    assert charge.total == charge.wages
+    assert charge.fee_waived is False
+
+
+def test_an_unaccepted_invitation_is_not_frozen_as_employment():
+    client, _, _, _ = _client()
+    shared_worker_relationship_repository().save(
+        WorkerRelationship(
+            relationship_id="rel-1",
+            venue_id="venue-1",
+            worker_id="worker-1",
+            relationship_type="one_off",
+            status="invited",
+            created_at=CREATED,
+            updated_at=CREATED,
+        )
+    )
+    _approve(client)
+    assert shared_booking_charge_repository().get_for_booking("bk-1").worker_relationship == "one_off"
+
+
+def test_a_pool_member_under_invitation_still_freezes_as_pool():
+    client, _, _, _ = _client()
+    shared_worker_relationship_repository().save(
+        WorkerRelationship(
+            relationship_id="rel-1",
+            venue_id="venue-1",
+            worker_id="worker-1",
+            relationship_type="pool",
+            status="invited",
+            created_at=CREATED,
+            updated_at=CREATED,
+        )
+    )
+    _approve(client)
+    assert shared_booking_charge_repository().get_for_booking("bk-1").worker_relationship == "pool"
+
+
+def test_approving_records_that_the_worker_has_now_worked_here():
+    client, _, _, _ = _client()
+    _approve(client)
+    relationships = shared_worker_relationship_repository().list_for_venue("venue-1")
+    assert [(item.worker_id, item.relationship_type) for item in relationships] == [("worker-1", "one_off")]
+
+
+def test_approving_does_not_demote_a_worker_already_in_the_pool():
+    client, _, _, _ = _client()
+    shared_worker_relationship_repository().save(
+        WorkerRelationship(
+            relationship_id="rel-1",
+            venue_id="venue-1",
+            worker_id="worker-1",
+            relationship_type="pool",
+            status="active",
+            created_at=CREATED,
+            updated_at=CREATED,
+        )
+    )
+    _approve(client)
+    assert shared_worker_relationship_repository().get("rel-1").relationship_type == "pool"
+    assert shared_booking_charge_repository().get_for_booking("bk-1").worker_relationship == "pool"
 
 
 def test_approving_twice_charges_once_and_records_one_transition():

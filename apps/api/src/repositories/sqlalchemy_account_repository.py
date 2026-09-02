@@ -37,6 +37,7 @@ class SqlAlchemyAccountRepository(AccountRepository):
         row.avatar_url = account.avatar_url
         row.photos = list(account.photos)
         row.notification_preferences = dict(account.notification_preferences)
+        row.escalation_policy = account.escalation_policy
         self._session.flush()
         return _to_domain(row)
 
@@ -55,6 +56,7 @@ def _to_domain(row: AccountModel) -> Account:
         avatar_url=getattr(row, "avatar_url", None),
         photos=list(getattr(row, "photos", None) or []),
         notification_preferences=normalize_notification_preferences(getattr(row, "notification_preferences", None)),
+        escalation_policy=row.escalation_policy,
         organisation_id=row.organisation_id,
         market_id=row.market_id,
     )

@@ -52,5 +52,26 @@ class InMemoryShiftRepository:
     def list_by_ids(self, shift_ids: list[str]) -> list[Shift]:
         return [self._shifts[shift_id] for shift_id in shift_ids if shift_id in self._shifts]
 
+    def list_due_for_escalation(self, now: datetime) -> list[Shift]:
+        due = [
+            shift
+            for shift in self._shifts.values()
+            if shift.status == "open"
+            and shift.start_time > now
+            and shift.workers_filled < shift.workers_needed
+            and _rung_is_due(shift, now)
+        ]
+        return sorted(due, key=lambda shift: shift.start_time)
+
     def clear(self) -> None:
         self._shifts.clear()
+
+
+def _rung_is_due(shift: Shift, now: datetime) -> bool:
+    if shift.origin == "assigned":
+        if shift.offer_pool_at is not None:
+            return shift.offer_pool_at <= now
+        return shift.publish_market_at is not None and shift.publish_market_at <= now
+    if shift.origin == "pool":
+        return shift.publish_market_at is not None and shift.publish_market_at <= now
+    return False

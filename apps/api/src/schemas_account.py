@@ -22,6 +22,7 @@ class AccountResponse(BaseModel):
     avatar_url: str | None = None
     photos: list[str] = Field(default_factory=list)
     notification_preferences: dict[str, bool] = Field(default_factory=default_notification_preferences)
+    escalation_policy: dict | None = None
 
 
 class AccountUpdateRequest(BaseModel):
@@ -34,4 +35,5 @@ class AccountUpdateRequest(BaseModel):
     default_location: str | None = Field(default=None, max_length=240)
     photos: list[str] | None = Field(default=None, max_length=20)
     notification_preferences: dict[str, bool] | None = None
+    escalation_policy: dict | None = None
     market_id: str | None = Field(default=None, max_length=100)

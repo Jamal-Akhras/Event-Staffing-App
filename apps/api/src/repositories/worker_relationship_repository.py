@@ -1,0 +1,23 @@
+from __future__ import annotations
+
+from typing import Protocol
+
+from apps.api.src.models.worker_relationship import RelationshipTransition, WorkerRelationship
+
+
+class WorkerRelationshipRepository(Protocol):
+    def save(self, relationship: WorkerRelationship) -> WorkerRelationship: ...
+
+    def get(self, relationship_id: str) -> WorkerRelationship | None: ...
+
+    def get_for_venue_worker(self, venue_id: str, worker_id: str) -> WorkerRelationship | None: ...
+
+    def list_for_venue(self, venue_id: str, status: str | None = None) -> list[WorkerRelationship]: ...
+
+    def list_for_worker(self, worker_id: str) -> list[WorkerRelationship]: ...
+
+
+class RelationshipTransitionRepository(Protocol):
+    def record(self, transition: RelationshipTransition) -> RelationshipTransition: ...
+
+    def list_for_relationship(self, relationship_id: str) -> list[RelationshipTransition]: ...

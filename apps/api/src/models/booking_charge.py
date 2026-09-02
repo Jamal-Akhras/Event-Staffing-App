@@ -28,3 +28,4 @@ class BookingCharge:
     fee_waived: bool
     waiver_code: str | None
     recorded_at: datetime
+    worker_relationship: str | None = None

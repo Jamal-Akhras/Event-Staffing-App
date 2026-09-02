@@ -19,12 +19,16 @@ from apps.api.src.config import get_bool_env
 from apps.api.src.datetime_utils import utc_now
 from apps.api.src.deps import (
     get_event_recorder,
+    get_join_code_service,
     get_market_repo,
     get_organisation_repo,
     get_outbox_publisher,
     get_user_repo,
     get_worker_profile_repo,
 )
+from apps.api.src.routes.service_errors import raise_service_error
+from apps.api.src.services.errors import ServiceError
+from apps.api.src.services.join_code_service import JoinCodeService
 from apps.api.src.models.organisation import (
     Organisation,
     OrganisationMembership,
@@ -59,11 +63,17 @@ def register(
     user_repo: UserRepository = Depends(get_user_repo),
     worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
+    join_codes: JoinCodeService = Depends(get_join_code_service),
 ) -> TokenResponse:
     if user_repo.get_by_email(payload.email) is not None:
         raise HTTPException(status_code=400, detail="Email already registered")
 
     now = utc_now()
+    if payload.join_code is not None:
+        try:
+            join_codes.preview(payload.join_code, now)
+        except ServiceError as exc:
+            raise_service_error(exc)
     worker_profile_id = str(uuid4())
     verification_token = generate_verification_token()
     user = User(
@@ -100,6 +110,11 @@ def register(
             updated_at=now,
         )
     )
+    if payload.join_code is not None:
+        try:
+            join_codes.redeem(payload.join_code, worker_profile_id, now)
+        except ServiceError as exc:
+            raise_service_error(exc)
     _send_verification(outbox, user, verification_token)
     return issue_session(user, organisation_id=None, currency="GBP")
 

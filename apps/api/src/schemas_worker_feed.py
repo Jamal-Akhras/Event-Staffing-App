@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from apps.api.src.validation_types import UtcTimestamp
+from pydantic import BaseModel, Field
 
 from apps.api.src.schemas import ShiftResponse
 from apps.api.src.schemas_market import MarketResponse
@@ -21,3 +22,16 @@ class WorkerFeedPageResponse(BaseModel):
     slate_id: str
     next_cursor: str | None
     market: MarketResponse
+
+
+class WorkerFeedStateUpdateRequest(BaseModel):
+    action: str = Field(pattern="^passed$")
+    now: UtcTimestamp | None = None
+
+
+class WorkerFeedStateResponse(BaseModel):
+    worker_id: str
+    shift_id: str
+    action: str
+    created_at: UtcTimestamp
+    updated_at: UtcTimestamp

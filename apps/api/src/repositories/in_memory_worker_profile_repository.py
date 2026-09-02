@@ -16,5 +16,11 @@ class InMemoryWorkerProfileRepository:
         self._profiles[profile.worker_id] = profile
         return profile
 
+    def list_all(self) -> list[WorkerProfile]:
+        return list(self._profiles.values())
+
+    def list_by_ids(self, worker_ids: list[str]) -> list[WorkerProfile]:
+        return [self._profiles[worker_id] for worker_id in worker_ids if worker_id in self._profiles]
+
     def clear(self) -> None:
         self._profiles.clear()

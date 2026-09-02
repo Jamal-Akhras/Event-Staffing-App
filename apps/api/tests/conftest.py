@@ -111,6 +111,20 @@ def restore_dependency_overrides():
     app.dependency_overrides.update(saved)
 
 
+@pytest.fixture()
+def in_memory_repos():
+    from apps.api.src.main import app
+    from apps.api.tests.repository_overrides import (
+        clear_in_memory_repositories,
+        install_in_memory_repositories,
+    )
+
+    clear_in_memory_repositories()
+    repositories = install_in_memory_repositories(app)
+    yield repositories
+    clear_in_memory_repositories()
+
+
 @pytest.fixture(autouse=True)
 def reset_in_memory_idempotency():
     from apps.api.src.services.idempotency import clear_in_memory_idempotency

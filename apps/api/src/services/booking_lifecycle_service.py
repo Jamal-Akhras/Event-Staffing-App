@@ -36,12 +36,14 @@ class BookingLifecycleService:
         shift_repo: ShiftRepository,
         outbox: OutboxPublisher,
         transitions: BookingTransitionRepository,
+        escalations=None,
     ) -> None:
         self._bookings = booking_repo
         self._workers = worker_repo
         self._shifts = shift_repo
         self._outbox = outbox
         self._transitions = transitions
+        self._escalations = escalations
 
     def get_booking(self, booking_id: str) -> Booking:
         booking = self._bookings.get(booking_id)
@@ -122,6 +124,8 @@ class BookingLifecycleService:
             )
         if target in _CANCELLATION_STATES:
             _decrement_workers_filled(self._shifts, booking.shift_id, now)
+            if self._escalations is not None:
+                self._escalations.restart_ladder(booking.shift_id, now)
         if target == BookingState.CANCELLED_BY_OPERATOR:
             notify_worker(
                 self._outbox,

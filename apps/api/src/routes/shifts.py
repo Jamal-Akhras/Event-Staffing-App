@@ -10,12 +10,14 @@ from apps.api.src.config import use_in_memory_repositories
 from apps.api.src.db.database import SessionLocal
 from apps.api.src.deps import (
     get_account_repo,
+    get_escalation_service,
+    get_worker_relationship_repo,
     get_idempotency_service,
     get_shift_lifecycle_service,
     get_shift_repo,
     get_shift_service,
 )
-from apps.api.src.helpers import _shift_view
+from apps.api.src.helpers import _now_or, _shift_view
 from apps.api.src.models.shift import Shift
 from apps.api.src.rate_limit import actor_or_ip, limiter
 from apps.api.src.repository_dependencies import get_request_unit_of_work
@@ -25,10 +27,18 @@ from apps.api.src.repositories.sqlalchemy_shift_repository import SqlAlchemyShif
 from apps.api.src.routes.idempotency_support import IdempotencyKeyHeader, replayed
 from apps.api.src.routes.service_errors import raise_service_error
 from apps.api.src.schemas import ErrorResponse, ShiftCreateRequest, ShiftResponse
-from apps.api.src.schemas_recovery import CancellationRequest, ShiftLifecycleRequest, ShiftUpdateRequest
+from apps.api.src.schemas_recovery import (
+    CancellationRequest,
+    ShiftAdvanceRequest,
+    ShiftLifecycleRequest,
+    ShiftUpdateRequest,
+)
 from apps.api.src.services.errors import ServiceError
 from apps.api.src.services.geocoding import geocode
 from apps.api.src.services.idempotency import IdempotencyConflict, IdempotencyService
+from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
+from apps.api.src.services.escalation_service import EscalationService
+from apps.api.src.services.shift_visibility import worker_can_see_shift
 from apps.api.src.services.shift_service import ShiftService
 from apps.api.src.services.shift_lifecycle_service import ShiftLifecycleService
 from apps.api.src.unit_of_work import RequestUnitOfWork
@@ -51,6 +61,8 @@ def create_shift(
     actor: ActorContext = Depends(get_actor_context),
     account_repo: AccountRepository = Depends(get_account_repo),
     unit_of_work: RequestUnitOfWork = Depends(get_request_unit_of_work),
+    escalations: EscalationService = Depends(get_escalation_service),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
 ) -> ShiftResponse:
     require_role(actor.role, {ActorRole.OPERATOR})
     require_verified_actor(actor, "posting shifts")
@@ -65,11 +77,38 @@ def create_shift(
         account = account_repo.get(actor.account_id)
         if account:
             currency = account.currency
+    if payload.assigned_worker_id is not None and actor.account_id:
+        assignee = relationship_repo.get_for_venue_worker(actor.account_id, payload.assigned_worker_id)
+        if assignee is None or assignee.status != "active":
+            raise HTTPException(
+                status_code=400,
+                detail="That worker does not have an active relationship with your venue.",
+            )
     shift = service.create_shift(payload, actor.user_id, actor.account_id, currency)
+    if payload.assigned_worker_id is not None:
+        shift = replace(shift, assigned_worker_id=payload.assigned_worker_id)
+    shift = shift_repo.save(escalations.stamp_new_shift(shift, shift.created_at))
     _schedule_geocode(unit_of_work, shift_repo, shift)
     result = _shift_view(shift)
     idempotency.finish(started.record_id, result.model_dump(mode="json"))
     return result
+
+
+@router.post("/shifts/{shift_id}/advance", response_model=ShiftResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
+def advance_shift(
+    shift_id: str,
+    payload: ShiftAdvanceRequest,
+    actor: ActorContext = Depends(get_actor_context),
+    escalations: EscalationService = Depends(get_escalation_service),
+) -> ShiftResponse:
+    require_role(actor.role, {ActorRole.OPERATOR})
+    if not actor.account_id:
+        raise HTTPException(status_code=403, detail="This account is not linked to a venue.")
+    try:
+        shift = escalations.advance_now(shift_id, actor.account_id, payload.target, _now_or(payload.now))
+    except ServiceError as exc:
+        raise_service_error(exc)
+    return _shift_view(shift)
 
 
 @router.get("/shifts", response_model=list[ShiftResponse])
@@ -81,6 +120,7 @@ def list_shifts(
     starts_before: datetime | None = Query(default=None),
     service: ShiftService = Depends(get_shift_service),
     actor: ActorContext = Depends(get_actor_context),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
 ) -> list[ShiftResponse]:
     require_role(actor.role, {ActorRole.OPERATOR, ActorRole.WORKER})
     if (starts_from is None) != (starts_before is None):
@@ -97,7 +137,12 @@ def list_shifts(
         starts_before=starts_before,
     )
     if actor.role == ActorRole.WORKER:
-        shifts = [item for item in shifts if item.status == "open"]
+        worker_id = actor.effective_worker_id
+        shifts = [
+            item
+            for item in shifts
+            if item.status == "open" and worker_can_see_shift(item, worker_id, relationship_repo)
+        ]
     return [_shift_view(item) for item in shifts]
 
 
@@ -106,10 +151,15 @@ def get_shift_by_id(
     shift_id: str,
     service: ShiftService = Depends(get_shift_service),
     actor: ActorContext = Depends(get_actor_context),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
 ) -> ShiftResponse:
     try:
         shift = service.get_shift(shift_id)
         _require_shift_access(actor, shift)
+        if actor.role == ActorRole.WORKER and not worker_can_see_shift(
+            shift, actor.effective_worker_id, relationship_repo
+        ):
+            raise HTTPException(status_code=404, detail="Shift not found.")
         return _shift_view(shift)
     except ServiceError as exc:
         raise_service_error(exc)

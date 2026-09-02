@@ -6,6 +6,7 @@ from apps.api.src.repositories.in_memory_application_repository import InMemoryA
 from apps.api.src.repositories.in_memory_organisation_repository import InMemoryOrganisationRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 from apps.api.src.repositories.in_memory_worker_feed_state_repository import InMemoryWorkerFeedStateRepository
+from apps.api.src.repositories.in_memory_worker_relationship_repository import InMemoryWorkerRelationshipRepository
 from apps.api.src.models.worker_feed_query import WorkerFeedItem, WorkerFeedQuery
 
 
@@ -16,11 +17,25 @@ class InMemoryWorkerFeedQueryRepository:
         organisations: InMemoryOrganisationRepository,
         applications: InMemoryApplicationRepository,
         feed_states: InMemoryWorkerFeedStateRepository,
+        relationships: InMemoryWorkerRelationshipRepository,
     ) -> None:
         self._shifts = shifts
         self._organisations = organisations
         self._applications = applications
         self._feed_states = feed_states
+        self._relationships = relationships
+
+    def _reaches_worker(self, shift, worker_id: str) -> bool:
+        if shift.origin == "market":
+            return True
+        if shift.origin == "assigned":
+            return shift.assigned_worker_id == worker_id
+        relationship = self._relationships.get_for_venue_worker(shift.account_id or "", worker_id)
+        return (
+            relationship is not None
+            and relationship.status in ("active", "invited")
+            and relationship.relationship_type != "one_off"
+        )
 
     def list_page(self, query: WorkerFeedQuery) -> list[WorkerFeedItem]:
         local_zone = ZoneInfo(query.timezone)
@@ -33,6 +48,8 @@ class InMemoryWorkerFeedQueryRepository:
             if shift.status != "open" or shift.start_time <= query.now:
                 continue
             if shift.workers_filled >= shift.workers_needed:
+                continue
+            if not self._reaches_worker(shift, query.worker_id):
                 continue
             if self._feed_states.get(query.worker_id, shift.shift_id) is not None:
                 continue

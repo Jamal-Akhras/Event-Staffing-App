@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
+SHIFT_ORIGINS = ("assigned", "pool", "market")
+
 
 @dataclass(frozen=True)
 class Shift:
@@ -28,3 +30,8 @@ class Shift:
     cancelled_at: datetime | None = None
     cancellation_reason: str | None = None
     cancelled_by_user_id: str | None = None
+    origin: str = "market"
+    assigned_worker_id: str | None = None
+    billable: bool = True
+    offer_pool_at: datetime | None = None
+    publish_market_at: datetime | None = None

@@ -30,6 +30,16 @@ class SqlAlchemyWorkerProfileRepository:
     def list_all(self) -> list[WorkerProfile]:
         return [_to_domain(m) for m in self._session.query(WorkerProfileModel).all()]
 
+    def list_by_ids(self, worker_ids: list[str]) -> list[WorkerProfile]:
+        if not worker_ids:
+            return []
+        rows = (
+            self._session.query(WorkerProfileModel)
+            .filter(WorkerProfileModel.worker_id.in_(worker_ids))
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
     def list_for_account(self, account_id: str) -> list[WorkerProfile]:
         completed_states = {BookingState.CHECKED_OUT, BookingState.PAID}
 

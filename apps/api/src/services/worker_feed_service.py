@@ -4,7 +4,7 @@ from apps.api.src.helpers import _now_or
 from apps.api.src.models.worker_feed_state import WorkerFeedState
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_feed_state_repository import WorkerFeedStateRepository
-from apps.api.src.schemas import WorkerFeedStateUpdateRequest
+from apps.api.src.schemas_worker_feed import WorkerFeedStateUpdateRequest
 from apps.api.src.services.errors import NotFoundError, ValidationError
 
 

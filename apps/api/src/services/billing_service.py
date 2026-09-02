@@ -13,6 +13,7 @@ from apps.api.src.repositories.booking_charge_repository import BookingChargeRep
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
 from apps.api.src.services.billing_math import money
+from apps.api.src.services.code_generation import new_code
 from apps.api.src.services.errors import ConflictError, NotFoundError, ValidationError
 
 FOUNDING_WAIVER_MONTHS = 3
@@ -156,21 +157,14 @@ class BillingService:
 
 
 def new_partner_code(prefix: str, label: str, max_redemptions: int, created_by: str, now: datetime, expires_at: datetime | None) -> PartnerCode:
-    import secrets
-
-    normalized_prefix = prefix.strip().upper()
-    if not normalized_prefix or len(normalized_prefix) > 21 or not normalized_prefix.isalnum():
-        raise ValueError("prefix must contain 1-21 letters or numbers")
     if not label.strip() or len(label) > 160:
         raise ValueError("label must contain 1-160 characters")
     if max_redemptions < 1:
         raise ValueError("max redemptions must be positive")
     if expires_at is not None and expires_at <= now:
         raise ValueError("redemption expiry must be in the future")
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-    body = "".join(secrets.choice(alphabet) for _ in range(8))
     return PartnerCode(
-        code=f"{normalized_prefix}-{body[:4]}-{body[4:]}",
+        code=new_code(prefix),
         label=label.strip(),
         waiver_months=FOUNDING_WAIVER_MONTHS,
         shift_cap=FOUNDING_SHIFT_CAP,

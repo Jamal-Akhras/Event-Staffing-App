@@ -92,7 +92,7 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "036"
+        assert version == "041"
 
     command.downgrade(config, "022")
     downgraded_rating_columns = {
@@ -199,3 +199,84 @@ def test_market_migration_backfills_bath_and_reverses(tmp_path, monkeypatch):
     assert "ix_shifts_open_venue_start" not in {
         index["name"] for index in downgraded.get_indexes("shifts")
     }
+
+
+def test_backfill_creates_one_relationship_per_venue_and_worker(tmp_path, monkeypatch):
+    database_path = tmp_path / "people-backfill.db"
+    database_url = f"sqlite+pysqlite:///{database_path.as_posix()}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    config = Config(str(PROJECT_ROOT / "apps/api/alembic.ini"))
+    command.upgrade(config, "040")
+    engine = create_engine(database_url)
+
+    with engine.begin() as connection:
+        connection.execute(text(
+            "INSERT INTO organisations (organisation_id, name, country, currency, created_at) "
+            "VALUES ('org-1', 'Group', 'GB', 'GBP', '2030-01-01 10:00:00')"
+        ))
+        connection.execute(text(
+            "INSERT INTO venues (venue_id, organisation_id, name, country, currency, created_at) "
+            "VALUES ('venue-1', 'org-1', 'The Grapes', 'GB', 'GBP', '2030-01-01 10:00:00')"
+        ))
+        for day, charge_id in (("05", "chg-1"), ("09", "chg-2")):
+            connection.execute(text(
+                "INSERT INTO booking_charges (charge_id, booking_id, shift_id, account_id, worker_id, "
+                "worker_name, role, period, start_time, end_time, completed_at, hours, pay_rate, wages, "
+                "fee_percent, fee, total, currency, fee_waived, recorded_at) VALUES "
+                f"('{charge_id}', '{charge_id}-bk', 'shift-1', 'venue-1', 'worker-1', 'Ana', 'Bar', "
+                f"'2030-02', '2030-02-{day} 18:00:00', '2030-02-{day} 23:00:00', '2030-02-{day} 23:00:00', "
+                "5, 14, 70, 8, 5.6, 75.6, 'GBP', 0, '2030-02-01 10:00:00')"
+            ))
+
+    command.upgrade(config, "041")
+    with engine.connect() as connection:
+        rows = connection.execute(text(
+            "SELECT worker_id, relationship_type, status, start_date FROM worker_relationships"
+        )).all()
+        assert len(rows) == 1
+        assert rows[0][0] == "worker-1"
+        assert (rows[0][1], rows[0][2]) == ("one_off", "active")
+        assert str(rows[0][3]).startswith("2030-02-05")
+        transitions = connection.execute(
+            text("SELECT count(*) FROM relationship_transitions")
+        ).scalar_one()
+        assert transitions == 1
+
+
+def test_backfill_leaves_an_existing_relationship_alone(tmp_path, monkeypatch):
+    database_path = tmp_path / "people-existing.db"
+    database_url = f"sqlite+pysqlite:///{database_path.as_posix()}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    config = Config(str(PROJECT_ROOT / "apps/api/alembic.ini"))
+    command.upgrade(config, "040")
+    engine = create_engine(database_url)
+
+    with engine.begin() as connection:
+        connection.execute(text(
+            "INSERT INTO organisations (organisation_id, name, country, currency, created_at) "
+            "VALUES ('org-1', 'Group', 'GB', 'GBP', '2030-01-01 10:00:00')"
+        ))
+        connection.execute(text(
+            "INSERT INTO venues (venue_id, organisation_id, name, country, currency, created_at) "
+            "VALUES ('venue-1', 'org-1', 'The Grapes', 'GB', 'GBP', '2030-01-01 10:00:00')"
+        ))
+        connection.execute(text(
+            "INSERT INTO worker_relationships (relationship_id, venue_id, worker_id, relationship_type, "
+            "status, created_at, updated_at) VALUES "
+            "('rel-1', 'venue-1', 'worker-1', 'pool', 'active', '2030-01-01 10:00:00', '2030-01-01 10:00:00')"
+        ))
+        connection.execute(text(
+            "INSERT INTO booking_charges (charge_id, booking_id, shift_id, account_id, worker_id, "
+            "worker_name, role, period, start_time, end_time, completed_at, hours, pay_rate, wages, "
+            "fee_percent, fee, total, currency, fee_waived, recorded_at) VALUES "
+            "('chg-1', 'bk-1', 'shift-1', 'venue-1', 'worker-1', 'Ana', 'Bar', '2030-02', "
+            "'2030-02-05 18:00:00', '2030-02-05 23:00:00', '2030-02-05 23:00:00', 5, 14, 70, 8, 5.6, "
+            "75.6, 'GBP', 0, '2030-02-01 10:00:00')"
+        ))
+
+    command.upgrade(config, "041")
+    with engine.connect() as connection:
+        rows = connection.execute(
+            text("SELECT relationship_id, relationship_type FROM worker_relationships")
+        ).all()
+        assert rows == [("rel-1", "pool")]

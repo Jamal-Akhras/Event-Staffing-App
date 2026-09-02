@@ -8,6 +8,12 @@ from apps.api.src.deps import get_booking_charge_repo, get_booking_repo, get_boo
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
 from apps.api.src.repository_dependencies import shared_booking_charge_repository, shared_booking_transition_repository
 from packages.domain.src.booking import Booking
+from apps.api.src.repository_dependencies_workforce import (
+    get_relationship_transition_repo,
+    get_worker_relationship_repo,
+    shared_relationship_transition_repository,
+    shared_worker_relationship_repository,
+)
 
 OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-1"}
 OTHER_OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-2"}
@@ -44,6 +50,8 @@ def _client() -> TestClient:
     main.app.dependency_overrides[get_booking_repo] = lambda: repo
     main.app.dependency_overrides[get_booking_transition_repo] = shared_booking_transition_repository
     main.app.dependency_overrides[get_booking_charge_repo] = shared_booking_charge_repository
+    main.app.dependency_overrides[get_worker_relationship_repo] = shared_worker_relationship_repository
+    main.app.dependency_overrides[get_relationship_transition_repo] = shared_relationship_transition_repository
     main.app.dependency_overrides[get_shift_repo] = lambda: shift_repo
     return TestClient(main.app)
 

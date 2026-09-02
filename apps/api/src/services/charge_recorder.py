@@ -9,6 +9,7 @@ from apps.api.src.repositories.booking_charge_repository import BookingChargeRep
 from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
+from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.services.billing_math import completed_at, money, worked_hours
 from apps.api.src.services.errors import NotFoundError
 from packages.domain.src.booking import Booking
@@ -22,12 +23,14 @@ class ChargeRecorder:
         workers: WorkerProfileRepository,
         partner_codes: PartnerCodeRepository,
         fee_percent: Decimal,
+        relationships: WorkerRelationshipRepository,
     ) -> None:
         self._charges = charges
         self._shifts = shifts
         self._workers = workers
         self._codes = partner_codes
         self._fee_percent = fee_percent
+        self._relationships = relationships
 
     def freeze(self, booking: Booking, now: datetime) -> BookingCharge:
         existing = self._charges.get_for_booking(booking.booking_id)
@@ -41,7 +44,8 @@ class ChargeRecorder:
         pay_rate = money(Decimal(shift.pay_rate))
         wages = money(hours * pay_rate)
         waiver_code = self._active_waiver_code(shift.account_id, now)
-        fee = Decimal("0.00") if waiver_code else money(wages * self._fee_percent / Decimal(100))
+        fee_percent = Decimal("0.00") if not shift.billable else self._fee_percent
+        fee = Decimal("0.00") if (waiver_code or not shift.billable) else money(wages * fee_percent / Decimal(100))
         completed = completed_at(booking)
         return self._charges.record(
             BookingCharge(
@@ -59,15 +63,22 @@ class ChargeRecorder:
                 hours=hours,
                 pay_rate=pay_rate,
                 wages=wages,
-                fee_percent=self._fee_percent,
+                fee_percent=fee_percent,
                 fee=fee,
                 total=money(wages + fee),
                 currency=shift.currency,
                 fee_waived=waiver_code is not None,
                 waiver_code=waiver_code,
                 recorded_at=now,
+                worker_relationship=self._relationship_type(shift.account_id, booking.worker_id),
             )
         )
+
+    def _relationship_type(self, venue_id: str, worker_id: str) -> str:
+        relationship = self._relationships.get_for_venue_worker(venue_id, worker_id)
+        if relationship is None or relationship.status not in ("active", "invited"):
+            return "one_off"
+        return relationship.relationship_type
 
     def _active_waiver_code(self, account_id: str, now: datetime) -> str | None:
         redemption = self._codes.get_redemption_for_account(account_id)
