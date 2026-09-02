@@ -5,6 +5,8 @@ from typing import Any, Callable
 from apps.api.src import repository_dependencies as rd
 from apps.api.src import repository_dependencies_workforce as rdw
 from apps.api.src.repositories.in_memory_booking_allocator import InMemoryBookingAllocator
+from apps.api.src.services.email import LoggingEmailTransport
+from apps.api.src.services.outbox_publisher import InMemoryOutboxPublisher
 
 
 def in_memory_repositories() -> dict[Callable[..., Any], Any]:
@@ -34,6 +36,7 @@ def in_memory_repositories() -> dict[Callable[..., Any], Any]:
         rdw.get_venue_join_code_repo: rdw._JOIN_CODES,
         rd.get_rota_publication_repo: rd._ROTA_PUBLICATIONS,
         rd.get_booking_allocator: InMemoryBookingAllocator(rd._BOOKINGS, rd._SHIFTS),
+        rd.get_outbox_publisher: InMemoryOutboxPublisher(rd._NOTIFICATIONS, LoggingEmailTransport()),
     }
 
 

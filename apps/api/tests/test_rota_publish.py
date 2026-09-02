@@ -178,6 +178,25 @@ def test_publishing_an_unchanged_week_returns_the_same_revision(client):
 
 
 def test_the_same_idempotency_key_replays_the_cached_response(client):
+    from apps.api.src.config import use_in_memory_repositories
+
+    if not use_in_memory_repositories():
+        from apps.api.src.db.database import SessionLocal
+        from apps.api.src.db.models import UserModel
+
+        with SessionLocal() as session, session.begin():
+            session.add(
+                UserModel(
+                    user_id="operator-1",
+                    email="rota-idem@example.com",
+                    hashed_password="x",
+                    role="operator",
+                    is_active=True,
+                    created_at=NOW,
+                    updated_at=NOW,
+                    email_verified=True,
+                )
+            )
     _draft(client, "staff-1")
     headers = {**OPERATOR, "Idempotency-Key": "pub-1"}
     first = _publish(client, headers=headers).json()
