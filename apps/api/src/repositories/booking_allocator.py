@@ -54,3 +54,7 @@ class BookingAllocator(Protocol):
         booking_id: str,
         attendance_mode: str = "pin",
     ) -> AllocatedBooking: ...
+
+    def check_availability(
+        self, worker_id: str, start_time: datetime, end_time: datetime, ignore_shift_id: str
+    ) -> None: ...

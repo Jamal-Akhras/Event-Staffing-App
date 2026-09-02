@@ -14,6 +14,8 @@ from apps.api.src.repositories.worker_profile_repository import WorkerProfileRep
 from apps.api.src.repositories.worker_feed_query_repository import WorkerFeedQueryRepository
 from apps.api.src.repository_dependencies import (
     get_account_repo,
+    get_booking_allocator,
+    get_rota_publication_repo,
     get_application_decision_repo,
     get_application_message_history_repo,
     get_application_repo,
@@ -58,6 +60,7 @@ from apps.api.src.repositories.account_repository import AccountRepository
 from apps.api.src.services.join_code_service import JoinCodeService
 from apps.api.src.services.people_service import PeopleService
 from apps.api.src.services.escalation_service import EscalationService
+from apps.api.src.services.rota_service import RotaService
 from apps.api.src.services.relationship_service import RelationshipService
 from apps.api.src.services.billing_service import BillingService
 from apps.api.src.services.charge_recorder import ChargeRecorder
@@ -264,3 +267,33 @@ def get_worker_shift_feed_service(
     query_repo: WorkerFeedQueryRepository = Depends(get_worker_feed_query_repo),
 ) -> WorkerShiftFeedService:
     return WorkerShiftFeedService(profile_repo, market_repo, query_repo)
+
+
+def get_rota_service(
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    booking_repo: BookingRepository = Depends(get_booking_repo),
+    application_repo: ApplicationRepository = Depends(get_application_repo),
+    publications=Depends(get_rota_publication_repo),
+    allocator=Depends(get_booking_allocator),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    transitions: BookingTransitionRepository = Depends(get_booking_transition_repo),
+    lifecycle: BookingLifecycleService = Depends(get_booking_lifecycle_service),
+    escalations: EscalationService = Depends(get_escalation_service),
+    outbox: OutboxPublisher = Depends(get_outbox_publisher),
+    account_repo: AccountRepository = Depends(get_account_repo),
+    market_repo: MarketRepository = Depends(get_market_repo),
+) -> RotaService:
+    return RotaService(
+        shift_repo,
+        booking_repo,
+        application_repo,
+        allocator,
+        publications,
+        relationship_repo,
+        transitions,
+        lifecycle,
+        escalations,
+        outbox,
+        account_repo,
+        market_repo,
+    )

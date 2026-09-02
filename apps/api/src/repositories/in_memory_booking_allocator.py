@@ -25,6 +25,19 @@ class InMemoryBookingAllocator:
         self._bookings = bookings
         self._shifts = shifts
 
+    def check_availability(
+        self, worker_id: str, start_time: datetime, end_time: datetime, ignore_shift_id: str
+    ) -> None:
+        with _ALLOCATOR_LOCK:
+            for existing in self._bookings.list_by_worker(worker_id):
+                if (
+                    existing.state in LIVE_STATES
+                    and existing.shift_id != ignore_shift_id
+                    and existing.start_time < end_time
+                    and existing.end_time > start_time
+                ):
+                    raise OverlappingBookingError(existing.shift_id)
+
     def allocate(
         self,
         shift_id: str,

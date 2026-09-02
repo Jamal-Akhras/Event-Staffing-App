@@ -89,6 +89,24 @@ class SqlAlchemyBookingAllocator:
             shift=_shift_to_domain(shift_model),
         )
 
+    def check_availability(
+        self, worker_id: str, start_time: datetime, end_time: datetime, ignore_shift_id: str
+    ) -> None:
+        self._serialize_on_worker(worker_id)
+        clash = self._session.execute(
+            select(BookingModel.shift_id)
+            .where(
+                BookingModel.worker_id == worker_id,
+                BookingModel.state.in_(LIVE_STATES),
+                BookingModel.shift_id != ignore_shift_id,
+                BookingModel.start_time < end_time,
+                BookingModel.end_time > start_time,
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        if clash is not None:
+            raise OverlappingBookingError(clash)
+
     def _serialize_on_worker(self, worker_id: str) -> None:
         if self._session.get_bind().dialect.name == "postgresql":
             self._session.execute(
