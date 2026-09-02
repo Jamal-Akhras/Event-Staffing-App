@@ -356,3 +356,40 @@ def test_shift_detail_is_hidden_from_ineligible_workers(client):
     shift = _create_shift(client)
     assert client.get(f"/shifts/{shift['shift_id']}", headers=STRANGER).status_code == 404
     assert client.get(f"/shifts/{shift['shift_id']}", headers=POOL_WORKER).status_code == 200
+
+
+def test_template_generated_shifts_follow_the_escalation_policy(client, in_memory_repos):
+    from apps.api.src.repository_dependencies import get_template_repo
+    from apps.api.src.schemas import GenerateShiftsRequest, TemplateCreateRequest
+    from apps.api.src.services.template_service import TemplateService
+
+    service = TemplateService(
+        in_memory_repos[get_template_repo],
+        in_memory_repos[get_shift_repo],
+        _service(in_memory_repos),
+    )
+    template = service.create_template(
+        TemplateCreateRequest(
+            name="Friday bar",
+            role="Bartender",
+            location="Main bar",
+            duration_hours=5,
+            pay_rate=14.5,
+            workers_needed=1,
+        ),
+        "operator-1",
+        account_id=VENUE_ID,
+    )
+    generated = service.generate_shifts(
+        template.template_id,
+        GenerateShiftsRequest(
+            start_date=NOW + timedelta(days=14),
+            end_date=NOW + timedelta(days=14),
+            start_time="18:00",
+        ),
+        "operator-1",
+    )
+    assert len(generated) == 1
+    assert generated[0].origin == "pool"
+    assert generated[0].offer_pool_at is not None
+    assert generated[0].publish_market_at is not None

@@ -7,7 +7,10 @@ from uuid import uuid4
 from apps.api.src.models.venue_join_code import VenueJoinCode, VenueJoinCodeRedemption
 from apps.api.src.models.worker_relationship import EMPLOYED_TYPES, WorkerRelationship
 from apps.api.src.repositories.account_repository import AccountRepository
-from apps.api.src.repositories.venue_join_code_repository import VenueJoinCodeRepository
+from apps.api.src.repositories.venue_join_code_repository import (
+    JoinCodeExhaustedError,
+    VenueJoinCodeRepository,
+)
 from apps.api.src.services.code_generation import new_code
 from apps.api.src.services.errors import NotFoundError, ValidationError
 from apps.api.src.services.relationship_service import RelationshipService
@@ -110,25 +113,32 @@ class JoinCodeService:
                 return existing
 
         found = self._usable(code, now)
-        relationship = self._relationships.establish(
-            found.venue_id,
-            worker_id,
-            found.default_relationship_type,
-            now,
-            reason=f"Joined with code {found.code}.",
-            default_role=found.default_role,
-        )
+        try:
+            with self._codes.redemption_guard(found.code, found.max_redemptions):
+                relationship = self._relationships.establish(
+                    found.venue_id,
+                    worker_id,
+                    found.default_relationship_type,
+                    now,
+                    reason=f"Joined with code {found.code}.",
+                    default_role=found.default_role,
+                )
+                self._save_redemption(found, worker_id, relationship.relationship_id, now)
+        except JoinCodeExhaustedError:
+            raise ValidationError("That join code has already been used the maximum number of times.")
+        return relationship
+
+    def _save_redemption(self, found, worker_id: str, relationship_id: str, now):
         self._codes.save_redemption(
             VenueJoinCodeRedemption(
                 redemption_id=str(uuid4()),
                 code=found.code,
                 venue_id=found.venue_id,
                 worker_id=worker_id,
-                relationship_id=relationship.relationship_id,
+                relationship_id=relationship_id,
                 redeemed_at=now,
             )
         )
-        return relationship
 
     def _for_venue(self, code: str, venue_id: str) -> VenueJoinCode:
         found = self._codes.get_code(code.strip().upper())

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from apps.api.src.db.workforce_models import VenueJoinCodeModel, VenueJoinCodeRedemptionModel
 from apps.api.src.models.venue_join_code import VenueJoinCode, VenueJoinCodeRedemption
+from apps.api.src.repositories.venue_join_code_repository import JoinCodeExhaustedError
 
 _CODE_FIELDS = tuple(VenueJoinCode.__dataclass_fields__)
 _REDEMPTION_FIELDS = tuple(VenueJoinCodeRedemption.__dataclass_fields__)
@@ -59,6 +62,15 @@ class SqlAlchemyVenueJoinCodeRepository:
             .order_by(VenueJoinCodeRedemptionModel.redeemed_at)
         ).scalars().all()
         return [_to_redemption(row) for row in rows]
+
+    @contextmanager
+    def redemption_guard(self, code: str, max_redemptions: int):
+        self._session.execute(
+            select(VenueJoinCodeModel).where(VenueJoinCodeModel.code == code).with_for_update()
+        ).scalar_one()
+        if self.count_redemptions(code) >= max_redemptions:
+            raise JoinCodeExhaustedError(code)
+        yield
 
     def save_redemption(self, redemption: VenueJoinCodeRedemption) -> VenueJoinCodeRedemption:
         self._session.add(

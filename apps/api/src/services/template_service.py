@@ -8,6 +8,7 @@ from apps.api.src.models.shift import Shift
 from apps.api.src.models.shift_template import ShiftTemplate
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.template_repository import TemplateRepository
+from apps.api.src.services.escalation_service import EscalationService
 from apps.api.src.schemas import (
     GenerateShiftsRequest,
     TemplateCreateRequest,
@@ -21,9 +22,11 @@ class TemplateService:
         self,
         template_repo: TemplateRepository,
         shift_repo: ShiftRepository,
+        escalations: EscalationService,
     ) -> None:
         self._templates = template_repo
         self._shifts = shift_repo
+        self._escalations = escalations
 
     def create_template(self, request: TemplateCreateRequest, operator_id: str, account_id: str | None = None) -> ShiftTemplate:
         now = utc_now()
@@ -80,7 +83,8 @@ class TemplateService:
                 local_time = time(hour=hour, minute=minute, tzinfo=request.start_date.tzinfo)
                 shift_start = normalize_utc(datetime.combine(current_date, local_time))
                 shift_end = shift_start + timedelta(hours=template.duration_hours)
-                shifts.append(self._shifts.save(_shift_from_template(template, shift_start, shift_end)))
+                shift = _shift_from_template(template, shift_start, shift_end)
+                shifts.append(self._shifts.save(self._escalations.stamp_new_shift(shift, shift.created_at)))
             current_date += timedelta(days=1)
 
         return shifts

@@ -236,8 +236,9 @@ def get_venue_analytics_service(
 def get_template_service(
     template_repo: TemplateRepository = Depends(get_template_repo),
     shift_repo: ShiftRepository = Depends(get_shift_repo),
+    escalations: EscalationService = Depends(get_escalation_service),
 ) -> TemplateService:
-    return TemplateService(template_repo, shift_repo)
+    return TemplateService(template_repo, shift_repo, escalations)
 
 
 def get_message_service(

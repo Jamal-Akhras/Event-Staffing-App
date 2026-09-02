@@ -35,8 +35,14 @@ def run_escalation_sweep() -> None:
 def run_recurring_generation() -> None:
     from apps.api.src.db.database import SessionLocal
     from apps.api.src.db.models import RecurringScheduleModel
+    from apps.api.src.repositories.sqlalchemy_account_repository import SqlAlchemyAccountRepository
     from apps.api.src.repositories.sqlalchemy_shift_repository import SqlAlchemyShiftRepository
     from apps.api.src.repositories.sqlalchemy_template_repository import SqlAlchemyTemplateRepository
+    from apps.api.src.repositories.sqlalchemy_worker_relationship_repository import (
+        SqlAlchemyWorkerRelationshipRepository,
+    )
+    from apps.api.src.services.escalation_service import EscalationService
+    from apps.api.src.services.outbox_publisher import SqlAlchemyOutboxPublisher
     from apps.api.src.schemas import GenerateShiftsRequest
     from apps.api.src.services.template_service import TemplateService
 
@@ -56,9 +62,16 @@ def run_recurring_generation() -> None:
             .all()
         )
 
+        shift_repository = SqlAlchemyShiftRepository(session)
         service = TemplateService(
             SqlAlchemyTemplateRepository(session),
-            SqlAlchemyShiftRepository(session),
+            shift_repository,
+            EscalationService(
+                shift_repository,
+                SqlAlchemyWorkerRelationshipRepository(session),
+                SqlAlchemyAccountRepository(session),
+                SqlAlchemyOutboxPublisher(session),
+            ),
         )
         total = 0
         for schedule in schedules:
