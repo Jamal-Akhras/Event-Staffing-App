@@ -39,3 +39,21 @@ class BookingChargeModel(Base):
     waiver_code = Column(String(40), nullable=True)
     recorded_at = Column(UtcDateTime(), nullable=False)
     worker_relationship = Column(String(20), nullable=True)
+
+
+class BookingChargeAdjustmentModel(Base):
+    __tablename__ = "booking_charge_adjustments"
+    __table_args__ = (
+        CheckConstraint("delta_hours <> 0", name="ck_adjustment_deltas_present"),
+        Index("ix_charge_adjustments_charge", "charge_id"),
+    )
+
+    adjustment_id = Column(String, primary_key=True)
+    charge_id = Column(String, ForeignKey("booking_charges.charge_id", ondelete="RESTRICT"), nullable=False)
+    booking_id = Column(String, nullable=False)
+    delta_hours = Column(Numeric(6, 2), nullable=False)
+    delta_wages = Column(Numeric(12, 2), nullable=False)
+    delta_fee = Column(Numeric(12, 2), nullable=False)
+    reason = Column(String(500), nullable=False)
+    created_by_user_id = Column(String, nullable=False)
+    created_at = Column(UtcDateTime(), nullable=False)

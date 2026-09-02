@@ -10,6 +10,11 @@ from apps.api.src.db.models import ApplicationModel, BookingModel, ShiftModel
 from apps.api.src.money import money
 from apps.api.src.models.application import Application
 from apps.api.src.models.shift import Shift
+from apps.api.src.repositories.booking_allocator import (
+    AllocationTargetMissingError,
+    ShiftFullError,
+    WorkerAlreadyBookedError,
+)
 from apps.api.src.repositories.application_decision_repository import (
     ApplicationAlreadyDecidedError,
     ApplicationApprovalResult,
@@ -30,46 +35,41 @@ class SqlAlchemyApplicationDecisionRepository:
         application_id: str,
         now: datetime,
         booking_id: str,
+        attendance_mode: str = "pin",
     ) -> ApplicationApprovalResult:
+        from apps.api.src.repositories.sqlalchemy_booking_allocator import SqlAlchemyBookingAllocator
+
         try:
             with self._session.begin_nested():
                 application_model = self._load_application_for_update(application_id)
                 if application_model.status != "applied":
                     raise ApplicationAlreadyDecidedError("Application already decided.")
 
-                shift_model = self._load_shift_for_update(application_model.shift_id)
-                if shift_model.workers_filled >= shift_model.workers_needed:
-                    raise ShiftAlreadyFullError("Shift is already fully staffed.")
-
-                booking = Booking(
-                    booking_id=booking_id,
-                    shift_id=application_model.shift_id,
-                    worker_id=application_model.worker_id,
-                    operator_id=application_model.operator_id,
-                    start_time=application_model.start_time,
-                    end_time=application_model.end_time,
-                    created_at=now,
-                ).transition_to(BookingState.CONFIRMED, now)
-                booking_model = _booking_to_model(booking)
-                self._session.add(booking_model)
-                self._session.flush()
-
-                workers_filled = shift_model.workers_filled + 1
-                shift_model.workers_filled = workers_filled
-                if workers_filled >= shift_model.workers_needed:
-                    shift_model.status = "filled"
+                allocated = SqlAlchemyBookingAllocator(self._session).allocate(
+                    application_model.shift_id,
+                    application_model.worker_id,
+                    now,
+                    booking_id,
+                    attendance_mode=attendance_mode,
+                )
 
                 application_model.status = "approved"
                 application_model.decided_at = now
-                application_model.booking_id = booking.booking_id
+                application_model.booking_id = booking_id
                 self._session.flush()
+        except AllocationTargetMissingError as exc:
+            raise ApplicationDecisionNotFoundError("Shift not found.") from exc
+        except ShiftFullError as exc:
+            raise ShiftAlreadyFullError("Shift is already fully staffed.") from exc
+        except WorkerAlreadyBookedError as exc:
+            raise ApplicationDecisionConflictError("Application decision could not be saved.") from exc
         except IntegrityError as exc:
             raise ApplicationDecisionConflictError("Application decision could not be saved.") from exc
 
         return ApplicationApprovalResult(
             application=_application_to_domain(application_model),
-            booking=_booking_to_domain(booking_model),
-            shift=_shift_to_domain(shift_model),
+            booking=allocated.booking,
+            shift=allocated.shift,
         )
 
     def reject(self, application_id: str, now: datetime) -> Application:
@@ -121,6 +121,9 @@ def _booking_to_model(booking: Booking) -> BookingModel:
         no_show_at=booking.no_show_at,
         check_in_code=booking.check_in_code,
         completion_code=booking.completion_code,
+        attendance_mode=booking.attendance_mode,
+        override_checked_in_at=booking.override_checked_in_at,
+        override_checked_out_at=booking.override_checked_out_at,
     )
 
 
@@ -143,6 +146,9 @@ def _booking_to_domain(model: BookingModel) -> Booking:
         no_show_at=model.no_show_at,
         check_in_code=model.check_in_code,
         completion_code=model.completion_code,
+        attendance_mode=model.attendance_mode,
+        override_checked_in_at=model.override_checked_in_at,
+        override_checked_out_at=model.override_checked_out_at,
     )
 
 

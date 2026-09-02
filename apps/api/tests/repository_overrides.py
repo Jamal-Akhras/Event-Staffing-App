@@ -31,6 +31,7 @@ def in_memory_repositories() -> dict[Callable[..., Any], Any]:
         rdw.get_worker_relationship_repo: rdw._RELATIONSHIPS,
         rdw.get_relationship_transition_repo: rdw._RELATIONSHIP_TRANSITIONS,
         rdw.get_venue_join_code_repo: rdw._JOIN_CODES,
+        rd.get_rota_publication_repo: rd._ROTA_PUBLICATIONS,
     }
 
 

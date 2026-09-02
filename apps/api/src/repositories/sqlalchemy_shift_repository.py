@@ -81,6 +81,8 @@ class SqlAlchemyShiftRepository:
             .filter(ShiftModel.start_time > now)
             .filter(ShiftModel.workers_filled < ShiftModel.workers_needed)
             .filter(ShiftModel.origin != "market")
+            .filter(ShiftModel.rota_state == "published")
+            .filter(ShiftModel.needs_attention.is_(False))
             .filter(
                 or_(
                     and_(

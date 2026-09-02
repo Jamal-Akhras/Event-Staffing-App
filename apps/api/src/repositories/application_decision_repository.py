@@ -42,6 +42,7 @@ class ApplicationDecisionRepository(Protocol):
         application_id: str,
         now: datetime,
         booking_id: str,
+        attendance_mode: str = "pin",
     ) -> ApplicationApprovalResult:
         ...
 

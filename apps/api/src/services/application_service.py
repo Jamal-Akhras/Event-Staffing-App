@@ -27,6 +27,8 @@ from apps.api.src.schemas import (
     ApplicationMessageUpdateRequest,
 )
 from apps.api.src.schemas_recovery import CancellationRequest
+from apps.api.src.models.worker_relationship import EMPLOYED_TYPES
+from apps.api.src.repositories.booking_allocator import OverlappingBookingError
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.services.errors import ConflictError, ForbiddenError, NotFoundError, ValidationError
 from apps.api.src.services.shift_visibility import worker_can_see_shift
@@ -111,13 +113,36 @@ class ApplicationService:
             return self._applications.list_by_operator(operator_id, limit, status, shift_id)
         return self._applications.list_recent(limit, status, shift_id)
 
+    def _attendance_mode_for(self, application_id: str) -> str:
+        application = self._applications.get(application_id)
+        if application is None:
+            return "pin"
+        shift = self._shifts.get(application.shift_id)
+        if shift is None or not shift.account_id:
+            return "pin"
+        relationship = self._relationships.get_for_venue_worker(shift.account_id, application.worker_id)
+        if (
+            relationship is not None
+            and relationship.status == "active"
+            and relationship.relationship_type in EMPLOYED_TYPES
+        ):
+            return "employed"
+        return "pin"
+
     def approve_application(self, application_id: str, request: ApplicationDecisionRequest) -> Application:
         try:
-            result = self._decisions.approve(application_id, _now_or(request.now), str(uuid4()))
+            result = self._decisions.approve(
+                application_id,
+                _now_or(request.now),
+                str(uuid4()),
+                attendance_mode=self._attendance_mode_for(application_id),
+            )
         except ApplicationDecisionNotFoundError as exc:
             raise NotFoundError(str(exc)) from exc
         except (ApplicationAlreadyDecidedError, ShiftAlreadyFullError) as exc:
             raise ValidationError(str(exc)) from exc
+        except OverlappingBookingError as exc:
+            raise ValidationError("Worker is already booked on an overlapping shift.") from exc
         except ApplicationDecisionConflictError as exc:
             raise ConflictError(str(exc)) from exc
         self._publish_decision(result.application, "approved")

@@ -180,6 +180,9 @@ def _to_domain(model: BookingModel) -> Booking:
         payment_recorded_by_user_id=getattr(model, "payment_recorded_by_user_id", None),
         check_in_code=model.check_in_code,
         completion_code=model.completion_code,
+        attendance_mode=model.attendance_mode,
+        override_checked_in_at=model.override_checked_in_at,
+        override_checked_out_at=model.override_checked_out_at,
     )
 
 
@@ -205,3 +208,6 @@ def _apply_domain(model: BookingModel, booking: Booking) -> None:
     model.payment_recorded_by_user_id = booking.payment_recorded_by_user_id
     model.check_in_code = booking.check_in_code
     model.completion_code = booking.completion_code
+    model.attendance_mode = booking.attendance_mode
+    model.override_checked_in_at = booking.override_checked_in_at
+    model.override_checked_out_at = booking.override_checked_out_at

@@ -77,6 +77,13 @@ def create_shift(
         account = account_repo.get(actor.account_id)
         if account:
             currency = account.currency
+    if payload.rota_state == "draft" and (
+        payload.assigned_worker_id is None or payload.workers_needed != 1
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="A draft rota shift needs exactly one assigned worker.",
+        )
     if payload.assigned_worker_id is not None and actor.account_id:
         assignee = relationship_repo.get_for_venue_worker(actor.account_id, payload.assigned_worker_id)
         if assignee is None or assignee.status != "active":
@@ -87,7 +94,12 @@ def create_shift(
     shift = service.create_shift(payload, actor.user_id, actor.account_id, currency)
     if payload.assigned_worker_id is not None:
         shift = replace(shift, assigned_worker_id=payload.assigned_worker_id)
-    shift = shift_repo.save(escalations.stamp_new_shift(shift, shift.created_at))
+    if payload.rota_state == "draft":
+        shift = replace(shift, rota_state="draft")
+    try:
+        shift = shift_repo.save(escalations.stamp_new_shift(shift, shift.created_at))
+    except ServiceError as exc:
+        raise_service_error(exc)
     _schedule_geocode(unit_of_work, shift_repo, shift)
     result = _shift_view(shift)
     idempotency.finish(started.record_id, result.model_dump(mode="json"))

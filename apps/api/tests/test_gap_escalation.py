@@ -393,3 +393,90 @@ def test_template_generated_shifts_follow_the_escalation_policy(client, in_memor
     assert generated[0].origin == "pool"
     assert generated[0].offer_pool_at is not None
     assert generated[0].publish_market_at is not None
+
+
+def _draft_shift(client, worker_id="pool-worker", hours_ahead=24 * 14):
+    return _create_shift(
+        client, hours_ahead=hours_ahead, assigned_worker_id=worker_id, rota_state="draft"
+    )
+
+
+def test_a_draft_shift_is_invisible_at_every_door(client):
+    shift = _draft_shift(client)
+    assert shift["rota_state"] == "draft"
+    assert shift["offer_pool_at"] is None and shift["publish_market_at"] is None
+
+    feed = client.get("/workers/me/feed", headers=POOL_WORKER).json()
+    assert shift["shift_id"] not in [item["shift"]["shift_id"] for item in feed["items"]]
+    listed = client.get("/shifts", headers=POOL_WORKER).json()
+    assert shift["shift_id"] not in [item["shift_id"] for item in listed]
+    assert client.get(f"/shifts/{shift['shift_id']}", headers=POOL_WORKER).status_code == 404
+    assert _apply(client, shift["shift_id"], POOL_WORKER).status_code == 403
+
+
+def test_a_draft_never_escalates(client, in_memory_repos):
+    _draft_shift(client)
+    service = _service(in_memory_repos)
+    assert service.sweep(NOW + timedelta(days=300)) == []
+
+
+def test_a_draft_requires_one_assigned_worker(client):
+    start = NOW + timedelta(days=14)
+    payload = {
+        "role": "Bartender",
+        "location": "Main bar",
+        "start_time": start.isoformat(),
+        "end_time": (start + timedelta(hours=5)).isoformat(),
+        "pay_rate": 14.5,
+        "workers_needed": 2,
+        "assigned_worker_id": "pool-worker",
+        "rota_state": "draft",
+        "now": NOW.isoformat(),
+    }
+    response = client.post("/shifts", json=payload, headers={**OPERATOR, "X-Actor-Verified": "true"})
+    assert response.status_code == 400
+    assert "exactly one assigned worker" in response.text
+
+
+def test_an_unassigned_shift_with_no_rung_available_is_refused(client, in_memory_repos):
+    from dataclasses import replace
+
+    accounts = in_memory_repos[get_account_repo]
+    accounts.save(
+        replace(accounts.get(VENUE_ID), escalation_policy={"pool_hours": None, "market_lead_hours": None})
+    )
+    start = NOW + timedelta(days=14)
+    payload = {
+        "role": "Bartender",
+        "location": "Main bar",
+        "start_time": start.isoformat(),
+        "end_time": (start + timedelta(hours=5)).isoformat(),
+        "pay_rate": 14.5,
+        "workers_needed": 1,
+        "now": NOW.isoformat(),
+    }
+    response = client.post("/shifts", json=payload, headers={**OPERATOR, "X-Actor-Verified": "true"})
+    assert response.status_code == 400
+    assert "nowhere to go" in response.text
+
+
+def test_a_dropped_slot_with_no_rung_parks_privately(client, in_memory_repos):
+    from dataclasses import replace
+
+    shift = _create_shift(client, assigned_worker_id="pool-worker")
+    accounts = in_memory_repos[get_account_repo]
+    accounts.save(
+        replace(accounts.get(VENUE_ID), escalation_policy={"pool_hours": None, "market_lead_hours": None})
+    )
+    service = _service(in_memory_repos)
+    parked = service.restart_ladder(shift["shift_id"], NOW + timedelta(days=1))
+    assert parked.needs_attention is True
+    assert parked.offer_pool_at is None and parked.publish_market_at is None
+
+    feed = client.get("/workers/me/feed", headers=POOL_WORKER).json()
+    assert parked.shift_id not in [item["shift"]["shift_id"] for item in feed["items"]]
+    assert client.get(f"/shifts/{parked.shift_id}", headers=POOL_WORKER).status_code == 404
+    assert service.sweep(NOW + timedelta(days=300)) == []
+
+    notifications = in_memory_repos[get_notification_repo].list_for_recipient("venue", VENUE_ID, 10)
+    assert any(item.type == "shift.needs_attention" for item in notifications)

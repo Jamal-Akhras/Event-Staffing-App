@@ -57,6 +57,8 @@ class InMemoryShiftRepository:
             shift
             for shift in self._shifts.values()
             if shift.status == "open"
+            and shift.rota_state == "published"
+            and not shift.needs_attention
             and shift.start_time > now
             and shift.workers_filled < shift.workers_needed
             and _rung_is_due(shift, now)

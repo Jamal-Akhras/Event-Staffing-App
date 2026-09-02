@@ -22,6 +22,8 @@ class SqlAlchemyWorkerFeedQueryRepository:
             .join(VenueModel, VenueModel.venue_id == ShiftModel.venue_id)
             .where(VenueModel.market_id == query.market_id)
             .where(ShiftModel.status == "open")
+            .where(ShiftModel.rota_state == "published")
+            .where(ShiftModel.needs_attention.is_(False))
             .where(ShiftModel.start_time > query.now)
             .where(ShiftModel.workers_filled < ShiftModel.workers_needed)
             .where(~_passed_exists(query.worker_id))

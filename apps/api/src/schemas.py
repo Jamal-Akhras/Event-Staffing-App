@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 
+
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from apps.api.src.schemas_shift_summary import ShiftSummaryResponse
@@ -48,6 +51,7 @@ class ShiftCreateRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
     workers_needed: int = Field(default=1, ge=1, le=100)
     assigned_worker_id: str | None = Field(default=None, max_length=100)
+    rota_state: Literal["draft", "published"] = "published"
     now: UtcTimestamp | None = None
 
     @model_validator(mode="after")
@@ -82,6 +86,8 @@ class ShiftResponse(BaseModel):
     assigned_worker_id: str | None = None
     offer_pool_at: UtcTimestamp | None = None
     publish_market_at: UtcTimestamp | None = None
+    rota_state: str = "published"
+    needs_attention: bool = False
 
 
 class ApplicationCreateRequest(BaseModel):

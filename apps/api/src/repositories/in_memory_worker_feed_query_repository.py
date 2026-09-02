@@ -47,6 +47,8 @@ class InMemoryWorkerFeedQueryRepository:
                 continue
             if shift.status != "open" or shift.start_time <= query.now:
                 continue
+            if shift.rota_state == "draft" or shift.needs_attention:
+                continue
             if shift.workers_filled >= shift.workers_needed:
                 continue
             if not self._reaches_worker(shift, query.worker_id):

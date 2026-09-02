@@ -35,3 +35,5 @@ class Shift:
     billable: bool = True
     offer_pool_at: datetime | None = None
     publish_market_at: datetime | None = None
+    rota_state: str = "published"
+    needs_attention: bool = False

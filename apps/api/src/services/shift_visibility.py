@@ -7,6 +7,8 @@ from apps.api.src.repositories.worker_relationship_repository import WorkerRelat
 def worker_can_see_shift(
     shift: Shift, worker_id: str, relationships: WorkerRelationshipRepository
 ) -> bool:
+    if shift.rota_state == "draft" or shift.needs_attention:
+        return False
     if shift.origin == "market":
         return True
     if shift.origin == "assigned":

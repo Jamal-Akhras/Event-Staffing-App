@@ -95,6 +95,11 @@ from apps.api.src.repositories.in_memory_worker_relationship_repository import (
 )
 
 _RELATIONSHIPS = _RelationshipRepo()
+from apps.api.src.repositories.in_memory_rota_publication_repository import (
+    InMemoryRotaPublicationRepository as _RotaPublicationRepo,
+)
+
+_ROTA_PUBLICATIONS = _RotaPublicationRepo()
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
@@ -258,3 +263,22 @@ def shared_event_repository() -> InMemoryEventRepository:
 
 def get_event_repo(session: Session | None = Depends(get_request_session)) -> EventRepository:
     return _EVENTS if use_in_memory_repositories() else SqlAlchemyEventRepository(_session(session))
+
+
+def get_rota_publication_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_rota_publication_repository import (
+        SqlAlchemyRotaPublicationRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _ROTA_PUBLICATIONS
+    return SqlAlchemyRotaPublicationRepository(_session(session))
+
+
+def get_booking_allocator(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.in_memory_booking_allocator import InMemoryBookingAllocator
+    from apps.api.src.repositories.sqlalchemy_booking_allocator import SqlAlchemyBookingAllocator
+
+    if use_in_memory_repositories():
+        return InMemoryBookingAllocator(_BOOKINGS, _SHIFTS)
+    return SqlAlchemyBookingAllocator(_session(session))

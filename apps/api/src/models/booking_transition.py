@@ -12,6 +12,9 @@ ReasonCode = Literal[
     "venue_event_cancelled",
     "shift_details_changed",
     "missed_check_in",
+    "rota_published",
+    "venue_recorded",
+    "hours_adjusted",
     "other",
 ]
 

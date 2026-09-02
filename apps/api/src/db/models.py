@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     event,
+    false,
     true,
 )
 from sqlalchemy.orm import synonym
@@ -43,6 +44,7 @@ from apps.api.src.db.workforce_models import (
     WorkerRelationshipModel,
 )
 from apps.api.src.db.template_models import RecurringScheduleModel, ShiftTemplateModel
+from apps.api.src.db.rota_models import RotaPublicationModel
 
 AccountModel = VenueModel
 
@@ -55,6 +57,15 @@ class BookingModel(Base):
         CheckConstraint("length(check_in_code) = 4", name="ck_bookings_check_in_code_length"),
         CheckConstraint("length(completion_code) = 4", name="ck_bookings_completion_code_length"),
         CheckConstraint("check_in_code <> completion_code", name="ck_bookings_attendance_codes_distinct"),
+        CheckConstraint("attendance_mode IN ('pin', 'employed')", name="ck_bookings_attendance_mode"),
+        CheckConstraint(
+            "(override_checked_in_at IS NULL) = (override_checked_out_at IS NULL)",
+            name="ck_bookings_override_pair",
+        ),
+        CheckConstraint(
+            "override_checked_out_at IS NULL OR override_checked_out_at > override_checked_in_at",
+            name="ck_bookings_override_order",
+        ),
     )
 
     booking_id = Column(String, primary_key=True)
@@ -80,6 +91,9 @@ class BookingModel(Base):
     payment_recorded_by_user_id = Column(String, nullable=True)
     check_in_code = Column(String(4), nullable=False)
     completion_code = Column(String(4), nullable=False)
+    attendance_mode = Column(String(12), nullable=False, default="pin", server_default="pin")
+    override_checked_in_at = Column(UtcDateTime(), nullable=True)
+    override_checked_out_at = Column(UtcDateTime(), nullable=True)
 
 
 @event.listens_for(BookingModel, "before_insert")
@@ -110,6 +124,13 @@ class ShiftModel(Base):
             "origin <> 'assigned' OR assigned_worker_id IS NOT NULL",
             name="ck_shifts_assigned_has_worker",
         ),
+        CheckConstraint("rota_state IN ('draft', 'published')", name="ck_shifts_rota_state"),
+        CheckConstraint(
+            "rota_state <> 'draft' OR origin = 'assigned'", name="ck_shifts_draft_is_assigned"
+        ),
+        CheckConstraint(
+            "rota_state <> 'draft' OR workers_needed = 1", name="ck_shifts_draft_single_seat"
+        ),
     )
 
     shift_id = Column(String, primary_key=True)
@@ -139,6 +160,8 @@ class ShiftModel(Base):
     billable = Column(Boolean, nullable=False, default=True, server_default=true())
     offer_pool_at = Column(UtcDateTime(), nullable=True)
     publish_market_at = Column(UtcDateTime(), nullable=True)
+    rota_state = Column(String(12), nullable=False, default="published", server_default="published")
+    needs_attention = Column(Boolean, nullable=False, default=False, server_default=false())
 
 
 class ApplicationModel(Base):
