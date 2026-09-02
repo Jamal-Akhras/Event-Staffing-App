@@ -14,12 +14,15 @@ import { SsoButtons } from "../../components/SsoButtons";
 import { useAuth } from "../../contexts/AuthContext";
 import { SSO_ENABLED } from "../../lib/clerk";
 import { authStyles } from "./authStyles";
+import { useJoinCodePreview } from "./useJoinCodePreview";
 import { COLORS } from "../../theme/colors";
 
-type Props = { onBack: () => void };
+type Props = { onBack: () => void; withJoinCode?: boolean };
 
-export function RegisterScreen({ onBack }: Props) {
+export function RegisterScreen({ onBack, withJoinCode = false }: Props) {
   const { register } = useAuth();
+  const [joinCode, setJoinCode] = useState("");
+  const { preview, error: codeError, checking } = useJoinCodePreview(withJoinCode ? joinCode : "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -39,10 +42,14 @@ export function RegisterScreen({ onBack }: Props) {
       setError("Passwords don't match.");
       return;
     }
+    if (withJoinCode && !preview) {
+      setError(codeError ?? "Enter the code your venue gave you.");
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      await register(email.trim().toLowerCase(), password);
+      await register(email.trim().toLowerCase(), password, preview?.code);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -70,9 +77,36 @@ export function RegisterScreen({ onBack }: Props) {
 
           <View style={authStyles.card}>
             <Text style={authStyles.heading}>Create account</Text>
-            <Text style={authStyles.subheading}>Start applying for shifts today.</Text>
+            <Text style={authStyles.subheading}>
+              {withJoinCode ? "Join the venue you work for." : "Start applying for shifts today."}
+            </Text>
 
-            {SSO_ENABLED && <SsoButtons />}
+            {withJoinCode && (
+              <View style={authStyles.fieldGroup}>
+                <Text style={authStyles.label}>Venue code</Text>
+                <TextInput
+                  style={authStyles.input}
+                  value={joinCode}
+                  onChangeText={(value) => setJoinCode(value.toUpperCase())}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  placeholder="TEAM-XXXX-XXXX"
+                  placeholderTextColor={COLORS.inkSubtle}
+                />
+                {checking && <Text style={authStyles.subheading}>Checking…</Text>}
+                {preview && (
+                  <Text style={authStyles.subheading}>
+                    Joining {preview.venue_name}
+                    {preview.default_role ? ` as ${preview.default_role}` : ""}
+                  </Text>
+                )}
+                {!checking && !preview && codeError && (
+                  <Text style={authStyles.error}>{codeError}</Text>
+                )}
+              </View>
+            )}
+
+            {SSO_ENABLED && !withJoinCode && <SsoButtons />}
 
             <View style={authStyles.fieldGroup}>
               <Text style={authStyles.label}>Email address</Text>

@@ -20,6 +20,7 @@ import { BottomTabNavigator } from "./src/navigation/BottomTabNavigator";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { LoginScreen } from "./src/screens/auth/LoginScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
+import { JoinChoiceScreen } from "./src/screens/auth/JoinChoiceScreen";
 import { RegisterScreen } from "./src/screens/auth/RegisterScreen";
 import { COLORS } from "./src/theme/colors";
 import { fetchWorker } from "./src/lib/api";
@@ -30,7 +31,7 @@ import { flushPendingNotificationTarget, navigationRef } from "./src/navigation/
 WebBrowser.maybeCompleteAuthSession();
 startAnalytics();
 
-type AuthScreen = "login" | "register" | "forgotPassword";
+type AuthScreen = "login" | "joinChoice" | "register" | "registerWithCode" | "forgotPassword";
 
 function IdentityProvider({ children }: { children: ReactNode }) {
   if (!SSO_ENABLED) return <>{children}</>;
@@ -68,15 +69,29 @@ function AppContent() {
   }
 
   if (!user) {
-    if (authScreen === "register") {
-      return <RegisterScreen onBack={() => setAuthScreen("login")} />;
+    if (authScreen === "joinChoice") {
+      return (
+        <JoinChoiceScreen
+          onJoinVenue={() => setAuthScreen("registerWithCode")}
+          onFindShifts={() => setAuthScreen("register")}
+          onBack={() => setAuthScreen("login")}
+        />
+      );
+    }
+    if (authScreen === "register" || authScreen === "registerWithCode") {
+      return (
+        <RegisterScreen
+          withJoinCode={authScreen === "registerWithCode"}
+          onBack={() => setAuthScreen("login")}
+        />
+      );
     }
     if (authScreen === "forgotPassword") {
       return <ForgotPasswordScreen onBack={() => setAuthScreen("login")} />;
     }
     return (
       <LoginScreen
-        onRegister={() => setAuthScreen("register")}
+        onRegister={() => setAuthScreen("joinChoice")}
         onForgotPassword={() => setAuthScreen("forgotPassword")}
       />
     );

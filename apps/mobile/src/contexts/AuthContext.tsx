@@ -19,7 +19,7 @@ type AuthContextType = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithSso: (ssoToken: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, joinCode?: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -130,8 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(authUser);
   }
 
-  async function register(email: string, password: string): Promise<void> {
-    const authUser = await callAuthEndpoint("/auth/register", { email, password });
+  async function register(email: string, password: string, joinCode?: string): Promise<void> {
+    const body = joinCode ? { email, password, join_code: joinCode } : { email, password };
+    const authUser = await callAuthEndpoint("/auth/register", body);
     setUser(authUser);
   }
 

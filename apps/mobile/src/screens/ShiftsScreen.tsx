@@ -13,6 +13,7 @@ import { TYPE } from "../theme/type";
 import type { Application, Booking } from "../types";
 import { CancellationReasonModal } from "./shifts/CancellationReasonModal";
 import { MessagingModal } from "./shifts/MessagingModal";
+import { InvitationCard } from "./shifts/InvitationCard";
 import { NextShiftCard } from "./shifts/NextShiftCard";
 import { PastShiftItem, ShiftListItem } from "./shifts/ShiftListItem";
 import {
@@ -95,6 +96,8 @@ export function ShiftsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         {target.targetError ? <Text style={styles.error}>{target.targetError}</Text> : null}
+
+        {tab === "upcoming" && <InvitationCard />}
 
         {tab === "upcoming" &&
           (next ? (
