@@ -230,19 +230,41 @@
   letter-spacing: 0.03em;
 }
 
-.wk-tag.regular {
+.wk-tag.team {
   background: rgba(14, 90, 58, 0.1);
   color: var(--ocean-500);
 }
 
-.wk-tag.new {
+.wk-tag.pool {
+  background: rgba(71, 85, 105, 0.12);
+  color: #334155;
+}
+
+.wk-tag.once {
   background: var(--paper-2);
   color: var(--ink-700);
 }
 
-.wk-tag.watch {
-  background: rgba(245, 165, 36, 0.16);
-  color: #b45309;
+.wk-tag.ended {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--ink-500);
+}
+
+.rel-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.rel-invite {
+  display: flex;
+  gap: 8px;
+}
+
+.rel-invite .st-select {
+  flex: 1;
 }
 
 @media (max-width: 1080px) {

@@ -1,24 +1,32 @@
-import { stars } from "../../components/WorkerRail";
 import { initials } from "../../lib/useVenue";
+import { formatMoney } from "../../lib/format";
+import { RELATIONSHIP_LABELS } from "../../types/workforce";
 import { shortDay } from "../dashboard/dashboardUtils";
-import { STANDING_LABELS, type RosterRow, type RosterSort } from "./rosterUtils";
+import { bucketOf, type DirectoryEntry, type DirectorySort } from "./directory";
 
-const COLUMNS: { key: RosterSort; label: string; align: "left" | "right" }[] = [
-  { key: "name", label: "Worker", align: "left" },
+const COLUMNS: { key: DirectorySort; label: string; align: "left" | "right" }[] = [
+  { key: "name", label: "Person", align: "left" },
   { key: "reliability", label: "Reliability", align: "right" },
   { key: "shifts", label: "Shifts with you", align: "right" },
   { key: "recent", label: "Last worked", align: "right" },
 ];
 
 type RosterTableProps = {
-  rows: RosterRow[];
-  sort: RosterSort;
+  rows: DirectoryEntry[];
+  sort: DirectorySort;
+  currency: string;
   selectedId: string | null;
-  onSort: (sort: RosterSort) => void;
-  onSelect: (row: RosterRow) => void;
+  onSort: (sort: DirectorySort) => void;
+  onSelect: (entry: DirectoryEntry) => void;
 };
 
-export function RosterTable({ rows, sort, selectedId, onSort, onSelect }: RosterTableProps) {
+function relationshipLabel(entry: DirectoryEntry): string {
+  if (entry.status === "invited") return "Invited";
+  if (entry.status === "ended") return "Past";
+  return RELATIONSHIP_LABELS[entry.relationship_type];
+}
+
+export function RosterTable({ rows, sort, currency, selectedId, onSort, onSelect }: RosterTableProps) {
   return (
     <div className="wk-table-wrap">
       <div className="wk-scroll">
@@ -37,36 +45,37 @@ export function RosterTable({ rows, sort, selectedId, onSort, onSelect }: Roster
                   </button>
                 </th>
               ))}
-              <th className="r plain">Your rating</th>
-              <th className="r plain">Standing</th>
+              <th className="r plain">Cost to date</th>
+              <th className="r plain">Relationship</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((entry) => (
               <tr
-                key={row.worker.worker_id}
-                className={selectedId === row.worker.worker_id ? "sel" : ""}
-                onClick={() => onSelect(row)}
+                key={entry.worker_id}
+                className={selectedId === entry.worker_id ? "sel" : ""}
+                onClick={() => onSelect(entry)}
               >
                 <td>
                   <span className="wk-person">
-                    <span className="wk-avatar">{initials(row.worker.display_name || "Worker")}</span>
+                    <span className="wk-avatar">{initials(entry.display_name)}</span>
                     <span>
-                      <b>{row.worker.display_name}</b>
+                      <b>{entry.display_name}</b>
                       <span>
-                        {row.worker.role} · {row.worker.city}
+                        {entry.role || "No role set"}
+                        {entry.agreed_rate ? ` · ${formatMoney(entry.agreed_rate, currency)}/hr` : ""}
                       </span>
                     </span>
                   </span>
                 </td>
                 <td className="r">
-                  {row.worker.reliability_score > 0 ? (
+                  {entry.reliability_score > 0 ? (
                     <span className="wk-rel">
-                      <b>{Math.round(row.worker.reliability_score * 100)}%</b>
+                      <b>{Math.round(entry.reliability_score * 100)}%</b>
                       <span className="wk-track">
                         <i
-                          className={row.worker.reliability_score < 0.8 ? "warn" : ""}
-                          style={{ width: `${Math.round(row.worker.reliability_score * 100)}%` }}
+                          className={entry.reliability_score < 0.8 ? "warn" : ""}
+                          style={{ width: `${Math.round(entry.reliability_score * 100)}%` }}
                         />
                       </span>
                     </span>
@@ -74,13 +83,19 @@ export function RosterTable({ rows, sort, selectedId, onSort, onSelect }: Roster
                     <span className="wk-quiet">No history</span>
                   )}
                 </td>
-                <td className="r">{row.shiftsWithYou}</td>
-                <td className="r">{row.lastWorked ? shortDay(row.lastWorked) : <span className="wk-quiet">Never</span>}</td>
+                <td className="r">{entry.shifts_with_you}</td>
                 <td className="r">
-                  {row.rating === null ? <span className="wk-quiet">—</span> : <span className="wk-stars">{stars(row.rating)}</span>}
+                  {entry.last_worked ? shortDay(entry.last_worked) : <span className="wk-quiet">Never</span>}
                 </td>
                 <td className="r">
-                  <span className={`wk-tag ${row.standing}`}>{STANDING_LABELS[row.standing]}</span>
+                  {entry.shifts_with_you > 0 ? (
+                    formatMoney(entry.wages_to_date, currency)
+                  ) : (
+                    <span className="wk-quiet">—</span>
+                  )}
+                </td>
+                <td className="r">
+                  <span className={`wk-tag ${bucketOf(entry)}`}>{relationshipLabel(entry)}</span>
                 </td>
               </tr>
             ))}

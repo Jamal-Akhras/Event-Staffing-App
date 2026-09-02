@@ -48,6 +48,13 @@ export function ShiftManagementModal({ shift, bookings, workers, onChanged, onCl
     });
   }
 
+  async function advance(target: "pool" | "market") {
+    await run(target, async () => {
+      await postJson(`/shifts/${shift.shift_id}/advance`, { target, now: new Date().toISOString() });
+      await onSaved(target === "pool" ? "Shift offered to your people." : "Shift published to the open market.");
+    });
+  }
+
   async function closeApplications() {
     if (!window.confirm("Close this shift to new applications? Confirmed workers will keep their bookings.")) return;
     await run("close", async () => {
@@ -127,6 +134,29 @@ export function ShiftManagementModal({ shift, bookings, workers, onChanged, onCl
             </button>
 
             <div className="management-divider" />
+            {shift.origin && shift.origin !== "market" && (
+              <section className="management-action-row">
+                <div>
+                  <strong>{shift.origin === "assigned" ? "Assigned to one person" : "With your people"}</strong>
+                  <p>
+                    {shift.origin === "assigned"
+                      ? "Only the assigned worker can see this shift. Widen it without waiting for the timer."
+                      : "Only your team and pool can see this shift. Publish it to the open market now."}
+                  </p>
+                </div>
+                <span className="st-inline">
+                  {shift.origin === "assigned" && (
+                    <button className="btn secondary" disabled={busy !== null} type="button" onClick={() => advance("pool")}>
+                      {busy === "pool" ? "Offering..." : "Offer to your people"}
+                    </button>
+                  )}
+                  <button className="btn secondary" disabled={busy !== null} type="button" onClick={() => advance("market")}>
+                    {busy === "market" ? "Publishing..." : "Publish to market"}
+                  </button>
+                </span>
+              </section>
+            )}
+
             <section className="management-action-row">
               <div>
                 <strong>Close applications</strong>

@@ -2,11 +2,13 @@ import { useState } from "react";
 
 import { WEEKDAYS, readWeekStart, saveWeekStart } from "../../lib/weekStart";
 import { Group, Switch, Tag } from "./SettingsRows";
+import type { VenueSettings } from "./useVenueSettings";
 
 const ROLES = ["Bartender", "Server", "Barback", "Host"];
 
-export function SchedulingPane() {
+export function SchedulingPane({ settings }: { settings: VenueSettings }) {
   const [weekStart, setWeekStart] = useState(readWeekStart);
+  const draft = settings.draft;
 
   const changeWeekStart = (day: number) => {
     saveWeekStart(day);
@@ -29,6 +31,72 @@ export function SchedulingPane() {
                 </select>
                 <Tag tone="live">Saved</Tag>
               </>
+            ),
+          },
+        ]}
+      />
+      <Group
+        title="Filling gaps"
+        hint="An unfilled or dropped shift goes to your own people first, then the open market. You control both steps."
+        rows={[
+          {
+            key: "pool-window",
+            label: "Your people get it first",
+            hint:
+              draft?.pool_hours === null
+                ? "Off - new shifts go straight to the open market"
+                : `Your team and pool see a shift ${draft?.pool_hours ?? 24} hours before anyone else`,
+            control: (
+              <span className="st-inline">
+                <Switch
+                  checked={draft?.pool_hours !== null}
+                  label="Offer to your people first"
+                  onChange={() => settings.update({ pool_hours: draft?.pool_hours === null ? 24 : null })}
+                />
+                {draft?.pool_hours !== null && (
+                  <select
+                    className="st-select"
+                    value={draft?.pool_hours ?? 24}
+                    aria-label="Pool window in hours"
+                    onChange={(event) => settings.update({ pool_hours: Number(event.target.value) })}
+                  >
+                    {[4, 12, 24, 48, 72].map((hours) => (
+                      <option key={hours} value={hours}>{hours} hours</option>
+                    ))}
+                  </select>
+                )}
+              </span>
+            ),
+          },
+          {
+            key: "market-lead",
+            label: "Open market safety net",
+            hint:
+              draft?.market_lead_hours === null
+                ? "Off - shifts never reach the open market on their own"
+                : `Unfilled shifts reach the open market no later than ${draft?.market_lead_hours ?? 48} hours before they start`,
+            control: (
+              <span className="st-inline">
+                <Switch
+                  checked={draft?.market_lead_hours !== null}
+                  label="Publish to the open market automatically"
+                  onChange={() =>
+                    settings.update({ market_lead_hours: draft?.market_lead_hours === null ? 48 : null })
+                  }
+                />
+                {draft?.market_lead_hours !== null && (
+                  <select
+                    className="st-select"
+                    value={draft?.market_lead_hours ?? 48}
+                    aria-label="Market lead time in hours"
+                    onChange={(event) => settings.update({ market_lead_hours: Number(event.target.value) })}
+                  >
+                    {[12, 24, 48, 72, 96].map((hours) => (
+                      <option key={hours} value={hours}>{hours} hours</option>
+                    ))}
+                  </select>
+                )}
+              </span>
             ),
           },
         ]}

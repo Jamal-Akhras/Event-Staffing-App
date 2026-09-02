@@ -13,6 +13,8 @@ export type VenueDraft = {
   contact_email: string;
   contact_phone: string;
   photos: string[];
+  pool_hours: number | null;
+  market_lead_hours: number | null;
 };
 
 type Notify = (type: "success" | "error", message: string) => void;
@@ -26,6 +28,8 @@ function draftFrom(venue: Venue): VenueDraft {
     contact_email: venue.contact_email ?? "",
     contact_phone: venue.contact_phone ?? "",
     photos: venue.photos ?? [],
+    pool_hours: venue.escalation_policy == null ? 24 : venue.escalation_policy.pool_hours,
+    market_lead_hours: venue.escalation_policy == null ? 48 : venue.escalation_policy.market_lead_hours,
   };
 }
 
@@ -51,6 +55,7 @@ export function useVenueSettings(notify: Notify) {
         contact_email: next.contact_email || undefined,
         contact_phone: next.contact_phone || undefined,
         photos: next.photos,
+        escalation_policy: { pool_hours: next.pool_hours, market_lead_hours: next.market_lead_hours },
       }),
     onSuccess: (updated) => {
       queryClient.setQueryData(["venue"], updated);

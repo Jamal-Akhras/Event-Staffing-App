@@ -17,6 +17,10 @@ export type Shift = {
   cancelled_at?: string | null;
   cancellation_reason?: string | null;
   cancelled_by_user_id?: string | null;
+  origin?: "assigned" | "pool" | "market";
+  assigned_worker_id?: string | null;
+  offer_pool_at?: string | null;
+  publish_market_at?: string | null;
 };
 
 export type Application = {
@@ -76,6 +80,7 @@ export type Venue = {
   default_location?: string | null;
   avatar_url?: string | null;
   photos: string[];
+  escalation_policy?: { pool_hours: number | null; market_lead_hours: number | null } | null;
 };
 
 export type VenueRatingSummary = {
