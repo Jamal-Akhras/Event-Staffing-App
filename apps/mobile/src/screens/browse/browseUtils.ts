@@ -1,3 +1,4 @@
+import { formatClock, formatDayDate } from "../../lib/format";
 import type { Shift } from "../../types";
 
 export type ShiftFilter = "all" | "today" | "weekend" | "highPay";
@@ -45,20 +46,7 @@ export function getShiftTags(shift: Shift, highPayThreshold?: number | null) {
 export function formatShiftWindow(shift: Shift) {
   const startDate = new Date(shift.start_time);
   const endDate = new Date(shift.end_time);
-  const date = startDate.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-  const start = startDate.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  const end = endDate.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  return `${date} / ${start} - ${end}`;
+  return `${formatDayDate(startDate)} / ${formatClock(startDate)} - ${formatClock(endDate)}`;
 }
 
 export function buildQuickApplyMessage(shift: Shift) {

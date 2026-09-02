@@ -1,3 +1,4 @@
+import { formatClock, formatDayDate } from "../../lib/format";
 import type { Booking } from "../../types";
 
 export type ShiftTab = "upcoming" | "previous" | "applications";
@@ -32,13 +33,7 @@ export function formatDateTime(value?: string | null) {
   if (!value) return "N/A";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return `${formatDayDate(date)}, ${formatClock(date)}`;
 }
 
 export function getCheckInWindow(booking: Booking | null) {
@@ -47,7 +42,7 @@ export function getCheckInWindow(booking: Booking | null) {
   if (Number.isNaN(start.getTime())) return "N/A";
   const open = new Date(start.getTime() - 30 * 60 * 1000);
   const close = new Date(start.getTime() + 15 * 60 * 1000);
-  return `${open.toLocaleTimeString()} - ${close.toLocaleTimeString()}`;
+  return `${formatClock(open)} - ${formatClock(close)}`;
 }
 
 export function groupByMonth(bookings: Booking[]): { month: string; items: Booking[] }[] {

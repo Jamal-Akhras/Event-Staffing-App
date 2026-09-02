@@ -1,9 +1,8 @@
 import { StyleSheet, Text, type TextStyle } from "react-native";
 
+import { splitMoney } from "../lib/format";
 import { COLORS } from "../theme/colors";
 import { NUMERIC, TYPE } from "../theme/type";
-
-const SYMBOLS: Record<string, string> = { GBP: "£", EUR: "€", USD: "$" };
 
 type MoneyProps = {
   amount: string | number;
@@ -13,10 +12,10 @@ type MoneyProps = {
 };
 
 export function Money({ amount, currency = "GBP", suffix, style }: MoneyProps) {
-  const value = Number(amount).toFixed(2);
+  const { symbol, value } = splitMoney(amount, currency);
   return (
     <Text style={[styles.value, style]}>
-      <Text style={styles.symbol}>{SYMBOLS[currency] ?? currency}</Text>
+      <Text style={styles.symbol}>{symbol}</Text>
       {value}
       {suffix ? <Text style={styles.suffix}>{suffix}</Text> : null}
     </Text>

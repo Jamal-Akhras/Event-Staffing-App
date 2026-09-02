@@ -30,21 +30,4 @@ export const PERIOD_LABELS: Record<Period, string> = {
   year: "Year",
 };
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  GBP: "£",
-  AED: "AED ",
-  USD: "$",
-};
-
-export function formatMoney(amount: number | string, currency = "GBP"): string {
-  const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
-  return `${symbol}${Number(amount).toFixed(2)}`;
-}
-
-export function formatEntryDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
+export { formatMoney, formatDayDate as formatEntryDate } from "../../lib/format";
