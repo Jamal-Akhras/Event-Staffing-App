@@ -83,7 +83,12 @@ export type Venue = {
   default_location?: string | null;
   avatar_url?: string | null;
   photos: string[];
-  escalation_policy?: { pool_hours: number | null; market_lead_hours: number | null } | null;
+  escalation_policy?: {
+    named_offer_hours: number | null;
+    team_hours: number | null;
+    pool_hours: number | null;
+    market_lead_hours: number | null;
+  } | null;
 };
 
 export type VenueRatingSummary = {

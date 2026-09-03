@@ -122,7 +122,7 @@ class ShiftModel(Base):
             name="ck_shifts_status",
         ),
         CheckConstraint(
-            "origin IN ('assigned', 'pool', 'market')",
+            "origin IN ('assigned', 'team', 'pool', 'market')",
             name="ck_shifts_origin",
         ),
         CheckConstraint(
@@ -163,6 +163,7 @@ class ShiftModel(Base):
     origin = Column(String(20), nullable=False, default="market", server_default="market")
     assigned_worker_id = Column(String, nullable=True, index=True)
     billable = Column(Boolean, nullable=False, default=True, server_default=true())
+    offer_team_at = Column(UtcDateTime(), nullable=True)
     offer_pool_at = Column(UtcDateTime(), nullable=True)
     publish_market_at = Column(UtcDateTime(), nullable=True)
     rota_state = Column(String(12), nullable=False, default="published", server_default="published")

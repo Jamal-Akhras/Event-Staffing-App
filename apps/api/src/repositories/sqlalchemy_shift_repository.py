@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import and_, desc, or_
+from sqlalchemy import and_, desc, func, or_
 from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import BookingModel, ShiftModel
@@ -87,10 +87,15 @@ class SqlAlchemyShiftRepository:
                 or_(
                     and_(
                         ShiftModel.origin == "assigned",
-                        or_(
-                            ShiftModel.offer_pool_at <= now,
-                            and_(ShiftModel.offer_pool_at.is_(None), ShiftModel.publish_market_at <= now),
-                        ),
+                        func.coalesce(
+                            ShiftModel.offer_team_at,
+                            ShiftModel.offer_pool_at,
+                            ShiftModel.publish_market_at,
+                        ) <= now,
+                    ),
+                    and_(
+                        ShiftModel.origin == "team",
+                        func.coalesce(ShiftModel.offer_pool_at, ShiftModel.publish_market_at) <= now,
                     ),
                     and_(ShiftModel.origin == "pool", ShiftModel.publish_market_at <= now),
                 )
@@ -138,6 +143,7 @@ def _to_domain(model: ShiftModel) -> Shift:
         origin=model.origin,
         assigned_worker_id=model.assigned_worker_id,
         billable=model.billable,
+        offer_team_at=model.offer_team_at,
         offer_pool_at=model.offer_pool_at,
         publish_market_at=model.publish_market_at,
         rota_state=model.rota_state,
@@ -169,6 +175,7 @@ def _apply_domain(model: ShiftModel, shift: Shift) -> None:
     model.origin = shift.origin
     model.assigned_worker_id = shift.assigned_worker_id
     model.billable = shift.billable
+    model.offer_team_at = shift.offer_team_at
     model.offer_pool_at = shift.offer_pool_at
     model.publish_market_at = shift.publish_market_at
     model.rota_state = shift.rota_state

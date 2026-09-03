@@ -97,7 +97,19 @@ def _reaches_worker(worker_id: str, marketplace_enabled: bool):
     return or_(
         market_arm,
         and_(ShiftModel.origin == "assigned", ShiftModel.assigned_worker_id == worker_id),
+        and_(ShiftModel.origin == "team", _employed_member_exists(worker_id)),
         and_(ShiftModel.origin == "pool", _pool_member_exists(worker_id)),
+    )
+
+
+def _employed_member_exists(worker_id: str):
+    return exists(
+        select(1).where(
+            WorkerRelationshipModel.venue_id == ShiftModel.venue_id,
+            WorkerRelationshipModel.worker_id == worker_id,
+            WorkerRelationshipModel.status.in_(("active", "invited")),
+            WorkerRelationshipModel.relationship_type.in_(("permanent", "part_time", "bank")),
+        )
     )
 
 

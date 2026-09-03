@@ -18,7 +18,7 @@ from apps.api.src.repository_dependencies_workforce import (
     shared_worker_relationship_repository,
 )
 from apps.api.src.services.escalation_service import EscalationService
-from apps.api.src.services.escalation_policy import EscalationPolicy, next_timestamps
+from apps.api.src.services.escalation_policy import EscalationPolicy, plan_rungs
 
 VENUE_ID = "venue-1"
 NOW = datetime(2030, 6, 1, 9, 0, tzinfo=UTC)
@@ -183,7 +183,7 @@ def test_a_shift_with_the_market_rung_off_never_leaves_the_pool(client, in_memor
     accounts = in_memory_repos[get_account_repo]
     from dataclasses import replace
 
-    accounts.save(replace(accounts.get(VENUE_ID), escalation_policy={"market_lead_hours": None}))
+    accounts.save(replace(accounts.get(VENUE_ID), escalation_policy={"named_offer_hours": 24, "team_hours": None, "pool_hours": 24, "market_lead_hours": None}))
     shift = _create_shift(client)
     assert shift["publish_market_at"] is None
 
@@ -208,7 +208,7 @@ def test_an_assigned_shift_with_the_pool_rung_off_escalates_straight_to_market(c
     from dataclasses import replace
 
     accounts = in_memory_repos[get_account_repo]
-    accounts.save(replace(accounts.get(VENUE_ID), escalation_policy={"pool_hours": None}))
+    accounts.save(replace(accounts.get(VENUE_ID), escalation_policy={"named_offer_hours": 24, "team_hours": None, "pool_hours": None, "market_lead_hours": 48}))
     shift = _create_shift(client, assigned_worker_id="pool-worker")
     assert shift["offer_pool_at"] is None
     assert shift["publish_market_at"] is not None
@@ -275,7 +275,7 @@ def test_a_vacated_market_slot_goes_back_to_the_venues_people(client, in_memory_
 
 def test_a_drop_on_the_day_reaches_the_market_at_once():
     start = NOW + timedelta(hours=3)
-    stamps = next_timestamps(start, NOW, EscalationPolicy(), assigned=False)
+    stamps = plan_rungs(start, NOW, EscalationPolicy(), "pool", has_team=False, has_pool=True)
     assert stamps.publish_market_at == NOW
 
 
@@ -446,7 +446,7 @@ def test_an_unassigned_shift_with_no_rung_available_is_refused(client, in_memory
 
     accounts = in_memory_repos[get_account_repo]
     accounts.save(
-        replace(accounts.get(VENUE_ID), escalation_policy={"pool_hours": None, "market_lead_hours": None})
+        replace(accounts.get(VENUE_ID), escalation_policy={"named_offer_hours": 24, "team_hours": None, "pool_hours": None, "market_lead_hours": None})
     )
     start = NOW + timedelta(days=14)
     payload = {
@@ -469,7 +469,7 @@ def test_a_dropped_slot_with_no_rung_parks_privately(client, in_memory_repos):
     shift = _create_shift(client, assigned_worker_id="pool-worker")
     accounts = in_memory_repos[get_account_repo]
     accounts.save(
-        replace(accounts.get(VENUE_ID), escalation_policy={"pool_hours": None, "market_lead_hours": None})
+        replace(accounts.get(VENUE_ID), escalation_policy={"named_offer_hours": 24, "team_hours": None, "pool_hours": None, "market_lead_hours": None})
     )
     service = _service(in_memory_repos)
     parked = service.restart_ladder(shift["shift_id"], NOW + timedelta(days=1))

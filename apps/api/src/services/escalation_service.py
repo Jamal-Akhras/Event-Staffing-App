@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime
+from typing import Callable
 
 from apps.api.src.models.shift import Shift
-from apps.api.src.models.worker_relationship import EMPLOYED_TYPES
+from apps.api.src.models.worker_relationship import EMPLOYED_TYPES, WorkerRelationship
 from apps.api.src.repositories.account_repository import AccountRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.services.errors import NotFoundError, ValidationError
-from apps.api.src.services.escalation_policy import next_timestamps, policy_from_venue
+from apps.api.src.services.escalation_policy import RUNG_ORDER, plan_rungs, policy_from_venue
 from apps.api.src.services.outbox_publisher import OutboxPublisher
-
-NEXT_RUNG = {"assigned": "pool", "pool": "market"}
 
 
 class EscalationService:
@@ -34,21 +33,28 @@ class EscalationService:
         billable = not self._assigned_to_employee(shift)
         if shift.rota_state == "draft":
             return replace(
-                shift, origin="assigned", billable=billable, offer_pool_at=None, publish_market_at=None
+                shift, origin="assigned", billable=billable,
+                offer_team_at=None, offer_pool_at=None, publish_market_at=None,
             )
-        private_rung = policy.offers_pool and self._has_people(shift.account_id)
-        if not assigned and not private_rung and not policy.reaches_market:
-            raise ValidationError(
-                "This shift has nowhere to go: turn a rung on in Settings or assign someone."
-            )
-        stamps = next_timestamps(shift.start_time, now, policy, assigned)
-        origin = "assigned" if assigned else ("pool" if private_rung else "market")
+        has_team = self._has_team(shift.account_id)
+        has_pool = self._has_people(shift.account_id)
+        if assigned:
+            first = "assigned"
+        else:
+            first = self._first_open_rung(policy, has_team, has_pool)
+            if first is None:
+                raise ValidationError(
+                    "This shift has nowhere to go: turn a rung on in Settings or assign someone."
+                )
+        stamps = plan_rungs(shift.start_time, now, policy, first, has_team, has_pool)
+        keep = first != "market"
         return replace(
             shift,
-            origin=origin,
+            origin=first,
             billable=billable,
-            offer_pool_at=stamps.offer_pool_at if origin != "market" else None,
-            publish_market_at=stamps.publish_market_at if origin != "market" else None,
+            offer_team_at=stamps.offer_team_at if keep else None,
+            offer_pool_at=stamps.offer_pool_at if keep else None,
+            publish_market_at=stamps.publish_market_at if keep else None,
         )
 
     def restart_ladder(self, shift_id: str, now: datetime) -> Shift | None:
@@ -62,28 +68,21 @@ class EscalationService:
         ):
             return None
         policy = self._policy_for(shift.account_id)
-        if policy.offers_pool and self._has_people(shift.account_id):
-            stamps = next_timestamps(shift.start_time, now, policy, assigned=False)
+        has_team = self._has_team(shift.account_id)
+        has_pool = self._has_people(shift.account_id)
+        first = self._first_open_rung(policy, has_team, has_pool)
+        if first is not None:
+            stamps = plan_rungs(shift.start_time, now, policy, first, has_team, has_pool)
+            keep = first != "market"
             return self._shifts.save(
                 replace(
                     shift,
-                    origin="pool",
+                    origin=first,
                     assigned_worker_id=None,
                     billable=True,
-                    offer_pool_at=stamps.offer_pool_at,
-                    publish_market_at=stamps.publish_market_at,
-                    updated_at=now,
-                )
-            )
-        if policy.reaches_market:
-            return self._shifts.save(
-                replace(
-                    shift,
-                    origin="market",
-                    assigned_worker_id=None,
-                    billable=True,
-                    offer_pool_at=None,
-                    publish_market_at=None,
+                    offer_team_at=stamps.offer_team_at if keep else None,
+                    offer_pool_at=stamps.offer_pool_at if keep else None,
+                    publish_market_at=stamps.publish_market_at if keep else None,
                     updated_at=now,
                 )
             )
@@ -94,6 +93,7 @@ class EscalationService:
                 assigned_worker_id=None,
                 billable=True,
                 needs_attention=True,
+                offer_team_at=None,
                 offer_pool_at=None,
                 publish_market_at=None,
                 updated_at=now,
@@ -105,8 +105,9 @@ class EscalationService:
     def sweep(self, now: datetime) -> list[Shift]:
         moved = []
         for shift in self._shifts.list_due_for_escalation(now):
-            skip_pool = shift.origin == "assigned" and shift.offer_pool_at is None
-            target = "market" if skip_pool else NEXT_RUNG[shift.origin]
+            target = self._next_stamped_rung(shift)
+            if target is None:
+                continue
             moved.append(self._advance(shift, target, now, "Reached the next step."))
         return moved
 
@@ -114,29 +115,57 @@ class EscalationService:
         shift = self._shifts.get(shift_id)
         if shift is None or shift.account_id != venue_id:
             raise NotFoundError("That shift was not found.")
-        if target not in ("pool", "market"):
-            raise ValidationError("A shift can only be moved to your pool or to the open market.")
-        if NEXT_RUNG.get(shift.origin) is None:
+        if target not in ("team", "pool", "market"):
+            raise ValidationError("A shift can only be moved to your team, your pool or the open market.")
+        if shift.origin == "market":
             raise ValidationError("This shift is already on the open market.")
+        if RUNG_ORDER.index(target) <= RUNG_ORDER.index(shift.origin):
+            raise ValidationError("A shift only moves outward: team, then pool, then the open market.")
         if shift.needs_attention:
             shift = self._shifts.save(replace(shift, needs_attention=False, updated_at=now))
         return self._advance(shift, target, now, "Moved by the venue.")
 
     def _advance(self, shift: Shift, target: str, now: datetime, reason: str) -> Shift:
+        previous = shift.origin
+        market = target == "market"
         moved = self._shifts.save(
             replace(
                 shift,
                 origin=target,
                 assigned_worker_id=None,
                 billable=True,
-                offer_pool_at=None if target == "market" else shift.offer_pool_at,
-                publish_market_at=None if target == "market" else shift.publish_market_at,
+                offer_team_at=None if market else shift.offer_team_at,
+                offer_pool_at=None if market else shift.offer_pool_at,
+                publish_market_at=None if market else shift.publish_market_at,
                 updated_at=now,
             )
         )
-        if target == "pool":
-            self._notify_pool(moved, reason)
+        if target == "team":
+            self._notify_audience(moved, reason, self._is_team_member)
+        elif target == "pool":
+            newly = self._is_pool_member if previous == "team" else self._is_private_member
+            self._notify_audience(moved, reason, newly)
         return moved
+
+    def _next_stamped_rung(self, shift: Shift) -> str | None:
+        stamps = {
+            "team": shift.offer_team_at,
+            "pool": shift.offer_pool_at,
+            "market": shift.publish_market_at,
+        }
+        for rung in RUNG_ORDER[RUNG_ORDER.index(shift.origin) + 1:]:
+            if stamps[rung] is not None:
+                return rung
+        return None
+
+    def _first_open_rung(self, policy, has_team: bool, has_pool: bool) -> str | None:
+        if policy.offers_team and has_team:
+            return "team"
+        if policy.offers_pool and has_pool:
+            return "pool"
+        if policy.reaches_market:
+            return "market"
+        return None
 
     def _notify_venue_attention(self, shift: Shift) -> None:
         if not shift.account_id:
@@ -154,12 +183,15 @@ class EscalationService:
             action_entity_id=shift.shift_id,
         )
 
-    def _notify_pool(self, shift: Shift, reason: str) -> None:
+    def _notify_audience(
+        self, shift: Shift, reason: str,
+        included: Callable[[WorkerRelationship], bool],
+    ) -> None:
         if not shift.account_id:
             return
         venue = self._accounts.get(shift.account_id)
         for relationship in self._relationships.list_for_venue(shift.account_id):
-            if relationship.relationship_type == "one_off" or relationship.status not in ("active", "invited"):
+            if relationship.status not in ("active", "invited") or not included(relationship):
                 continue
             self._outbox.publish_notification(
                 event_type="shift.offered_to_pool",
@@ -174,6 +206,18 @@ class EscalationService:
                 action_entity_id=shift.shift_id,
             )
 
+    @staticmethod
+    def _is_team_member(relationship: WorkerRelationship) -> bool:
+        return relationship.relationship_type in EMPLOYED_TYPES
+
+    @staticmethod
+    def _is_pool_member(relationship: WorkerRelationship) -> bool:
+        return relationship.relationship_type == "pool"
+
+    @staticmethod
+    def _is_private_member(relationship: WorkerRelationship) -> bool:
+        return relationship.relationship_type != "one_off"
+
     def _assigned_to_employee(self, shift: Shift) -> bool:
         if shift.assigned_worker_id is None or not shift.account_id:
             return False
@@ -182,6 +226,15 @@ class EscalationService:
             relationship is not None
             and relationship.status == "active"
             and relationship.relationship_type in EMPLOYED_TYPES
+        )
+
+    def _has_team(self, venue_id: str | None) -> bool:
+        if not venue_id:
+            return False
+        return any(
+            relationship.relationship_type in EMPLOYED_TYPES
+            and relationship.status in ("active", "invited")
+            for relationship in self._relationships.list_for_venue(venue_id)
         )
 
     def _has_people(self, venue_id: str | None) -> bool:

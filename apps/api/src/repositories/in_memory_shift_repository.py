@@ -71,9 +71,12 @@ class InMemoryShiftRepository:
 
 def _rung_is_due(shift: Shift, now: datetime) -> bool:
     if shift.origin == "assigned":
-        if shift.offer_pool_at is not None:
-            return shift.offer_pool_at <= now
-        return shift.publish_market_at is not None and shift.publish_market_at <= now
-    if shift.origin == "pool":
-        return shift.publish_market_at is not None and shift.publish_market_at <= now
-    return False
+        stamps = (shift.offer_team_at, shift.offer_pool_at, shift.publish_market_at)
+    elif shift.origin == "team":
+        stamps = (shift.offer_pool_at, shift.publish_market_at)
+    elif shift.origin == "pool":
+        stamps = (shift.publish_market_at,)
+    else:
+        return False
+    next_stamp = next((stamp for stamp in stamps if stamp is not None), None)
+    return next_stamp is not None and next_stamp <= now

@@ -3,22 +3,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+DEFAULT_NAMED_OFFER_HOURS = 24
 DEFAULT_POOL_HOURS = 24
 DEFAULT_MARKET_LEAD_HOURS = 48
+
+RUNG_ORDER = ("assigned", "team", "pool", "market")
+
+_POLICY_KEYS = ("named_offer_hours", "team_hours", "pool_hours", "market_lead_hours")
 
 
 @dataclass(frozen=True)
 class EscalationPolicy:
-    """How long the venue's own people hold a shift, and the latest it may reach the market.
-
-    `pool_hours` is the length of one private rung: a named worker's hold on an assigned shift, and
-    the pool's exclusivity after that. `market_lead_hours` is measured back from the shift start, so
-    a late drop reaches the market at once while an early one still gives the pool its window.
-    Either may be None, which turns that rung off.
-    """
-
+    named_offer_hours: int | None = DEFAULT_NAMED_OFFER_HOURS
+    team_hours: int | None = None
     pool_hours: int | None = DEFAULT_POOL_HOURS
     market_lead_hours: int | None = DEFAULT_MARKET_LEAD_HOURS
+
+    @property
+    def offers_team(self) -> bool:
+        return self.team_hours is not None
 
     @property
     def offers_pool(self) -> bool:
@@ -31,6 +34,7 @@ class EscalationPolicy:
 
 @dataclass(frozen=True)
 class EscalationTimestamps:
+    offer_team_at: datetime | None
     offer_pool_at: datetime | None
     publish_market_at: datetime | None
 
@@ -38,38 +42,52 @@ class EscalationTimestamps:
 def policy_from_venue(stored: dict | None) -> EscalationPolicy:
     if not stored:
         return EscalationPolicy()
-    return EscalationPolicy(
-        pool_hours=_hours(stored, "pool_hours", DEFAULT_POOL_HOURS),
-        market_lead_hours=_hours(stored, "market_lead_hours", DEFAULT_MARKET_LEAD_HOURS),
-    )
+    missing = [key for key in _POLICY_KEYS if key not in stored]
+    if missing:
+        raise ValueError(f"The escalation policy is missing {', '.join(missing)}.")
+    return EscalationPolicy(**{key: _hours(stored[key], key) for key in _POLICY_KEYS})
 
 
-def next_timestamps(
+def plan_rungs(
     start_time: datetime,
     from_time: datetime,
     policy: EscalationPolicy,
-    assigned: bool,
+    first_rung: str,
+    has_team: bool,
+    has_pool: bool,
 ) -> EscalationTimestamps:
-    hold = timedelta(hours=policy.pool_hours or 0)
+    if first_rung not in RUNG_ORDER:
+        raise ValueError(f"Unknown rung '{first_rung}'.")
+    first = RUNG_ORDER.index(first_rung)
+    cursor = from_time
+    team_at: datetime | None = None
+    pool_at: datetime | None = None
+    market_at: datetime | None = None
 
-    offer_pool_at = None
-    if policy.offers_pool:
-        offer_pool_at = from_time + hold if assigned else from_time
+    if first_rung == "assigned":
+        if policy.named_offer_hours is None:
+            return EscalationTimestamps(None, None, None)
+        cursor = cursor + timedelta(hours=policy.named_offer_hours)
 
-    publish_market_at = None
+    if first <= RUNG_ORDER.index("team") and policy.offers_team and has_team:
+        team_at = cursor
+        cursor = cursor + timedelta(hours=policy.team_hours)
+
+    if first <= RUNG_ORDER.index("pool") and policy.offers_pool and has_pool:
+        pool_at = cursor
+        cursor = cursor + timedelta(hours=policy.pool_hours)
+
     if policy.reaches_market:
-        previous_rung = offer_pool_at if offer_pool_at is not None else from_time
-        window_ends = previous_rung + hold if policy.offers_pool else previous_rung
-        deadline = start_time - timedelta(hours=policy.market_lead_hours or 0)
-        publish_market_at = max(min(window_ends, deadline), previous_rung)
+        deadline = start_time - timedelta(hours=policy.market_lead_hours)
+        floor = pool_at or team_at or from_time
+        market_at = max(min(cursor, deadline), floor)
 
-    return EscalationTimestamps(offer_pool_at=offer_pool_at, publish_market_at=publish_market_at)
+    return EscalationTimestamps(
+        offer_team_at=team_at, offer_pool_at=pool_at, publish_market_at=market_at
+    )
 
 
-def _hours(stored: dict, key: str, fallback: int) -> int | None:
-    if key not in stored:
-        return fallback
-    value = stored[key]
+def _hours(value, key: str) -> int | None:
     if value is None:
         return None
     hours = int(value)

@@ -57,5 +57,5 @@ class ShiftUpdateRequest(BaseModel):
 
 
 class ShiftAdvanceRequest(BaseModel):
-    target: Literal["pool", "market"]
+    target: Literal["team", "pool", "market"]
     now: UtcTimestamp | None = None

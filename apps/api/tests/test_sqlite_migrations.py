@@ -99,7 +99,7 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "046"
+        assert version == "047"
 
     command.downgrade(config, "022")
     downgraded_rating_columns = {
@@ -148,6 +148,56 @@ def test_availability_migration_backfills_and_reverses(tmp_path, monkeypatch):
     command.upgrade(config, "046")
     with engine.connect() as connection:
         assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "046"
+
+
+def test_team_rung_migration_completes_the_policy_and_reverses(tmp_path, monkeypatch):
+    database_path = tmp_path / "team-backfill.db"
+    database_url = f"sqlite+pysqlite:///{database_path.as_posix()}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    config = Config(str(PROJECT_ROOT / "apps/api/alembic.ini"))
+    command.upgrade(config, "046")
+    engine = create_engine(database_url)
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO venues (venue_id, organisation_id, name, country, currency, "
+                "created_at, escalation_policy) VALUES "
+                "('venue-1', 'org-1', 'The Grapes', 'GB', 'GBP', '2030-01-01 10:00:00', "
+                "'{\"pool_hours\": 12, \"market_lead_hours\": null}')"
+            )
+        )
+
+    command.upgrade(config, "047")
+    import json
+    with engine.connect() as connection:
+        stored = json.loads(
+            connection.execute(
+                text("SELECT escalation_policy FROM venues WHERE venue_id = 'venue-1'")
+            ).scalar_one()
+        )
+    assert stored == {
+        "named_offer_hours": 12,
+        "team_hours": None,
+        "pool_hours": 12,
+        "market_lead_hours": None,
+    }
+    shift_columns = {column["name"] for column in inspect(engine).get_columns("shifts")}
+    assert "offer_team_at" in shift_columns
+
+    command.downgrade(config, "046")
+    with engine.connect() as connection:
+        stored = json.loads(
+            connection.execute(
+                text("SELECT escalation_policy FROM venues WHERE venue_id = 'venue-1'")
+            ).scalar_one()
+        )
+    assert stored == {"pool_hours": 12, "market_lead_hours": None}
+    assert "offer_team_at" not in {
+        column["name"] for column in inspect(engine).get_columns("shifts")
+    }
+
+    command.upgrade(config, "047")
 
 
 def test_organisation_migration_backfills_and_reverses(tmp_path, monkeypatch):

@@ -38,6 +38,13 @@ class InMemoryWorkerFeedQueryRepository:
             return marketplace_enabled or self._is_related(shift, worker_id)
         if shift.origin == "assigned":
             return shift.assigned_worker_id == worker_id
+        if shift.origin == "team":
+            relationship = self._relationships.get_for_venue_worker(shift.account_id or "", worker_id)
+            return (
+                relationship is not None
+                and relationship.status in ("active", "invited")
+                and relationship.relationship_type in ("permanent", "part_time", "bank")
+            )
         return self._is_related(shift, worker_id)
 
     def list_page(self, query: WorkerFeedQuery) -> list[WorkerFeedItem]:

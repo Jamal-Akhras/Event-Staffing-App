@@ -40,8 +40,68 @@ export function SchedulingPane({ settings }: { settings: VenueSettings }) {
         hint="An unfilled or dropped shift goes to your own people first, then the open market. You control both steps."
         rows={[
           {
+            key: "named-hold",
+            label: "A named person holds it",
+            hint:
+              draft?.named_offer_hours === null
+                ? "Waits for their answer - the shift never moves on by itself"
+                : `An assigned shift moves on after ${draft?.named_offer_hours ?? 24} hours without an answer`,
+            control: (
+              <span className="st-inline">
+                <Switch
+                  checked={draft?.named_offer_hours !== null}
+                  label="Move on from an unanswered offer"
+                  onChange={() =>
+                    settings.update({ named_offer_hours: draft?.named_offer_hours === null ? 24 : null })
+                  }
+                />
+                {draft?.named_offer_hours !== null && (
+                  <select
+                    className="st-select"
+                    value={draft?.named_offer_hours ?? 24}
+                    aria-label="Named offer hold in hours"
+                    onChange={(event) => settings.update({ named_offer_hours: Number(event.target.value) })}
+                  >
+                    {[4, 12, 24, 48, 72].map((hours) => (
+                      <option key={hours} value={hours}>{hours} hours</option>
+                    ))}
+                  </select>
+                )}
+              </span>
+            ),
+          },
+          {
+            key: "team-window",
+            label: "Then your employed team",
+            hint:
+              draft?.team_hours === null
+                ? "Off - unfilled shifts skip straight to your pool"
+                : `Employed staff see it ${draft?.team_hours ?? 6} hours before the pool`,
+            control: (
+              <span className="st-inline">
+                <Switch
+                  checked={draft?.team_hours !== null}
+                  label="Offer to employed staff first"
+                  onChange={() => settings.update({ team_hours: draft?.team_hours === null ? 6 : null })}
+                />
+                {draft?.team_hours !== null && (
+                  <select
+                    className="st-select"
+                    value={draft?.team_hours ?? 6}
+                    aria-label="Team window in hours"
+                    onChange={(event) => settings.update({ team_hours: Number(event.target.value) })}
+                  >
+                    {[2, 4, 6, 12, 24].map((hours) => (
+                      <option key={hours} value={hours}>{hours} hours</option>
+                    ))}
+                  </select>
+                )}
+              </span>
+            ),
+          },
+          {
             key: "pool-window",
-            label: "Your people get it first",
+            label: "Then your pool",
             hint:
               draft?.pool_hours === null
                 ? "Off - new shifts go straight to the open market"
