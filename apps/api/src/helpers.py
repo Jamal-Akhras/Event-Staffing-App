@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException
 
 from apps.api.src.auth.actor import ActorRole
-from apps.api.src.datetime_utils import utc_now
+from apps.api.src.datetime_utils import _now_or, utc_now
 from apps.api.src.models.application import Application
 from apps.api.src.models.shift import Shift
 from apps.api.src.models.worker_profile import WorkerProfile
@@ -25,10 +25,6 @@ from packages.domain.src.booking_state_machine import allowed_next_states
 
 if TYPE_CHECKING:
     from apps.api.src.services.shift_summary import ShiftSummary
-
-def _now_or(request_time: datetime | None) -> datetime:
-    return request_time or utc_now()
-
 
 def _get_worker_profile(repo: WorkerProfileRepository, worker_id: str) -> WorkerProfile:
     profile = repo.get(worker_id)

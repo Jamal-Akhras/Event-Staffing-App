@@ -6,7 +6,7 @@ from dataclasses import replace
 from uuid import uuid4
 
 from apps.api.src.datetime_utils import utc_now
-from apps.api.src.helpers import _now_or
+from apps.api.src.datetime_utils import _now_or
 from apps.api.src.models.shift import Shift
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.schemas import ShiftCreateRequest

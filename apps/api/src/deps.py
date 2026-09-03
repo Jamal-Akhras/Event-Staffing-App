@@ -16,6 +16,8 @@ from apps.api.src.repository_dependencies import (
     get_account_repo,
     get_booking_allocator,
     get_booking_charge_adjustment_repo,
+    get_shift_change_request_repo,
+    get_shift_change_transition_repo,
     get_shift_offer_repo,
     get_rota_publication_repo,
     get_application_decision_repo,
@@ -68,7 +70,9 @@ from apps.api.src.services.join_code_service import JoinCodeService
 from apps.api.src.services.people_service import PeopleService
 from apps.api.src.services.escalation_service import EscalationService
 from apps.api.src.services.rota_service import RotaService
+from apps.api.src.services.shift_change_service import ShiftChangeService
 from apps.api.src.services.shift_offer_service import ShiftOfferService
+from apps.api.src.services.rota_revisions import RotaRevisionService
 from apps.api.src.services.timesheet_service import TimesheetService
 from apps.api.src.services.relationship_service import RelationshipService
 from apps.api.src.services.billing_service import BillingService
@@ -361,4 +365,34 @@ def get_timesheet_service(
         transitions,
         account_repo,
         market_repo,
+    )
+
+
+def get_shift_change_service(
+    request_repo=Depends(get_shift_change_request_repo),
+    change_transition_repo=Depends(get_shift_change_transition_repo),
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    booking_repo: BookingRepository = Depends(get_booking_repo),
+    allocator=Depends(get_booking_allocator),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    transitions: BookingTransitionRepository = Depends(get_booking_transition_repo),
+    lifecycle: BookingLifecycleService = Depends(get_booking_lifecycle_service),
+    escalations: EscalationService = Depends(get_escalation_service),
+    outbox: OutboxPublisher = Depends(get_outbox_publisher),
+    publications=Depends(get_rota_publication_repo),
+    account_repo: AccountRepository = Depends(get_account_repo),
+    market_repo: MarketRepository = Depends(get_market_repo),
+) -> ShiftChangeService:
+    return ShiftChangeService(
+        request_repo,
+        change_transition_repo,
+        shift_repo,
+        booking_repo,
+        allocator,
+        relationship_repo,
+        transitions,
+        lifecycle,
+        escalations,
+        outbox,
+        RotaRevisionService(shift_repo, booking_repo, publications, outbox, account_repo, market_repo),
     )

@@ -40,6 +40,8 @@ def in_memory_repositories() -> dict[Callable[..., Any], Any]:
         rd.get_outbox_publisher: InMemoryOutboxPublisher(rd._NOTIFICATIONS, LoggingEmailTransport()),
         rd.get_booking_charge_adjustment_repo: rd._CHARGE_ADJUSTMENTS,
         rd.get_shift_offer_repo: rd._SHIFT_OFFERS,
+        rd.get_shift_change_request_repo: rd._SHIFT_CHANGES,
+        rd.get_shift_change_transition_repo: rd._SHIFT_CHANGE_TRANSITIONS,
         rda.get_availability_rule_repo: rda._AVAILABILITY_RULES,
         rda.get_availability_exception_repo: rda._AVAILABILITY_EXCEPTIONS,
         rda.get_time_off_repo: rda._TIME_OFF,

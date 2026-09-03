@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from apps.api.src.helpers import _now_or
+from apps.api.src.datetime_utils import _now_or
 from apps.api.src.models.worker_feed_state import WorkerFeedState
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_feed_state_repository import WorkerFeedStateRepository

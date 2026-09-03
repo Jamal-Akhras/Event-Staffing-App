@@ -121,6 +121,23 @@ _SHIFT_OFFERS = _ShiftOfferRepo()
 def shared_shift_offer_repository():
     return _SHIFT_OFFERS
 
+
+from apps.api.src.repositories.in_memory_shift_change_request_repository import (
+    InMemoryShiftChangeRequestRepository as _ShiftChangeRepo,
+    InMemoryShiftChangeTransitionRepository as _ShiftChangeTransitionRepo,
+)
+
+_SHIFT_CHANGES = _ShiftChangeRepo()
+_SHIFT_CHANGE_TRANSITIONS = _ShiftChangeTransitionRepo()
+
+
+def shared_shift_change_request_repository():
+    return _SHIFT_CHANGES
+
+
+def shared_shift_change_transition_repository():
+    return _SHIFT_CHANGE_TRANSITIONS
+
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
@@ -323,3 +340,23 @@ def get_shift_offer_repo(session: Session | None = Depends(get_request_session))
     if use_in_memory_repositories():
         return _SHIFT_OFFERS
     return SqlAlchemyShiftOfferRepository(_session(session))
+
+
+def get_shift_change_request_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_shift_change_request_repository import (
+        SqlAlchemyShiftChangeRequestRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _SHIFT_CHANGES
+    return SqlAlchemyShiftChangeRequestRepository(_session(session))
+
+
+def get_shift_change_transition_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_shift_change_request_repository import (
+        SqlAlchemyShiftChangeTransitionRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _SHIFT_CHANGE_TRANSITIONS
+    return SqlAlchemyShiftChangeTransitionRepository(_session(session))

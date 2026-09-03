@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from uuid import uuid4
 
-from apps.api.src.helpers import _now_or
+from apps.api.src.datetime_utils import _now_or
 from apps.api.src.models.application import Application
 from apps.api.src.models.application_message_history import ApplicationMessageHistory
 from apps.api.src.repositories.application_decision_repository import (

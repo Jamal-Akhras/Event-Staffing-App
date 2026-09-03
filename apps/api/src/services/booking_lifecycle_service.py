@@ -4,7 +4,7 @@ from dataclasses import replace
 
 from uuid import uuid4
 
-from apps.api.src.helpers import _now_or
+from apps.api.src.datetime_utils import _now_or
 from apps.api.src.models.booking_transition import BookingTransition
 from apps.api.src.repositories.booking_transition_repository import BookingTransitionRepository
 from apps.api.src.repositories.booking_repository import BookingRepository

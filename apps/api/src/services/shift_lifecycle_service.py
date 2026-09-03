@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from apps.api.src.helpers import _now_or
+from apps.api.src.datetime_utils import _now_or
 from apps.api.src.models.shift import Shift
 from apps.api.src.repositories.application_repository import ApplicationRepository
 from apps.api.src.repositories.booking_repository import BookingRepository

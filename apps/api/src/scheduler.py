@@ -32,6 +32,17 @@ def run_escalation_sweep() -> None:
         log.exception("escalation sweep failed")
 
 
+def run_workforce_expiry_sweep() -> None:
+    from apps.api.src.jobs.run_workforce_expiry_sweep import run
+
+    try:
+        expired = run()
+        if expired:
+            log.info("workforce expiry sweep: %d request(s) expired", expired)
+    except Exception:
+        log.exception("workforce expiry sweep failed")
+
+
 def run_recurring_generation() -> None:
     from apps.api.src.db.database import SessionLocal
     from apps.api.src.db.models import RecurringScheduleModel
@@ -124,5 +135,6 @@ def create_scheduler() -> BackgroundScheduler:
     )
     scheduler.add_job(run_no_show_sweep, "interval", minutes=15, id="no_show_sweep", replace_existing=True)
     scheduler.add_job(run_escalation_sweep, "interval", minutes=5, id="escalation_sweep", replace_existing=True)
+    scheduler.add_job(run_workforce_expiry_sweep, "interval", minutes=10, id="workforce_expiry_sweep", replace_existing=True)
     scheduler.add_job(run_recurring_generation, "cron", hour=3, minute=0, id="recurring_gen", replace_existing=True)
     return scheduler

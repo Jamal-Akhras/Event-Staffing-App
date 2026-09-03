@@ -37,6 +37,7 @@ from apps.api.src.db.billing_models import PartnerCodeModel, PartnerCodeRedempti
 from apps.api.src.db.event_models import EventModel
 from apps.api.src.db.booking_charge_models import BookingChargeModel
 from apps.api.src.db.shift_offer_models import ShiftOfferModel
+from apps.api.src.db.shift_change_models import ShiftChangeRequestModel, ShiftChangeTransitionModel
 from apps.api.src.db.booking_transition_models import BookingTransitionModel
 from apps.api.src.db.workforce_models import (
     RelationshipTransitionModel,
