@@ -35,6 +35,8 @@ def sweep_no_shows(
     updated: list[Booking] = []
 
     for booking in booking_repo.list_by_state(BookingState.CONFIRMED):
+        if booking.attendance_mode == "employed":
+            continue
         try:
             transitioned = booking.transition_to(BookingState.NO_SHOW, now)
         except TransitionError:

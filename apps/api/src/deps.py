@@ -15,6 +15,7 @@ from apps.api.src.repositories.worker_feed_query_repository import WorkerFeedQue
 from apps.api.src.repository_dependencies import (
     get_account_repo,
     get_booking_allocator,
+    get_booking_charge_adjustment_repo,
     get_rota_publication_repo,
     get_application_decision_repo,
     get_application_message_history_repo,
@@ -61,6 +62,7 @@ from apps.api.src.services.join_code_service import JoinCodeService
 from apps.api.src.services.people_service import PeopleService
 from apps.api.src.services.escalation_service import EscalationService
 from apps.api.src.services.rota_service import RotaService
+from apps.api.src.services.timesheet_service import TimesheetService
 from apps.api.src.services.relationship_service import RelationshipService
 from apps.api.src.services.billing_service import BillingService
 from apps.api.src.services.charge_recorder import ChargeRecorder
@@ -137,6 +139,7 @@ def get_charge_recorder(
     worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     partner_code_repo: PartnerCodeRepository = Depends(get_partner_code_repo),
     relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    relationship_transition_repo: RelationshipTransitionRepository = Depends(get_relationship_transition_repo),
 ) -> ChargeRecorder:
     return ChargeRecorder(
         charge_repo,
@@ -145,6 +148,7 @@ def get_charge_recorder(
         partner_code_repo,
         get_platform_fee_percent(),
         relationship_repo,
+        relationship_transition_repo,
     )
 
 
@@ -294,6 +298,30 @@ def get_rota_service(
         lifecycle,
         escalations,
         outbox,
+        account_repo,
+        market_repo,
+    )
+
+
+def get_timesheet_service(
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    booking_repo: BookingRepository = Depends(get_booking_repo),
+    worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    charge_repo: BookingChargeRepository = Depends(get_booking_charge_repo),
+    adjustment_repo=Depends(get_booking_charge_adjustment_repo),
+    transitions: BookingTransitionRepository = Depends(get_booking_transition_repo),
+    account_repo: AccountRepository = Depends(get_account_repo),
+    market_repo: MarketRepository = Depends(get_market_repo),
+) -> TimesheetService:
+    return TimesheetService(
+        shift_repo,
+        booking_repo,
+        worker_repo,
+        relationship_repo,
+        charge_repo,
+        adjustment_repo,
+        transitions,
         account_repo,
         market_repo,
     )

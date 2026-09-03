@@ -83,9 +83,10 @@ class BookingLifecycleService:
         booking = self.get_booking(booking_id)
         previous_state = booking.state.value
         submitted = request.code if isinstance(request, BookingTransitionRequest) else None
-        if target == BookingState.CHECKED_IN and not code_matches(submitted, booking.check_in_code):
+        codeless = booking.attendance_mode == "employed"
+        if target == BookingState.CHECKED_IN and not codeless and not code_matches(submitted, booking.check_in_code):
             raise ValidationError("That check-in code doesn't match. Ask the manager for the code on their board.")
-        if target == BookingState.APPROVED and not code_matches(submitted, booking.completion_code):
+        if target == BookingState.APPROVED and not codeless and not code_matches(submitted, booking.completion_code):
             raise ValidationError("That completion code doesn't match. Ask the worker to show the code in their app.")
         try:
             booking = booking.transition_to(target, now)

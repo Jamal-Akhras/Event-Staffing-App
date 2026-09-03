@@ -9,7 +9,11 @@ from apps.api.src.repositories.booking_charge_repository import BookingChargeRep
 from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
-from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
+from apps.api.src.models.worker_relationship import EMPLOYED_TYPES
+from apps.api.src.repositories.worker_relationship_repository import (
+    RelationshipTransitionRepository,
+    WorkerRelationshipRepository,
+)
 from apps.api.src.services.billing_math import completed_at, money, worked_hours
 from apps.api.src.services.errors import NotFoundError
 from packages.domain.src.booking import Booking
@@ -24,6 +28,7 @@ class ChargeRecorder:
         partner_codes: PartnerCodeRepository,
         fee_percent: Decimal,
         relationships: WorkerRelationshipRepository,
+        relationship_transitions: RelationshipTransitionRepository,
     ) -> None:
         self._charges = charges
         self._shifts = shifts
@@ -31,6 +36,7 @@ class ChargeRecorder:
         self._codes = partner_codes
         self._fee_percent = fee_percent
         self._relationships = relationships
+        self._relationship_transitions = relationship_transitions
 
     def freeze(self, booking: Booking, now: datetime) -> BookingCharge:
         existing = self._charges.get_for_booking(booking.booking_id)
@@ -44,8 +50,10 @@ class ChargeRecorder:
         pay_rate = money(Decimal(shift.pay_rate))
         wages = money(hours * pay_rate)
         waiver_code = self._active_waiver_code(shift.account_id, now)
-        fee_percent = Decimal("0.00") if not shift.billable else self._fee_percent
-        fee = Decimal("0.00") if (waiver_code or not shift.billable) else money(wages * fee_percent / Decimal(100))
+        relationship_at_start = self._relationship_as_of(shift.account_id, booking.worker_id, booking.start_time)
+        exempt = relationship_at_start in EMPLOYED_TYPES or not shift.billable
+        fee_percent = Decimal("0.00") if exempt else self._fee_percent
+        fee = Decimal("0.00") if (waiver_code or exempt) else money(wages * fee_percent / Decimal(100))
         completed = completed_at(booking)
         return self._charges.record(
             BookingCharge(
@@ -70,15 +78,31 @@ class ChargeRecorder:
                 fee_waived=waiver_code is not None,
                 waiver_code=waiver_code,
                 recorded_at=now,
-                worker_relationship=self._relationship_type(shift.account_id, booking.worker_id),
+                worker_relationship=relationship_at_start,
             )
         )
 
-    def _relationship_type(self, venue_id: str, worker_id: str) -> str:
+    def _relationship_as_of(self, venue_id: str, worker_id: str, at) -> str:
         relationship = self._relationships.get_for_venue_worker(venue_id, worker_id)
-        if relationship is None or relationship.status not in ("active", "invited"):
+        if relationship is None:
             return "one_off"
-        return relationship.relationship_type
+        recorded = self._relationship_transitions.list_for_relationship(relationship.relationship_id)
+        if not recorded:
+            if relationship.created_at <= at and relationship.status in ("active", "invited"):
+                return relationship.relationship_type
+            return "one_off"
+        state_type = recorded[0].from_relationship_type
+        state_status = recorded[0].from_status
+        for transition in recorded:
+            if transition.occurred_at > at:
+                break
+            if transition.to_status == "invited":
+                continue
+            state_type = transition.to_relationship_type
+            state_status = transition.to_status
+        if state_type is None or state_status != "active":
+            return "one_off"
+        return state_type
 
     def _active_waiver_code(self, account_id: str, now: datetime) -> str | None:
         redemption = self._codes.get_redemption_for_account(account_id)

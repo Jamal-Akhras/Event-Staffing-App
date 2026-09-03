@@ -100,6 +100,15 @@ from apps.api.src.repositories.in_memory_rota_publication_repository import (
 )
 
 _ROTA_PUBLICATIONS = _RotaPublicationRepo()
+from apps.api.src.repositories.in_memory_booking_charge_adjustment_repository import (
+    InMemoryBookingChargeAdjustmentRepository as _ChargeAdjustmentRepo,
+)
+
+_CHARGE_ADJUSTMENTS = _ChargeAdjustmentRepo()
+
+
+def shared_booking_charge_adjustment_repository():
+    return _CHARGE_ADJUSTMENTS
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
@@ -282,3 +291,13 @@ def get_booking_allocator(session: Session | None = Depends(get_request_session)
     if use_in_memory_repositories():
         return InMemoryBookingAllocator(_BOOKINGS, _SHIFTS)
     return SqlAlchemyBookingAllocator(_session(session))
+
+
+def get_booking_charge_adjustment_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_booking_charge_adjustment_repository import (
+        SqlAlchemyBookingChargeAdjustmentRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _CHARGE_ADJUSTMENTS
+    return SqlAlchemyBookingChargeAdjustmentRepository(_session(session))

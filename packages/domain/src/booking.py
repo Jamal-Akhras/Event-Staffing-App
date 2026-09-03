@@ -36,6 +36,9 @@ class Booking:
     payment_recorded_by_user_id: str | None = None
     check_in_code: str = field(default_factory=new_attendance_code)
     completion_code: str = field(default_factory=new_attendance_code)
+    attendance_mode: str = "pin"
+    override_checked_in_at: datetime | None = None
+    override_checked_out_at: datetime | None = None
 
     def __post_init__(self) -> None:
         if self.completion_code == self.check_in_code:
@@ -83,6 +86,18 @@ class Booking:
             return replace(self, state=target, cancelled_at=now)
 
         return replace(self, state=target, confirmed_at=now)
+
+    def record_attendance(self, checked_in_at: datetime, checked_out_at: datetime) -> "Booking":
+        if self.state != BookingState.CONFIRMED:
+            raise TransitionError("Attendance can only be recorded on a confirmed booking.")
+        if checked_out_at <= checked_in_at:
+            raise TransitionError("Check-out must be after check-in.")
+        return replace(
+            self,
+            state=BookingState.CHECKED_OUT,
+            checked_in_at=checked_in_at,
+            checked_out_at=checked_out_at,
+        )
 
 
 def _within_check_in_window(now: datetime, start_time: datetime) -> bool:
