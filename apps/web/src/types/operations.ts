@@ -76,6 +76,7 @@ export type Venue = {
   country: string;
   currency: string;
   market_id: string | null;
+  timezone: string | null;
   venue_type?: string | null;
   contact_email?: string | null;
   contact_phone?: string | null;

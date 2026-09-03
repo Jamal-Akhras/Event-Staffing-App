@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from apps.api.src import main
 from apps.api.src.deps import (
+    get_booking_charge_adjustment_repo,
     get_booking_charge_repo,
     get_booking_repo,
     get_booking_transition_repo,
@@ -14,6 +15,7 @@ from apps.api.src.deps import (
     get_shift_repo,
     get_worker_profile_repo,
 )
+from apps.api.src.models.booking_charge_adjustment import BookingChargeAdjustment
 from apps.api.src.models.partner_code import PartnerCode
 from apps.api.src.models.shift import Shift
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
@@ -21,6 +23,7 @@ from apps.api.src.repositories.in_memory_partner_code_repository import InMemory
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 from apps.api.src.repositories.in_memory_worker_profile_repository import InMemoryWorkerProfileRepository
 from apps.api.src.repository_dependencies import (
+    shared_booking_charge_adjustment_repository,
     shared_booking_charge_repository,
     shared_booking_transition_repository,
 )
@@ -52,8 +55,10 @@ def freeze_billing_clock(monkeypatch):
 @pytest.fixture(autouse=True)
 def clear_charges():
     shared_booking_charge_repository().clear()
+    shared_booking_charge_adjustment_repository().clear()
     yield
     shared_booking_charge_repository().clear()
+    shared_booking_charge_adjustment_repository().clear()
 
 
 def _shift(shift_id: str, start: datetime) -> Shift:
@@ -131,6 +136,7 @@ def _client(extra_completed: int = 0):
     main.app.dependency_overrides[get_booking_repo] = lambda: bookings
     main.app.dependency_overrides[get_booking_transition_repo] = shared_booking_transition_repository
     main.app.dependency_overrides[get_booking_charge_repo] = shared_booking_charge_repository
+    main.app.dependency_overrides[get_booking_charge_adjustment_repo] = shared_booking_charge_adjustment_repository
     main.app.dependency_overrides[get_worker_relationship_repo] = shared_worker_relationship_repository
     main.app.dependency_overrides[get_relationship_transition_repo] = shared_relationship_transition_repository
     main.app.dependency_overrides[get_shift_repo] = lambda: shifts
@@ -165,6 +171,40 @@ def test_summary_charges_fee_on_completed_bookings_only():
     assert (line["hours"], line["wages"], line["fee"], line["total"]) == ("5.00", "72.50", "5.80", "78.30")
     assert line["waived"] is False
     assert (body["wages_total"], body["fee_total"], body["grand_total"]) == ("72.50", "5.80", "78.30")
+    assert body["completed_shifts_all_time"] == 1
+
+
+def test_summary_lists_signed_corrections_and_includes_them_in_totals():
+    client, _ = _client()
+    _approve(client, "bk-1", APPROVED_AT)
+    charge = shared_booking_charge_repository().get_for_booking("bk-1")
+    shared_booking_charge_adjustment_repository().record(
+        BookingChargeAdjustment(
+            adjustment_id="adjustment-1",
+            charge_id=charge.charge_id,
+            booking_id=charge.booking_id,
+            delta_hours=Decimal("-1.00"),
+            delta_wages=Decimal("-14.50"),
+            delta_fee=Decimal("-1.16"),
+            reason="Left early",
+            created_by_user_id="operator-1",
+            created_at=APPROVED_AT + timedelta(minutes=10),
+        )
+    )
+
+    response = client.get("/billing/summary?month=2030-03", headers=VENUE)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [line["line_kind"] for line in body["lines"]] == ["charge", "correction"]
+    correction = body["lines"][1]
+    assert correction["line_id"] == "adjustment-1"
+    assert correction["reason"] == "Left early"
+    assert (correction["hours"], correction["wages"], correction["fee"], correction["total"]) == (
+        "-1.00", "-14.50", "-1.16", "-15.66"
+    )
+    assert (body["wages_total"], body["fee_total"], body["grand_total"]) == (
+        "58.00", "4.64", "62.64"
+    )
     assert body["completed_shifts_all_time"] == 1
 
 

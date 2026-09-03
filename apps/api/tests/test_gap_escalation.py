@@ -199,6 +199,7 @@ def test_a_dropped_slot_restarts_the_ladder(client, in_memory_repos):
     restarted = service.restart_ladder(shift["shift_id"], dropped_at)
     assert restarted.origin == "pool"
     assert restarted.assigned_worker_id is None
+    assert restarted.billable is True
     assert restarted.offer_pool_at == dropped_at
     assert restarted.publish_market_at > dropped_at
 
@@ -215,6 +216,8 @@ def test_an_assigned_shift_with_the_pool_rung_off_escalates_straight_to_market(c
     service = _service(in_memory_repos)
     moved = service.sweep(NOW + timedelta(days=13))
     assert [item.origin for item in moved] == ["market"]
+    assert moved[0].assigned_worker_id is None
+    assert moved[0].billable is True
 
 
 def test_a_shift_assigned_to_an_employee_is_not_billable(client, in_memory_repos):

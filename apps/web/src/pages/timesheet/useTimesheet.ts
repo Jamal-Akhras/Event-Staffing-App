@@ -1,16 +1,21 @@
+import { useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { downloadFile, fetchJson, postJson } from "../../lib/api";
+import { idempotencyHeaders, requestAttempt, type IdempotencyAttempt } from "../../lib/idempotency";
 import type { ApprovalResult, ApprovalRow, ChargeCorrection, TimesheetWeek } from "../../types/rota";
 
 type Notify = (type: "success" | "error", message: string) => void;
 
-export function useTimesheet(weekStart: string, notify: Notify) {
+export function useTimesheet(weekStart: string, notify: Notify, enabled = true) {
   const client = useQueryClient();
+  const approveAttempt = useRef<IdempotencyAttempt | null>(null);
+  const correctionAttempt = useRef<IdempotencyAttempt | null>(null);
 
   const week = useQuery({
     queryKey: ["timesheet", weekStart],
     queryFn: () => fetchJson<TimesheetWeek>(`/venues/me/timesheet?week_start=${weekStart}`),
+    enabled,
   });
 
   const settle = async () => {
@@ -21,12 +26,17 @@ export function useTimesheet(weekStart: string, notify: Notify) {
   const fail = (error: Error) => notify("error", error.message);
 
   const approve = useMutation({
-    mutationFn: (bookingIds: string[]) =>
-      postJson<{ results: ApprovalRow[] }>("/venues/me/timesheet/approve", {
-        booking_ids: bookingIds,
-        now: new Date().toISOString(),
-      }),
+    mutationFn: (bookingIds: string[]) => {
+      const payload = { booking_ids: bookingIds };
+      approveAttempt.current = requestAttempt(approveAttempt.current, JSON.stringify(payload));
+      return postJson<{ results: ApprovalRow[] }>(
+        "/venues/me/timesheet/approve",
+        payload,
+        idempotencyHeaders(approveAttempt.current),
+      );
+    },
     onSuccess: async ({ results }) => {
+      approveAttempt.current = null;
       await settle();
       const approved = countOf(results, "approved");
       notify(approved > 0 ? "success" : "error", summarize(results));
@@ -64,13 +74,21 @@ export function useTimesheet(weekStart: string, notify: Notify) {
   });
 
   const correct = useMutation({
-    mutationFn: (input: { chargeId: string; deltaHours: string; reason: string }) =>
-      postJson<ChargeCorrection>(`/venues/me/timesheet/charges/${input.chargeId}/correct`, {
+    mutationFn: (input: { chargeId: string; deltaHours: string; reason: string }) => {
+      const payload = {
         delta_hours: input.deltaHours,
         reason: input.reason,
-        now: new Date().toISOString(),
-      }),
+      };
+      const fingerprint = JSON.stringify({ charge_id: input.chargeId, ...payload });
+      correctionAttempt.current = requestAttempt(correctionAttempt.current, fingerprint);
+      return postJson<ChargeCorrection>(
+        `/venues/me/timesheet/charges/${input.chargeId}/correct`,
+        payload,
+        idempotencyHeaders(correctionAttempt.current),
+      );
+    },
     onSuccess: async () => {
+      correctionAttempt.current = null;
       await settle();
       notify("success", "Correction recorded as its own line — the original charge is untouched.");
     },

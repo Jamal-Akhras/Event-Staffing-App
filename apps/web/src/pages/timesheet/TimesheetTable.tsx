@@ -1,7 +1,7 @@
 import { formatMoney } from "../../lib/format";
+import { calendarDayLabel, venueClock } from "../../lib/venueTime";
 import { RELATIONSHIP_LABELS, type RelationshipType } from "../../types/workforce";
 import type { TimesheetDay, TimesheetWeek, TimesheetWorker } from "../../types/rota";
-import { clock, shortDay } from "../dashboard/dashboardUtils";
 
 const SOURCE_LABELS: Record<TimesheetDay["hours_source"], string> = {
   clocked: "Clocked",
@@ -14,6 +14,7 @@ const SOURCE_LABELS: Record<TimesheetDay["hours_source"], string> = {
 type TimesheetTableProps = {
   week: TimesheetWeek;
   currency: string;
+  timezone: string;
   selected: Set<string>;
   onToggle: (bookingId: string) => void;
   onAdjust: (day: TimesheetDay) => void;
@@ -21,7 +22,7 @@ type TimesheetTableProps = {
   onCorrect: (day: TimesheetDay) => void;
 };
 
-export function TimesheetTable({ week, currency, selected, onToggle, onAdjust, onRecord, onCorrect }: TimesheetTableProps) {
+export function TimesheetTable({ week, currency, timezone, selected, onToggle, onAdjust, onRecord, onCorrect }: TimesheetTableProps) {
   if (week.workers.length === 0) {
     return <p className="ts-empty">No shifts fall in this week yet.</p>;
   }
@@ -60,6 +61,7 @@ export function TimesheetTable({ week, currency, selected, onToggle, onAdjust, o
                 day={day}
                 worker={worker}
                 currency={currency}
+                timezone={timezone}
                 selected={selected.has(day.booking_id)}
                 onToggle={() => onToggle(day.booking_id)}
                 onAdjust={() => onAdjust(day)}
@@ -90,6 +92,7 @@ function DayRow({
   day,
   worker,
   currency,
+  timezone,
   selected,
   onToggle,
   onAdjust,
@@ -99,6 +102,7 @@ function DayRow({
   day: TimesheetDay;
   worker: TimesheetWorker;
   currency: string;
+  timezone: string;
   selected: boolean;
   onToggle: () => void;
   onAdjust: () => void;
@@ -112,24 +116,25 @@ function DayRow({
   const workerLabel = worker.display_name;
 
   return (
-    <tr className={day.state === "no_show" ? "ts-muted" : ""}>
+    <>
+      <tr className={day.state === "no_show" ? "ts-muted" : ""}>
       <td className="ts-check">
         {approvable && (
           <input
             type="checkbox"
             checked={selected}
             onChange={onToggle}
-            aria-label={`Select ${workerLabel} on ${shortDay(day.day)}`}
+            aria-label={`Select ${workerLabel} on ${calendarDayLabel(day.day)}`}
           />
         )}
       </td>
-      <td>{shortDay(day.day)}</td>
+      <td>{calendarDayLabel(day.day)}</td>
       <td>
         {day.role}
         {day.attendance_mode === "employed" && <span className="ts-tag">Staff</span>}
       </td>
       <td>
-        {clock(day.scheduled_start)} – {clock(day.scheduled_end)} · {day.scheduled_hours}h
+        {venueClock(day.scheduled_start, timezone)} – {venueClock(day.scheduled_end, timezone)} · {day.scheduled_hours}h
       </td>
       <td>
         {day.worked_hours !== null ? `${day.worked_hours}h` : "—"}
@@ -161,6 +166,20 @@ function DayRow({
           )}
         </span>
       </td>
-    </tr>
+      </tr>
+      {day.adjustments.map((adjustment) => (
+        <tr className="ts-correction" key={adjustment.adjustment_id}>
+          <td />
+          <td>Correction</td>
+          <td colSpan={2}>{adjustment.reason}</td>
+          <td>{Number(adjustment.delta_hours) > 0 ? "+" : ""}{adjustment.delta_hours}h</td>
+          <td>
+            {formatMoney(adjustment.delta_wages, currency)} wages
+            {Number(adjustment.delta_fee) !== 0 && ` · ${formatMoney(adjustment.delta_fee, currency)} fee`}
+          </td>
+          <td />
+        </tr>
+      ))}
+    </>
   );
 }

@@ -13,6 +13,15 @@ ApprovalResultCode = Literal[
 ]
 
 
+class TimesheetAdjustmentResponse(BaseModel):
+    adjustment_id: str
+    delta_hours: Decimal
+    delta_wages: Decimal
+    delta_fee: Decimal
+    reason: str
+    created_at: UtcTimestamp
+
+
 class TimesheetDayResponse(BaseModel):
     day: date
     booking_id: str
@@ -29,6 +38,7 @@ class TimesheetDayResponse(BaseModel):
     approved_hours: Decimal | None
     approved_wages: Decimal | None
     adjustments_total_hours: Decimal
+    adjustments: list[TimesheetAdjustmentResponse]
 
 
 class TimesheetWorkerResponse(BaseModel):

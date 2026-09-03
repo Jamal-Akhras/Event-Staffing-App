@@ -25,6 +25,7 @@ from apps.api.src.schemas_timesheets import (
     ChargeCorrectionResponse,
     HoursAdjustRequest,
     TimesheetApprovalRow,
+    TimesheetAdjustmentResponse,
     TimesheetApproveRequest,
     TimesheetApproveResponse,
     TimesheetDayResponse,
@@ -311,6 +312,17 @@ def _week_view(week: TimesheetWeek) -> TimesheetWeekResponse:
                         approved_hours=row.approved_hours,
                         approved_wages=row.approved_wages,
                         adjustments_total_hours=row.adjustments_total_hours,
+                        adjustments=[
+                            TimesheetAdjustmentResponse(
+                                adjustment_id=adjustment.adjustment_id,
+                                delta_hours=adjustment.delta_hours,
+                                delta_wages=adjustment.delta_wages,
+                                delta_fee=adjustment.delta_fee,
+                                reason=adjustment.reason,
+                                created_at=adjustment.created_at,
+                            )
+                            for adjustment in row.adjustments
+                        ],
                     )
                     for row in worker.rows
                 ],

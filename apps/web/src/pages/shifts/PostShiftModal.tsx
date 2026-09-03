@@ -8,17 +8,19 @@ export type PostDraft = {
 
 type PostShiftModalProps = {
   draft: PostDraft;
+  timezone: string;
   onClose: () => void;
   onCreated: () => Promise<void>;
   onError: (message: string) => void;
 };
 
-export function PostShiftModal({ draft, onClose, onCreated, onError }: PostShiftModalProps) {
+export function PostShiftModal({ draft, timezone, onClose, onCreated, onError }: PostShiftModalProps) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <section className="card modal post-shift-modal" onClick={(event) => event.stopPropagation()}>
         <ShiftCreateForm
           initial={draft.initial}
+          timezone={timezone}
           durationHours={draft.durationHours}
           onCreated={onCreated}
           onError={onError}

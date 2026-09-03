@@ -1,7 +1,7 @@
 import { formatMoney } from "../../lib/format";
 import { initials } from "../../lib/useVenue";
+import { venueClock } from "../../lib/venueTime";
 import type { Application, Shift } from "../../types/operations";
-import { clock } from "../dashboard/dashboardUtils";
 import { appliedCount, missingSeats, projectedCost, sameDay, seatsOn, shiftsOn } from "./boardUtils";
 import "./WeekBoard.css";
 
@@ -12,15 +12,16 @@ type WeekBoardProps = {
   people: Record<string, string>;
   currency: string;
   now: Date;
+  timezone: string;
   onAdd: (day: Date) => void;
   onSelect: (shift: Shift) => void;
 };
 
-export function WeekBoard({ days, shifts, applications, people, currency, now, onAdd, onSelect }: WeekBoardProps) {
+export function WeekBoard({ days, shifts, applications, people, currency, now, timezone, onAdd, onSelect }: WeekBoardProps) {
   return (
     <div className="bd-board">
       {days.map((day) => {
-        const dayShifts = shiftsOn(day, shifts);
+        const dayShifts = shiftsOn(day, shifts, timezone);
         const open = dayShifts.reduce((sum, shift) => sum + missingSeats(shift), 0);
         const cost = projectedCost(dayShifts);
         const seats = seatsOn(dayShifts);
@@ -45,6 +46,7 @@ export function WeekBoard({ days, shifts, applications, people, currency, now, o
                 shift={shift}
                 applied={appliedCount(shift.shift_id, applications)}
                 person={shift.assigned_worker_id ? people[shift.assigned_worker_id] ?? null : null}
+                timezone={timezone}
                 onClick={() => onSelect(shift)}
               />
             ))}
@@ -72,11 +74,13 @@ function BoardCard({
   shift,
   applied,
   person,
+  timezone,
   onClick,
 }: {
   shift: Shift;
   applied: number;
   person: string | null;
+  timezone: string;
   onClick: () => void;
 }) {
   const missing = missingSeats(shift);
@@ -91,7 +95,7 @@ function BoardCard({
     >
       <span className="bd-card-role">{shift.role}{shift.workers_needed > 1 ? ` × ${shift.workers_needed}` : ""}</span>
       <span className="bd-card-meta">
-        {clock(shift.start_time)} – {clock(shift.end_time)} · {formatMoney(shift.pay_rate, shift.currency)}
+        {venueClock(shift.start_time, timezone)} – {venueClock(shift.end_time, timezone)} · {formatMoney(shift.pay_rate, shift.currency)}
       </span>
       {person && (
         <span className="bd-chip">

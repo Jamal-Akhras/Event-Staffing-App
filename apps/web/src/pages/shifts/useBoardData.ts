@@ -4,12 +4,21 @@ import { fetchJson } from "../../lib/api";
 import { startOfDay, useRosterActivity, useShiftsInRange, useVenueOverview } from "../../lib/useInsights";
 import type { Application, Booking, WorkerProfile } from "../../types/operations";
 import { nextDay } from "./boardUtils";
+import { fromVenueWallDate } from "../../lib/venueTime";
 
 const WEEK_DAYS = 7;
 
-export function useBoardData(days: Date[], now: Date) {
-  const shifts = useShiftsInRange(days[0], nextDay(days[days.length - 1]));
-  const overview = useVenueOverview(startOfDay(now), WEEK_DAYS);
+export function useBoardData(days: Date[], now: Date, timezone: string | null) {
+  const enabled = timezone !== null;
+  const rangeStart = timezone ? fromVenueWallDate(days[0], timezone) : days[0];
+  const rangeEnd = timezone
+    ? fromVenueWallDate(nextDay(days[days.length - 1]), timezone)
+    : nextDay(days[days.length - 1]);
+  const overviewStart = timezone
+    ? fromVenueWallDate(startOfDay(now), timezone)
+    : startOfDay(now);
+  const shifts = useShiftsInRange(rangeStart, rangeEnd, enabled);
+  const overview = useVenueOverview(overviewStart, WEEK_DAYS, enabled);
   const activity = useRosterActivity();
   const applications = useQuery({
     queryKey: ["applications"],
@@ -29,7 +38,7 @@ export function useBoardData(days: Date[], now: Date) {
   ).sort();
   const workers = useQuery({
     queryKey: ["workers", workerIds],
-    enabled: applications.isSuccess && bookings.isSuccess && overview.isSuccess,
+    enabled: enabled && applications.isSuccess && bookings.isSuccess && overview.isSuccess,
     queryFn: async () => {
       const profiles = await Promise.all(workerIds.map((id) => fetchJson<WorkerProfile>(`/workers/${id}`)));
       return Object.fromEntries(profiles.map((profile) => [profile.worker_id, profile]));

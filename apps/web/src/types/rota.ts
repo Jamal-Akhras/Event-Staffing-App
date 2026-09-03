@@ -53,6 +53,16 @@ export type TimesheetDay = {
   approved_hours: string | null;
   approved_wages: string | null;
   adjustments_total_hours: string;
+  adjustments: TimesheetAdjustment[];
+};
+
+export type TimesheetAdjustment = {
+  adjustment_id: string;
+  delta_hours: string;
+  delta_wages: string;
+  delta_fee: string;
+  reason: string;
+  created_at: string;
 };
 
 export type TimesheetWorker = {

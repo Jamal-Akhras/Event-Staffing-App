@@ -415,6 +415,16 @@ def test_corrections_derive_money_server_side_and_render_in_the_view(client, in_
     day = view["workers"][0]["days"][0]
     assert (day["approved_hours"], day["approved_wages"]) == ("6.00", "87.00")
     assert day["adjustments_total_hours"] == "1.00"
+    assert day["adjustments"] == [
+        {
+            "adjustment_id": body["adjustment_id"],
+            "delta_hours": "1.00",
+            "delta_wages": "14.50",
+            "delta_fee": "1.16",
+            "reason": "Stayed for close-down",
+            "created_at": AFTER.isoformat().replace("+00:00", "Z"),
+        }
+    ]
 
 
 def test_corrections_preserve_zero_fee_and_reject_negative_totals(client, in_memory_repos):

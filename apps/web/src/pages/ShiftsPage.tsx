@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { ErrorCard } from "../components/ErrorCard";
@@ -6,6 +6,7 @@ import { SkeletonCard } from "../components/SkeletonCard";
 import { useToast } from "../components/Toast";
 import { track } from "../lib/analytics";
 import { useVenue } from "../lib/useVenue";
+import { toVenueWallDate } from "../lib/venueTime";
 import { readWeekStart, saveWeekStart } from "../lib/weekStart";
 import type { Shift } from "../types/operations";
 import type { Template } from "../types/templates";
@@ -42,21 +43,28 @@ export function ShiftsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const venue = useVenue();
-  const now = new Date();
+  const timezone = venue.data?.timezone ?? null;
+  const instantNow = new Date();
+  const now = timezone ? toVenueWallDate(instantNow, timezone) : new Date(0);
   const decide = useDecideApplication(
     (message) => toast({ type: "success", message }),
     (message) => toast({ type: "error", message })
   );
   const [weekStart, setWeekStart] = useState(readWeekStart);
-  const [anchor, setAnchor] = useState(() => new Date());
+  const [anchor, setAnchor] = useState<Date | null>(null);
   const [draft, setDraft] = useState<PostDraft | null>(null);
   const [selected, setSelected] = useState<Shift | null>(null);
 
-  const days = boardDays(weekStartFor(anchor, weekStart));
+  useEffect(() => {
+    if (timezone) setAnchor(toVenueWallDate(new Date(), timezone));
+  }, [timezone]);
+
+  const calendarAnchor = anchor ?? new Date(0);
+  const days = boardDays(weekStartFor(calendarAnchor, weekStart));
   const weekKey = isoDay(days[0]);
-  const data = useBoardData(days, now);
+  const data = useBoardData(days, now, timezone);
   const people = usePeople();
-  const publications = usePublications(weekKey);
+  const publications = usePublications(weekKey, timezone !== null);
   const rota = useRotaActions(weekKey, (type, message) => toast({ type, message }));
   const location = venue.data?.default_location ?? "";
   const currency = venue.data?.currency ?? "GBP";
@@ -92,6 +100,10 @@ export function ShiftsPage() {
       durationHours: template.duration_hours,
     });
 
+  if (venue.error) return <ErrorCard message={(venue.error as Error).message} />;
+  if (!venue.data || !anchor) return <SkeletonCard lines={8} />;
+  if (!timezone) return <ErrorCard message="Choose a venue market before building the rota." />;
+
   return (
     <div className="board-page">
       <div className="board-main">
@@ -107,7 +119,7 @@ export function ShiftsPage() {
           weekStart={weekStart}
           onWeekStartChange={changeWeekStart}
           onPrevious={() => setAnchor(shiftDays(anchor, -7))}
-          onToday={() => setAnchor(new Date())}
+          onToday={() => setAnchor(toVenueWallDate(new Date(), timezone))}
           onNext={() => setAnchor(shiftDays(anchor, 7))}
           onPost={() => setDraft({ initial: { location } })}
           onPublish={() => rota.publish.mutate()}
@@ -127,6 +139,7 @@ export function ShiftsPage() {
               people={peopleNames}
               currency={currency}
               now={now}
+              timezone={timezone}
               onAdd={(day) => setDraft({ initial: { location, start_time: defaultStartFor(day) } })}
               onSelect={(shift) => {
                 track("shift.opened", { subject_type: "shift", subject_id: shift.shift_id, context: { status: shift.status } });
@@ -143,7 +156,7 @@ export function ShiftsPage() {
                   {
                     label: "Applications waiting",
                     value: String(data.overview?.pending_applications.count ?? 0),
-                    note: describeOldest(data.overview?.pending_applications.oldest_created_at ?? null, now),
+                    note: describeOldest(data.overview?.pending_applications.oldest_created_at ?? null, instantNow),
                   },
                 ]}
               />
@@ -167,6 +180,7 @@ export function ShiftsPage() {
       {draft && (
         <PostShiftModal
           draft={draft}
+          timezone={timezone}
           onClose={() => setDraft(null)}
           onError={(message) => toast({ type: "error", message })}
           onCreated={async () => {
@@ -179,6 +193,7 @@ export function ShiftsPage() {
       {selected && (
         <ShiftManagementModal
           shift={selected}
+          timezone={timezone}
           bookings={data.bookings}
           workers={data.workers}
           onChanged={refresh}

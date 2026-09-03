@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
-from apps.api.src.deps import get_account_repo
+from apps.api.src.deps import get_account_repo, get_market_repo
 from apps.api.src.main import app
 from apps.api.src.models.account import Account
 
@@ -43,6 +44,7 @@ def account_repo() -> FakeAccountRepository:
             contact_phone="+44 7700 900000",
             default_location="12 King St, London",
             photos=["/uploads/one.jpg"],
+            market_id="bath-gb",
         )
     )
     return repo
@@ -51,6 +53,9 @@ def account_repo() -> FakeAccountRepository:
 @pytest.fixture(autouse=True)
 def override_account_repo(account_repo: FakeAccountRepository):
     app.dependency_overrides[get_account_repo] = lambda: account_repo
+    app.dependency_overrides[get_market_repo] = lambda: SimpleNamespace(
+        get=lambda market_id: SimpleNamespace(timezone="Europe/London")
+    )
     yield
     app.dependency_overrides.clear()
 
@@ -61,6 +66,7 @@ def test_get_account_returns_default_notification_preferences():
     response = client.get("/accounts/me", headers=OPERATOR_HEADERS)
 
     assert response.status_code == 200
+    assert response.json()["timezone"] == "Europe/London"
     assert response.json()["notification_preferences"] == {
         "new_applications": True,
         "shift_reminders": True,

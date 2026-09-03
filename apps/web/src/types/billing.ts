@@ -1,4 +1,9 @@
 export type BillingLine = {
+  line_id: string;
+  line_kind: "charge" | "correction";
+  charge_id: string;
+  adjustment_id: string | null;
+  reason: string | null;
   booking_id: string;
   shift_id: string;
   worker_id: string;

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ErrorCard } from "../components/ErrorCard";
 import { SkeletonCard } from "../components/SkeletonCard";
 import { useToast } from "../components/Toast";
 import { readWeekStart } from "../lib/weekStart";
 import { useVenue } from "../lib/useVenue";
+import { toVenueWallDate } from "../lib/venueTime";
 import type { TimesheetDay } from "../types/rota";
 import { boardDays, boardLabel, isoDay, shiftDays, weekStartFor } from "./shifts/boardUtils";
 import { AdjustHoursModal, CorrectChargeModal } from "./timesheet/AdjustHoursModal";
@@ -20,15 +21,30 @@ type ModalState =
 export function TimesheetPage() {
   const { toast } = useToast();
   const venue = useVenue();
-  const [anchor, setAnchor] = useState(() => new Date());
+  const timezone = venue.data?.timezone ?? null;
+  const [anchor, setAnchor] = useState<Date | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<ModalState>(null);
 
-  const days = boardDays(weekStartFor(anchor, readWeekStart()));
+  useEffect(() => {
+    if (timezone) setAnchor(toVenueWallDate(new Date(), timezone));
+  }, [timezone]);
+
+  const calendarAnchor = anchor ?? new Date(0);
+  const days = boardDays(weekStartFor(calendarAnchor, readWeekStart()));
   const weekStart = isoDay(days[0]);
   const currency = venue.data?.currency ?? "GBP";
   const notify = (type: "success" | "error", message: string) => toast({ type, message });
-  const timesheet = useTimesheet(weekStart, notify);
+  const timesheet = useTimesheet(weekStart, notify, timezone !== null);
+
+  useEffect(() => {
+    setSelected(new Set());
+    setModal(null);
+  }, [weekStart]);
+
+  if (venue.error) return <ErrorCard message={(venue.error as Error).message} />;
+  if (!venue.data || !anchor) return <SkeletonCard lines={8} />;
+  if (!timezone) return <ErrorCard message="Choose a venue market before opening timesheets." />;
 
   const toggle = (bookingId: string) =>
     setSelected((current) => {
@@ -55,7 +71,7 @@ export function TimesheetPage() {
               <path d="M15 6l-6 6 6 6" />
             </svg>
           </button>
-          <button type="button" className="bd-nav-today" onClick={() => setAnchor(new Date())}>This week</button>
+          <button type="button" className="bd-nav-today" onClick={() => setAnchor(toVenueWallDate(new Date(), timezone))}>This week</button>
           <button type="button" className="bd-nav-arrow" aria-label="Next week" onClick={() => setAnchor(shiftDays(anchor, 7))}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M9 6l6 6-6 6" />
@@ -84,6 +100,7 @@ export function TimesheetPage() {
         <TimesheetTable
           week={timesheet.week.data}
           currency={currency}
+          timezone={timezone}
           selected={selected}
           onToggle={toggle}
           onAdjust={(day) => setModal({ kind: "adjust", day })}
@@ -97,6 +114,7 @@ export function TimesheetPage() {
           day={modal.day}
           workerName={workerName(modal.day)}
           mode={modal.kind}
+          timezone={timezone}
           busy={timesheet.adjust.isPending || timesheet.recordAttendance.isPending}
           onClose={() => setModal(null)}
           onSubmit={(payload) => {

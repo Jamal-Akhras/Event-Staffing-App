@@ -78,6 +78,7 @@ from apps.api.src.services.worker_feed_service import WorkerFeedService
 from apps.api.src.services.worker_shift_feed_service import WorkerShiftFeedService
 from apps.api.src.services.outbox_publisher import OutboxPublisher
 from apps.api.src.services.idempotency import IdempotencyService
+from apps.api.src.repositories.booking_charge_adjustment_repository import BookingChargeAdjustmentRepository
 
 __all__ = [
     "get_account_repo",
@@ -128,9 +129,12 @@ def get_shift_service(repo: ShiftRepository = Depends(get_shift_repo)) -> ShiftS
 def get_billing_service(
     booking_repo: BookingRepository = Depends(get_booking_repo),
     charge_repo: BookingChargeRepository = Depends(get_booking_charge_repo),
+    adjustment_repo: BookingChargeAdjustmentRepository = Depends(get_booking_charge_adjustment_repo),
     partner_code_repo: PartnerCodeRepository = Depends(get_partner_code_repo),
 ) -> BillingService:
-    return BillingService(booking_repo, charge_repo, partner_code_repo, get_platform_fee_percent())
+    return BillingService(
+        booking_repo, charge_repo, adjustment_repo, partner_code_repo, get_platform_fee_percent()
+    )
 
 
 def get_charge_recorder(

@@ -1,4 +1,5 @@
 import { toLocalInput } from "../../lib/localInput";
+import { toVenueWallDate } from "../../lib/venueTime";
 import type { Application, Shift } from "../../types/operations";
 
 export function startOfDay(date: Date) {
@@ -36,9 +37,9 @@ export function sameDay(left: Date, right: Date) {
   return left.toDateString() === right.toDateString();
 }
 
-export function shiftsOn(day: Date, shifts: Shift[]) {
+export function shiftsOn(day: Date, shifts: Shift[], timezone: string) {
   return shifts
-    .filter((shift) => sameDay(new Date(shift.start_time), day))
+    .filter((shift) => sameDay(toVenueWallDate(shift.start_time, timezone), day))
     .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime());
 }
 
@@ -48,8 +49,10 @@ export function nextDay(day: Date) {
   return next;
 }
 
-export function shiftsWithin(days: Date[], shifts: Shift[]) {
-  return shifts.filter((shift) => days.some((day) => sameDay(day, new Date(shift.start_time))));
+export function shiftsWithin(days: Date[], shifts: Shift[], timezone: string) {
+  return shifts.filter((shift) =>
+    days.some((day) => sameDay(day, toVenueWallDate(shift.start_time, timezone)))
+  );
 }
 
 export function missingSeats(shift: Shift) {

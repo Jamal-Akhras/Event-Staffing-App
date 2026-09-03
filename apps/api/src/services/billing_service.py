@@ -8,7 +8,11 @@ from uuid import uuid4
 from dateutil.relativedelta import relativedelta
 
 from apps.api.src.models.booking_charge import BookingCharge
+from apps.api.src.models.booking_charge_adjustment import BookingChargeAdjustment
 from apps.api.src.models.partner_code import PartnerCode, PartnerCodeRedemption
+from apps.api.src.repositories.booking_charge_adjustment_repository import (
+    BookingChargeAdjustmentRepository,
+)
 from apps.api.src.repositories.booking_charge_repository import BookingChargeRepository
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
@@ -22,6 +26,11 @@ FOUNDING_SHIFT_CAP = 20
 
 @dataclass(frozen=True)
 class BillingLine:
+    line_id: str
+    line_kind: str
+    charge_id: str
+    adjustment_id: str | None
+    reason: str | None
     booking_id: str
     shift_id: str
     worker_id: str
@@ -67,18 +76,33 @@ class BillingService:
         self,
         bookings: BookingRepository,
         charges: BookingChargeRepository,
+        adjustments: BookingChargeAdjustmentRepository,
         partner_codes: PartnerCodeRepository,
         fee_percent: Decimal,
     ) -> None:
         self._bookings = bookings
         self._charges = charges
+        self._adjustments = adjustments
         self._codes = partner_codes
         self._fee_percent = fee_percent
 
     def summary(self, account_id: str, month: str, now: datetime) -> BillingSummary:
         charges = self._charges.list_for_account(account_id)
         waiver = self._waiver(account_id, charges, now)
-        lines = [self._line(charge) for charge in charges if charge.period == month]
+        month_charges = [charge for charge in charges if charge.period == month]
+        adjustments_by_charge: dict[str, list[BookingChargeAdjustment]] = {}
+        for adjustment in self._adjustments.list_for_charges(
+            [charge.charge_id for charge in month_charges]
+        ):
+            adjustments_by_charge.setdefault(adjustment.charge_id, []).append(adjustment)
+        lines = []
+        for charge in month_charges:
+            line = self._line(charge)
+            lines.append(line)
+            lines.extend(
+                self._adjustment_line(charge, adjustment, line.state)
+                for adjustment in adjustments_by_charge.get(charge.charge_id, [])
+            )
         wages_total = money(sum((line.wages for line in lines), Decimal(0)))
         fee_total = money(sum((line.fee for line in lines), Decimal(0)))
         return BillingSummary(
@@ -139,6 +163,11 @@ class BillingService:
         if booking is None:
             raise NotFoundError(f"Booking {charge.booking_id} is missing for charge {charge.charge_id}.")
         return BillingLine(
+            line_id=charge.charge_id,
+            line_kind="charge",
+            charge_id=charge.charge_id,
+            adjustment_id=None,
+            reason=None,
             booking_id=charge.booking_id,
             shift_id=charge.shift_id,
             worker_id=charge.worker_id,
@@ -153,6 +182,31 @@ class BillingService:
             total=charge.total,
             waived=charge.fee_waived,
             state=booking.state.value,
+        )
+
+    def _adjustment_line(
+        self, charge: BookingCharge, adjustment: BookingChargeAdjustment, state: str
+    ) -> BillingLine:
+        return BillingLine(
+            line_id=adjustment.adjustment_id,
+            line_kind="correction",
+            charge_id=charge.charge_id,
+            adjustment_id=adjustment.adjustment_id,
+            reason=adjustment.reason,
+            booking_id=charge.booking_id,
+            shift_id=charge.shift_id,
+            worker_id=charge.worker_id,
+            worker_name=charge.worker_name,
+            role=charge.role,
+            start_time=charge.start_time,
+            end_time=charge.end_time,
+            completed_at=adjustment.created_at,
+            hours=adjustment.delta_hours,
+            wages=adjustment.delta_wages,
+            fee=adjustment.delta_fee,
+            total=money(adjustment.delta_wages + adjustment.delta_fee),
+            waived=charge.fee_waived,
+            state=state,
         )
 
 

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 
-import { toLocalInput } from "../../lib/localInput";
+import { fromVenueInput, toVenueInput } from "../../lib/venueTime";
 import type { TimesheetDay } from "../../types/rota";
 import "../../components/Modal.css";
 
@@ -8,21 +8,22 @@ type AdjustHoursModalProps = {
   day: TimesheetDay;
   workerName: string;
   mode: "adjust" | "record";
+  timezone: string;
   busy: boolean;
   onClose: () => void;
   onSubmit: (payload: { checkedIn: string; checkedOut: string; reason: string }) => void;
 };
 
-export function AdjustHoursModal({ day, workerName, mode, busy, onClose, onSubmit }: AdjustHoursModalProps) {
-  const [checkedIn, setCheckedIn] = useState(toLocalInput(day.scheduled_start));
-  const [checkedOut, setCheckedOut] = useState(toLocalInput(day.scheduled_end));
+export function AdjustHoursModal({ day, workerName, mode, timezone, busy, onClose, onSubmit }: AdjustHoursModalProps) {
+  const [checkedIn, setCheckedIn] = useState(toVenueInput(day.scheduled_start, timezone));
+  const [checkedOut, setCheckedOut] = useState(toVenueInput(day.scheduled_end, timezone));
   const [reason, setReason] = useState("");
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSubmit({
-      checkedIn: new Date(checkedIn).toISOString(),
-      checkedOut: new Date(checkedOut).toISOString(),
+      checkedIn: fromVenueInput(checkedIn, timezone),
+      checkedOut: fromVenueInput(checkedOut, timezone),
       reason,
     });
   };

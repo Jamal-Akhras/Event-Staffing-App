@@ -51,6 +51,7 @@ class TimesheetRow:
     approved_hours: Decimal | None
     approved_wages: Decimal | None
     adjustments_total_hours: Decimal
+    adjustments: list[BookingChargeAdjustment]
 
 
 @dataclass(frozen=True)
@@ -332,6 +333,7 @@ class TimesheetService:
             approved_hours=approved_hours,
             approved_wages=approved_wages,
             adjustments_total_hours=adjustment_hours,
+            adjustments=deltas if charge is not None else [],
         )
 
 

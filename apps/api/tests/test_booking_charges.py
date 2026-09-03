@@ -197,13 +197,13 @@ def test_a_worker_with_no_relationship_is_recorded_as_one_off():
     assert shared_booking_charge_repository().get_for_booking("bk-1").worker_relationship == "one_off"
 
 
-def test_a_non_billable_shift_freezes_a_zero_fee():
+def test_the_billable_projection_cannot_make_a_temp_fee_free():
     client, shifts, _, shift = _client()
     shifts.save(replace(shift, billable=False))
     _approve(client)
     charge = shared_booking_charge_repository().get_for_booking("bk-1")
-    assert (charge.fee, charge.fee_percent) == (Decimal("0.00"), Decimal("0.00"))
-    assert charge.total == charge.wages
+    assert (charge.fee, charge.fee_percent) == (Decimal("5.80"), Decimal("8.00"))
+    assert charge.total == Decimal("78.30")
     assert charge.fee_waived is False
 
 

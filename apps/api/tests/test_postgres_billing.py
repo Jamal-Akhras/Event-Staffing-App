@@ -11,6 +11,9 @@ from apps.api.src.db.billing_models import PartnerCodeRedemptionModel
 from apps.api.src.db.tenancy_models import OrganisationModel, VenueModel
 from apps.api.src.models.partner_code import PartnerCode
 from apps.api.src.repositories.sqlalchemy_booking_charge_repository import SqlAlchemyBookingChargeRepository
+from apps.api.src.repositories.sqlalchemy_booking_charge_adjustment_repository import (
+    SqlAlchemyBookingChargeAdjustmentRepository,
+)
 from apps.api.src.repositories.sqlalchemy_booking_repository import SqlAlchemyBookingRepository
 from apps.api.src.repositories.sqlalchemy_partner_code_repository import SqlAlchemyPartnerCodeRepository
 from apps.api.src.services.billing_service import BillingService
@@ -77,6 +80,7 @@ def test_partner_code_redemption_limit_is_atomic() -> None:
                 service = BillingService(
                     SqlAlchemyBookingRepository(session),
                     SqlAlchemyBookingChargeRepository(session),
+                    SqlAlchemyBookingChargeAdjustmentRepository(session),
                     SqlAlchemyPartnerCodeRepository(session),
                     Decimal("8"),
                 )

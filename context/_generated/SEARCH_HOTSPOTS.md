@@ -1,6 +1,6 @@
 ﻿# Search Hotspots
 
-Generated: 2026-09-03 01:28:27
+Generated: 2026-09-03 17:02:02
 
 | Area | Path | Exists |
 |---|---|---|

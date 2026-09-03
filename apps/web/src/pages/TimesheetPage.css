@@ -119,6 +119,16 @@
   opacity: 0.55;
 }
 
+.ts-correction td {
+  background: rgba(245, 165, 36, 0.06);
+  color: #92400e;
+  font-size: 12px;
+}
+
+.ts-correction td:first-of-type {
+  border-left: 3px solid rgba(180, 83, 9, 0.45);
+}
+
 .ts-empty {
   padding: 24px;
   color: var(--ink-500);

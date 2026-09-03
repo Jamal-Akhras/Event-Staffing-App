@@ -2,7 +2,7 @@ import { FormEvent, useState } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
 import { postJson } from "../lib/api";
-import { addHours } from "../lib/localInput";
+import { addVenueHours, fromVenueInput } from "../lib/venueTime";
 import { usePeople } from "../pages/workers/useDirectory";
 import { RELATIONSHIP_LABELS } from "../types/workforce";
 import "./ShiftCreateForm.css";
@@ -27,13 +27,14 @@ export type ShiftDraft = {
 
 type ShiftCreateFormProps = {
   initial?: Partial<ShiftDraft>;
+  timezone: string;
   durationHours?: number;
   onCreated: () => Promise<void>;
   onError: (message: string) => void;
   onCancel?: () => void;
 };
 
-export function ShiftCreateForm({ initial, durationHours, onCreated, onError, onCancel }: ShiftCreateFormProps) {
+export function ShiftCreateForm({ initial, timezone, durationHours, onCreated, onError, onCancel }: ShiftCreateFormProps) {
   const { user } = useAuth();
   const people = usePeople();
   const currency = user?.currency ?? "GBP";
@@ -62,7 +63,9 @@ export function ShiftCreateForm({ initial, durationHours, onCreated, onError, on
   const update = (patch: Partial<ShiftDraft>) => setForm((current) => ({ ...current, ...patch }));
 
   const setStart = (start_time: string) => {
-    const end_time = durationHours && start_time ? addHours(start_time, durationHours) : form.end_time;
+    const end_time = durationHours && start_time
+      ? addVenueHours(start_time, durationHours, timezone)
+      : form.end_time;
     update({ start_time, end_time });
   };
 
@@ -84,8 +87,8 @@ export function ShiftCreateForm({ initial, durationHours, onCreated, onError, on
       await postJson("/shifts", {
         role: form.role,
         location: form.location,
-        start_time: new Date(form.start_time).toISOString(),
-        end_time: new Date(form.end_time).toISOString(),
+        start_time: fromVenueInput(form.start_time, timezone),
+        end_time: fromVenueInput(form.end_time, timezone),
         pay_rate: Number(form.pay_rate),
         workers_needed: form.assigned_worker_id ? 1 : Number(form.workers_needed),
         notes: form.notes || null,

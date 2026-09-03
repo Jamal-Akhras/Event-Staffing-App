@@ -1,4 +1,5 @@
 from datetime import UTC, date, datetime, timedelta
+from dataclasses import replace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -141,7 +142,18 @@ def test_publishing_books_employed_staff_and_offers_to_pool_members(client, in_m
     assert in_memory_repos[get_booking_repo].list_by_worker("pool-1") == []
 
     notified = in_memory_repos[get_notification_repo].list_for_worker("staff-1", limit=10)
-    assert any(item.type == "rota.published" for item in notified)
+    staff_notice = next(item for item in notified if item.type == "rota.published")
+    assert (staff_notice.action_kind, staff_notice.action_entity_id) == (
+        "booking", bookings[0].booking_id,
+    )
+    pool_notice = next(
+        item
+        for item in in_memory_repos[get_notification_repo].list_for_worker("pool-1", limit=10)
+        if item.type == "rota.published"
+    )
+    assert (pool_notice.action_kind, pool_notice.action_entity_id) == (
+        "shift", pooled["shift_id"],
+    )
 
 
 def test_a_lapsed_assignee_blocks_publish_and_mutates_nothing(client, in_memory_repos):
@@ -230,7 +242,7 @@ def test_reassignment_is_one_revision_and_never_leaks_an_offer(client, in_memory
 
     from apps.api.tests.test_gap_escalation import _service
 
-    assert _service(in_memory_repos).sweep(NOW + timedelta(days=60)) != [] or True
+    assert _service(in_memory_repos).sweep(NOW + timedelta(days=60)) == []
     shift = in_memory_repos[get_shift_repo].get(drafted["shift_id"])
     assert shift.origin == "assigned"
     assert shift.rota_state == "published"
@@ -303,6 +315,52 @@ def test_remove_cancels_shift_and_booking_with_one_notification(client, in_memor
         "/venues/me/rota/publications", params={"week_start": WEEK_START.isoformat()}, headers=OPERATOR
     ).json()
     assert [c["kind"] for c in publications[-1]["changes"]] == ["removed"]
+
+
+def test_remove_rejects_started_attendance_without_mutating_the_shift(client, in_memory_repos):
+    drafted = _draft(client, "staff-1")
+    _publish(client)
+    booking_repo = in_memory_repos[get_booking_repo]
+    booking = booking_repo.list_by_worker("staff-1")[0]
+    booking_repo.save(
+        replace(
+            booking,
+            state=BookingState.CHECKED_OUT,
+            checked_in_at=booking.start_time,
+            checked_out_at=booking.end_time,
+        )
+    )
+
+    response = client.post(
+        f"/venues/me/rota/shifts/{drafted['shift_id']}/remove",
+        json={"reason": "This must use the timesheet", "now": NOW.isoformat()},
+        headers=OPERATOR,
+    )
+
+    assert response.status_code == 400
+    assert in_memory_repos[get_shift_repo].get(drafted["shift_id"]).status == "filled"
+    assert booking_repo.get(booking.booking_id).state == BookingState.CHECKED_OUT
+    publications = in_memory_repos[get_rota_publication_repo].list_for_week(VENUE_ID, WEEK_START)
+    assert len(publications) == 1
+
+
+def test_past_confirmed_shift_cannot_be_reassigned(client, in_memory_repos):
+    drafted = _draft(client, "staff-1")
+    _publish(client)
+    booking = in_memory_repos[get_booking_repo].list_by_worker("staff-1")[0]
+
+    response = client.post(
+        f"/venues/me/rota/shifts/{drafted['shift_id']}/reassign",
+        json={"worker_id": "pool-1", "now": drafted["start_time"]},
+        headers=OPERATOR,
+    )
+
+    assert response.status_code == 400
+    shift = in_memory_repos[get_shift_repo].get(drafted["shift_id"])
+    assert (shift.assigned_worker_id, shift.rota_state) == ("staff-1", "published")
+    assert in_memory_repos[get_booking_repo].get(booking.booking_id).state == BookingState.CONFIRMED
+    publications = in_memory_repos[get_rota_publication_repo].list_for_week(VENUE_ID, WEEK_START)
+    assert len(publications) == 1
 
 
 def test_another_venue_cannot_publish_or_mutate(client):

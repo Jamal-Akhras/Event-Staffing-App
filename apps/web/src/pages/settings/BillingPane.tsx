@@ -104,7 +104,7 @@ export function BillingPane() {
           {
             key: "statement",
             label: monthLabel(month),
-            hint: data.lines.length ? `${data.lines.length} completed shift${data.lines.length === 1 ? "" : "s"}` : "No completed shifts this month",
+            hint: data.lines.length ? `${data.completed_shifts_all_time} completed shifts, with corrections shown separately` : "No completed shifts this month",
             stack: true,
             control: (
               <div className="bl-statement">
@@ -120,10 +120,10 @@ export function BillingPane() {
                     </thead>
                     <tbody>
                       {data.lines.map((line) => (
-                        <tr key={line.booking_id}>
+                        <tr key={line.line_id} className={line.line_kind === "correction" ? "bl-correction" : undefined}>
                           <td>{longDate(line.start_time)}</td>
-                          <td>{line.worker_name}</td>
-                          <td>{line.role}</td>
+                          <td>{line.line_kind === "correction" ? `Correction · ${line.worker_name}` : line.worker_name}</td>
+                          <td>{line.reason ?? line.role}</td>
                           <td className="r">{line.hours}</td>
                           <td className="r">{money(line.wages)}</td>
                           <td className="r">{line.waived ? <span className="bl-waived">waived</span> : money(line.fee)}</td>

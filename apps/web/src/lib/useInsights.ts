@@ -24,12 +24,13 @@ export function daysInMonth(now: Date) {
   return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 }
 
-export function useVenueOverview(windowStart: Date, days: number) {
+export function useVenueOverview(windowStart: Date, days: number, enabled = true) {
   const start = windowStart.toISOString();
   return useQuery({
     queryKey: ["insights-overview", start, days],
     queryFn: () =>
       fetchJson<VenueOverview>(`/insights/overview?window_start=${encodeURIComponent(start)}&days=${days}`),
+    enabled,
   });
 }
 
@@ -46,7 +47,7 @@ export function useRosterActivity() {
   });
 }
 
-export function useShiftsInRange(start: Date, end: Date) {
+export function useShiftsInRange(start: Date, end: Date, enabled = true) {
   const from = start.toISOString();
   const before = end.toISOString();
   return useQuery({
@@ -55,6 +56,7 @@ export function useShiftsInRange(start: Date, end: Date) {
       fetchJson<Shift[]>(
         `/shifts?starts_from=${encodeURIComponent(from)}&starts_before=${encodeURIComponent(before)}`
       ),
+    enabled,
   });
 }
 

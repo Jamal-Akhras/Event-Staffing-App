@@ -21,12 +21,14 @@ from apps.api.src.unit_of_work import RequestUnitOfWork
 router = APIRouter(tags=["accounts"])
 
 
-def _account_view(account: Account) -> AccountResponse:
+def _account_view(account: Account, markets: MarketRepository) -> AccountResponse:
+    market = markets.get(account.market_id) if account.market_id else None
     return AccountResponse(
         account_id=account.account_id,
         venue_id=account.venue_id,
         organisation_id=account.organisation_id,
         market_id=account.market_id,
+        timezone=market.timezone if market else None,
         name=account.name,
         country=account.country,
         currency=account.currency,
@@ -54,11 +56,12 @@ def _get_account(repo: AccountRepository, account_id: str) -> Account:
 def get_my_account(
     actor: ActorContext = Depends(get_actor_context),
     repo: AccountRepository = Depends(get_account_repo),
+    market_repo: MarketRepository = Depends(get_market_repo),
 ) -> AccountResponse:
     require_role(actor.role, {ActorRole.OPERATOR})
     if not actor.account_id:
         raise HTTPException(status_code=404, detail="No account associated with this user.")
-    return _account_view(_get_account(repo, actor.account_id))
+    return _account_view(_get_account(repo, actor.account_id), market_repo)
 
 
 @router.put("/accounts/me", response_model=AccountResponse)
@@ -116,7 +119,7 @@ def update_my_account(
         removed_urls,
         venue_photo_prefix(account.account_id),
     )
-    return _account_view(updated)
+    return _account_view(updated, market_repo)
 
 
 def _validated_escalation_policy(policy: dict) -> dict:

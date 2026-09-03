@@ -1,19 +1,23 @@
+import { useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { fetchJson, postJson } from "../../lib/api";
+import { idempotencyHeaders, requestAttempt, type IdempotencyAttempt } from "../../lib/idempotency";
 import type { RotaPublication, RotaPublishResult } from "../../types/rota";
 
 type Notify = (type: "success" | "error", message: string) => void;
 
-export function usePublications(weekStart: string) {
+export function usePublications(weekStart: string, enabled = true) {
   return useQuery({
     queryKey: ["rota-publications", weekStart],
     queryFn: () => fetchJson<RotaPublication[]>(`/venues/me/rota/publications?week_start=${weekStart}`),
+    enabled,
   });
 }
 
 export function useRotaActions(weekStart: string, notify: Notify) {
   const client = useQueryClient();
+  const publishAttempt = useRef<IdempotencyAttempt | null>(null);
 
   const settle = async (message: string) => {
     await Promise.all(
@@ -26,12 +30,17 @@ export function useRotaActions(weekStart: string, notify: Notify) {
   const fail = (error: Error) => notify("error", error.message);
 
   const publish = useMutation({
-    mutationFn: () =>
-      postJson<RotaPublishResult>("/venues/me/rota/publish", {
-        week_start: weekStart,
-        now: new Date().toISOString(),
-      }),
+    mutationFn: () => {
+      const payload = { week_start: weekStart };
+      publishAttempt.current = requestAttempt(publishAttempt.current, JSON.stringify(payload));
+      return postJson<RotaPublishResult>(
+        "/venues/me/rota/publish",
+        payload,
+        idempotencyHeaders(publishAttempt.current),
+      );
+    },
     onSuccess: (result) => {
+      publishAttempt.current = null;
       const booked = result.booked_worker_ids.length;
       const offered = result.offered_worker_ids.length;
       settle(

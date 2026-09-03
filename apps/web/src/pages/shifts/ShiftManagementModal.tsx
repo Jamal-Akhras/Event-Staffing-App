@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 
 import { ApiError, postJson, putJson } from "../../lib/api";
-import { toLocalInput } from "../../lib/localInput";
+import { fromVenueInput, toVenueInput } from "../../lib/venueTime";
 import type { Booking, Shift, WorkerProfile } from "../../types/operations";
 import { BookedWorkers } from "./BookedWorkers";
 import "../../components/Modal.css";
@@ -9,6 +9,7 @@ import "./ShiftManagementModal.css";
 
 type ShiftManagementModalProps = {
   shift: Shift;
+  timezone: string;
   bookings?: Booking[];
   workers?: Record<string, WorkerProfile>;
   onChanged?: () => Promise<void>;
@@ -16,12 +17,12 @@ type ShiftManagementModalProps = {
   onSaved: (message: string) => Promise<void>;
 };
 
-export function ShiftManagementModal({ shift, bookings, workers, onChanged, onClose, onSaved }: ShiftManagementModalProps) {
+export function ShiftManagementModal({ shift, timezone, bookings, workers, onChanged, onClose, onSaved }: ShiftManagementModalProps) {
   const [form, setForm] = useState(() => ({
     role: shift.role,
     location: shift.location,
-    start_time: toLocalInput(shift.start_time),
-    end_time: toLocalInput(shift.end_time),
+    start_time: toVenueInput(shift.start_time, timezone),
+    end_time: toVenueInput(shift.end_time, timezone),
     pay_rate: String(shift.pay_rate),
     workers_needed: String(shift.workers_needed),
     notes: shift.notes ?? "",
@@ -37,8 +38,8 @@ export function ShiftManagementModal({ shift, bookings, workers, onChanged, onCl
       await putJson(`/shifts/${shift.shift_id}`, {
         role: form.role,
         location: form.location,
-        start_time: new Date(form.start_time).toISOString(),
-        end_time: new Date(form.end_time).toISOString(),
+        start_time: fromVenueInput(form.start_time, timezone),
+        end_time: fromVenueInput(form.end_time, timezone),
         pay_rate: Number(form.pay_rate),
         workers_needed: Number(form.workers_needed),
         notes: form.notes || null,

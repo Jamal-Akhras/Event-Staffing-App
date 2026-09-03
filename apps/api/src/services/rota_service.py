@@ -125,7 +125,7 @@ class RotaService:
 
         synced = self._sync_booking_times(venue_id, window_start, window_end, actor_user_id, now)
         outcome = self._mint_revision(venue_id, week_start, actor_user_id, now)
-        self._notify(outcome, booked, exclude=synced)
+        self._notify(outcome, exclude=synced)
         return PublishOutcome(
             publication=outcome.publication,
             changes=outcome.changes,
@@ -140,6 +140,8 @@ class RotaService:
         if end_time <= start_time:
             raise ValidationError("The end time has to be after the start time.")
         shift = self._published_shift(venue_id, shift_id)
+        if now >= shift.start_time:
+            raise ValidationError("This shift has already started: adjust hours on the timesheet instead.")
         live = self._live_bookings(shift_id)
         if len(live) > 1:
             raise ValidationError("This shift has several bookings: reassign or cancel instead.")
@@ -170,17 +172,20 @@ class RotaService:
             )
             self._notify_worker(
                 booking.worker_id, shift, "rota.times_changed", "Your shift times changed",
-                f"{shift.role} now runs {start_time:%H:%M}–{end_time:%H:%M} UTC.", booked=True,
+                f"{shift.role} now runs {start_time:%H:%M}–{end_time:%H:%M} UTC.",
+                booking_id=booking.booking_id,
             )
 
         outcome = self._mint_revision(venue_id, self._week_of(shift), actor_user_id, now)
-        self._notify(outcome, [b.worker_id for b in live], exclude={b.worker_id for b in live})
+        self._notify(outcome, exclude={b.worker_id for b in live})
         return self._shifts.get(shift_id)
 
     def reassign(
         self, venue_id: str, shift_id: str, new_worker_id: str, actor_user_id: str, now: datetime
     ) -> Shift:
         shift = self._published_shift(venue_id, shift_id)
+        if now >= shift.start_time:
+            raise ValidationError("This shift has already started.")
         relationship = self._relationships.get_for_venue_worker(venue_id, new_worker_id)
         if relationship is None or relationship.status != "active":
             raise ValidationError("That worker does not have an active relationship with your venue.")
@@ -224,14 +229,14 @@ class RotaService:
             )
             self._notify_worker(
                 new_worker_id, drafted, "shift.offered_to_pool", "A shift was offered to you",
-                f"{drafted.role} is yours to take.", booked=False,
+                f"{drafted.role} is yours to take.", booking_id=None,
             )
 
         outcome = self._mint_revision(venue_id, self._week_of(shift), actor_user_id, now)
         exclude = {live[0].worker_id} if live else set()
         if not employed:
             exclude.add(new_worker_id)
-        self._notify(outcome, [new_worker_id] if employed else [], exclude=exclude)
+        self._notify(outcome, exclude=exclude)
         return self._shifts.get(shift_id)
 
     def remove(
@@ -239,6 +244,8 @@ class RotaService:
     ) -> Shift:
         shift = self._published_shift(venue_id, shift_id)
         live = self._live_bookings(shift_id)
+        if now >= shift.start_time or any(booking.state != BookingState.CONFIRMED for booking in live):
+            raise ValidationError("This shift has already started: adjust it on the timesheet instead.")
         self._shifts.save(
             replace(shift, status="cancelled", cancelled_at=now, cancellation_reason=reason,
                     cancelled_by_user_id=actor_user_id, updated_at=now)
@@ -253,7 +260,7 @@ class RotaService:
                     actor_role="operator",
                 )
         outcome = self._mint_revision(venue_id, self._week_of(shift), actor_user_id, now)
-        self._notify(outcome, [], exclude={booking.worker_id for booking in live})
+        self._notify(outcome, exclude={booking.worker_id for booking in live})
         return self._shifts.get(shift_id)
 
     def publications_for_week(self, venue_id: str, week_start: date) -> list[tuple[RotaPublication, list[dict[str, Any]]]]:
@@ -265,7 +272,7 @@ class RotaService:
             previous = publication.assignments
         return result
 
-    def _book_employed(self, draft: Shift, actor_user_id: str, now: datetime) -> None:
+    def _book_employed(self, draft: Shift, actor_user_id: str, now: datetime) -> Booking:
         allocated = self._allocator.allocate(
             draft.shift_id, draft.assigned_worker_id, now, str(uuid4()), attendance_mode="employed"
         )
@@ -274,7 +281,10 @@ class RotaService:
             {"shift_id": draft.shift_id, "worker_id": draft.assigned_worker_id},
         )
         fresh = self._shifts.get(draft.shift_id)
-        self._shifts.save(replace(fresh, rota_state="published", updated_at=now))
+        self._shifts.save(
+            replace(fresh, rota_state="published", billable=False, updated_at=now)
+        )
+        return allocated.booking
 
     def _sync_booking_times(
         self, venue_id: str, window_start: datetime, window_end: datetime, actor_user_id: str, now: datetime
@@ -301,7 +311,7 @@ class RotaService:
                 self._notify_worker(
                     booking.worker_id, shift, "rota.times_changed", "Your shift times changed",
                     f"{shift.role} now runs {shift.start_time:%H:%M}–{shift.end_time:%H:%M} UTC.",
-                    booked=True,
+                    booking_id=booking.booking_id,
                 )
                 synced.add(booking.worker_id)
         return synced
@@ -342,7 +352,6 @@ class RotaService:
     def _notify(
         self,
         outcome: PublishOutcome,
-        booked_worker_ids: list[str],
         exclude: set[str] | None = None,
     ) -> None:
         exclude = exclude or set()
@@ -359,6 +368,14 @@ class RotaService:
             entry = next(
                 (e for e in outcome.publication.assignments if e["worker_id"] == worker_id), None
             )
+            booking = next(
+                (
+                    candidate
+                    for candidate in self._live_bookings(entry["shift_id"])
+                    if candidate.worker_id == worker_id
+                ),
+                None,
+            ) if entry else None
             body = "Open the app to see your week." if entry else "One of your shifts changed."
             self._outbox.publish_notification(
                 event_type="rota.published",
@@ -369,12 +386,17 @@ class RotaService:
                 category="shift_changes",
                 title="Your rota was published",
                 body=body,
-                action_kind="booking" if worker_id in booked_worker_ids or entry else "shift",
-                action_entity_id=entry["shift_id"] if entry else outcome.publication.publication_id,
+                action_kind="booking" if booking is not None else "shift",
+                action_entity_id=(
+                    booking.booking_id
+                    if booking is not None
+                    else entry["shift_id"] if entry else outcome.publication.publication_id
+                ),
             )
 
     def _notify_worker(
-        self, worker_id: str, shift: Shift, event_type: str, title: str, body: str, booked: bool
+        self, worker_id: str, shift: Shift, event_type: str, title: str, body: str,
+        booking_id: str | None,
     ) -> None:
         self._outbox.publish_notification(
             event_type=event_type,
@@ -385,8 +407,8 @@ class RotaService:
             category="shift_changes",
             title=title,
             body=body,
-            action_kind="booking" if booked else "shift",
-            action_entity_id=shift.shift_id,
+            action_kind="booking" if booking_id is not None else "shift",
+            action_entity_id=booking_id or shift.shift_id,
         )
 
     def _append_transition(

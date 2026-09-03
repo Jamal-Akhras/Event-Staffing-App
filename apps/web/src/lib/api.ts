@@ -64,10 +64,14 @@ export async function fetchJson<T>(path: string): Promise<T> {
   return requestJson<T>(path, { headers: getAuthHeaders() });
 }
 
-export async function postJson<T = void>(path: string, body?: object): Promise<T> {
+export async function postJson<T = void>(
+  path: string,
+  body?: object,
+  headers: Record<string, string> = {},
+): Promise<T> {
   return requestJson<T>(path, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: { ...getAuthHeaders(), ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 }

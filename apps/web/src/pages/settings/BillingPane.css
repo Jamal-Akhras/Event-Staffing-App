@@ -51,6 +51,12 @@
   font-weight: 700;
 }
 
+.bl-table .bl-correction td {
+  background: rgba(245, 165, 36, 0.06);
+  color: #92400e;
+  font-size: 12px;
+}
+
 .bl-waived {
   color: #047857;
   font-size: 12px;

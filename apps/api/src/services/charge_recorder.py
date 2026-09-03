@@ -51,7 +51,7 @@ class ChargeRecorder:
         wages = money(hours * pay_rate)
         waiver_code = self._active_waiver_code(shift.account_id, now)
         relationship_at_start = self._relationship_as_of(shift.account_id, booking.worker_id, booking.start_time)
-        exempt = relationship_at_start in EMPLOYED_TYPES or not shift.billable
+        exempt = relationship_at_start in EMPLOYED_TYPES
         fee_percent = Decimal("0.00") if exempt else self._fee_percent
         fee = Decimal("0.00") if (waiver_code or exempt) else money(wages * fee_percent / Decimal(100))
         completed = completed_at(booking)

@@ -69,6 +69,7 @@ class EscalationService:
                     shift,
                     origin="pool",
                     assigned_worker_id=None,
+                    billable=True,
                     offer_pool_at=stamps.offer_pool_at,
                     publish_market_at=stamps.publish_market_at,
                     updated_at=now,
@@ -76,13 +77,22 @@ class EscalationService:
             )
         if policy.reaches_market:
             return self._shifts.save(
-                replace(shift, origin="market", assigned_worker_id=None, updated_at=now)
+                replace(
+                    shift,
+                    origin="market",
+                    assigned_worker_id=None,
+                    billable=True,
+                    offer_pool_at=None,
+                    publish_market_at=None,
+                    updated_at=now,
+                )
             )
         parked = self._shifts.save(
             replace(
                 shift,
                 origin="pool",
                 assigned_worker_id=None,
+                billable=True,
                 needs_attention=True,
                 offer_pool_at=None,
                 publish_market_at=None,
@@ -102,18 +112,28 @@ class EscalationService:
 
     def advance_now(self, shift_id: str, venue_id: str, target: str, now: datetime) -> Shift:
         shift = self._shifts.get(shift_id)
-        if shift is not None and shift.needs_attention:
-            shift = self._shifts.save(replace(shift, needs_attention=False, updated_at=now))
         if shift is None or shift.account_id != venue_id:
             raise NotFoundError("That shift was not found.")
         if target not in ("pool", "market"):
             raise ValidationError("A shift can only be moved to your pool or to the open market.")
         if NEXT_RUNG.get(shift.origin) is None:
             raise ValidationError("This shift is already on the open market.")
+        if shift.needs_attention:
+            shift = self._shifts.save(replace(shift, needs_attention=False, updated_at=now))
         return self._advance(shift, target, now, "Moved by the venue.")
 
     def _advance(self, shift: Shift, target: str, now: datetime, reason: str) -> Shift:
-        moved = self._shifts.save(replace(shift, origin=target, updated_at=now))
+        moved = self._shifts.save(
+            replace(
+                shift,
+                origin=target,
+                assigned_worker_id=None,
+                billable=True,
+                offer_pool_at=None if target == "market" else shift.offer_pool_at,
+                publish_market_at=None if target == "market" else shift.publish_market_at,
+                updated_at=now,
+            )
+        )
         if target == "pool":
             self._notify_pool(moved, reason)
         return moved

@@ -11,6 +11,7 @@ class AccountResponse(BaseModel):
     venue_id: str
     organisation_id: str | None
     market_id: str | None
+    timezone: str | None
     name: str
     country: str
     currency: str

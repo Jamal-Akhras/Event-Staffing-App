@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -8,6 +9,11 @@ from apps.api.src.validation_types import MoneyAmount, UtcTimestamp
 
 
 class BillingLineResponse(BaseModel):
+    line_id: str
+    line_kind: Literal["charge", "correction"]
+    charge_id: str
+    adjustment_id: str | None
+    reason: str | None
     booking_id: str
     shift_id: str
     worker_id: str
@@ -17,9 +23,9 @@ class BillingLineResponse(BaseModel):
     end_time: UtcTimestamp
     completed_at: UtcTimestamp
     hours: Decimal
-    wages: MoneyAmount
-    fee: MoneyAmount
-    total: MoneyAmount
+    wages: Decimal
+    fee: Decimal
+    total: Decimal
     waived: bool
     state: str
 
