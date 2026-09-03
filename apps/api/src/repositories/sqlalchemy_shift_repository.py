@@ -140,6 +140,8 @@ def _to_domain(model: ShiftModel) -> Shift:
         billable=model.billable,
         offer_pool_at=model.offer_pool_at,
         publish_market_at=model.publish_market_at,
+        rota_state=model.rota_state,
+        needs_attention=model.needs_attention,
     )
 
 
@@ -169,3 +171,5 @@ def _apply_domain(model: ShiftModel, shift: Shift) -> None:
     model.billable = shift.billable
     model.offer_pool_at = shift.offer_pool_at
     model.publish_market_at = shift.publish_market_at
+    model.rota_state = shift.rota_state
+    model.needs_attention = shift.needs_attention
