@@ -71,6 +71,7 @@ export type Booking = {
   cancellation_reason?: string | null;
   cancelled_by_user_id?: string | null;
   completion_code?: string | null;
+  check_in_requires_code?: boolean;
   shift?: ShiftSummary | null;
 };
 

@@ -523,6 +523,18 @@ def test_the_week_view_aggregates_scheduled_worked_and_approved_hours(client, in
     assert body["total_approved_wages"] == "72.50"
 
 
+def test_the_booking_response_says_whether_check_in_needs_a_code(client, in_memory_repos):
+    shift = _shift(in_memory_repos, "shift-1")
+    _booking(in_memory_repos, "bk-emp", shift, "staff-1", BookingState.CONFIRMED, "employed")
+    other = _shift(in_memory_repos, "shift-2", start=START + timedelta(days=1))
+    _booking(in_memory_repos, "bk-pin", other, "temp-1", BookingState.CONFIRMED, "pin")
+
+    employed = client.get("/bookings/bk-emp", headers=STAFF).json()
+    assert employed["check_in_requires_code"] is False
+    pin = client.get("/bookings/bk-pin", headers=TEMP).json()
+    assert pin["check_in_requires_code"] is True
+
+
 def test_the_timesheet_is_scoped_to_the_operator_venue(client):
     other = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-2", "X-Account-Id": "venue-2"}
     worker = client.get(

@@ -49,7 +49,7 @@ export function NextShiftCard({ booking, now, error, onCheckIn, onCheckOut, onMe
 
       {onShift ? (
         <>
-          {booking.completion_code ? (
+          {booking.completion_code && booking.check_in_requires_code !== false ? (
             <View style={styles.stub}>
               <Text style={styles.label}>Show to finish</Text>
               <Text style={styles.code}>{booking.completion_code}</Text>
@@ -59,6 +59,10 @@ export function NextShiftCard({ booking, now, error, onCheckIn, onCheckOut, onMe
             <Text style={styles.actionText}>Finish shift</Text>
           </Pressable>
         </>
+      ) : booking.check_in_requires_code === false ? (
+        <Pressable style={styles.action} onPress={() => onCheckIn("")} accessibilityRole="button">
+          <Text style={styles.actionText}>I'm here</Text>
+        </Pressable>
       ) : entering ? (
         <>
           <Text style={styles.prompt}>Ask the manager for tonight's code</Text>

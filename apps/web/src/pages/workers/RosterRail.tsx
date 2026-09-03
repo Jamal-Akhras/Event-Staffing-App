@@ -8,6 +8,7 @@ import type { WorkerProfile } from "../../types/operations";
 import { RELATIONSHIP_LABELS } from "../../types/workforce";
 import { shortDay } from "../dashboard/dashboardUtils";
 import { RelationshipControls } from "./RelationshipControls";
+import { TermsEditor } from "./TermsEditor";
 import type { DirectoryEntry } from "./directory";
 import type { useDirectory } from "./useDirectory";
 import { useWorkerHistory } from "./useWorkerHistory";
@@ -34,16 +35,25 @@ export function RosterRail({ entry, actions, currency }: Props) {
 
   if (!profile.data) return <SkeletonCard lines={6} />;
 
+  const canEditTerms = entry.status === "active" && entry.relationship_type !== "one_off";
+
   return (
     <WorkerRail
       worker={profile.data}
       kicker={standing(entry)}
-      actions={<RelationshipControls entry={entry} actions={actions} />}
+      actions={
+        <>
+          <RelationshipControls entry={entry} actions={actions} />
+          {canEditTerms && <TermsEditor key={entry.relationship_id} entry={entry} actions={actions} />}
+        </>
+      }
       stats={[
         { label: "With you", value: `${entry.shifts_with_you} shifts` },
         { label: "Hours", value: entry.shifts_with_you ? entry.hours_with_you : "—" },
         { label: "Wages to date", value: formatMoney(entry.wages_to_date, currency) },
         { label: "Last worked", value: entry.last_worked ? shortDay(entry.last_worked) : "Never" },
+        ...(entry.agreed_rate ? [{ label: "Agreed rate", value: `${formatMoney(entry.agreed_rate, currency)}/hr` }] : []),
+        ...(entry.contracted_hours_per_week ? [{ label: "Contracted", value: `${entry.contracted_hours_per_week}h/week` }] : []),
       ]}
       historyTitle="Recent shifts with you"
       history={history}

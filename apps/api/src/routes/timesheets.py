@@ -298,6 +298,7 @@ def _week_view(week: TimesheetWeek) -> TimesheetWeekResponse:
                     TimesheetDayResponse(
                         day=row.day,
                         booking_id=row.booking.booking_id,
+                        charge_id=row.charge_id,
                         shift_id=row.booking.shift_id,
                         role=row.shift_role,
                         state=row.booking.state.value,

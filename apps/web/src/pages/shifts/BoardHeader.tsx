@@ -1,18 +1,29 @@
+import { formatMoney } from "../../lib/format";
 import { WEEKDAYS } from "../../lib/weekStart";
 import { boardLabel } from "./boardUtils";
 
 type BoardHeaderProps = {
   days: Date[];
   openSeats: number;
+  filledSeats: number;
+  postedSeats: number;
+  projected: number;
+  currency: string;
+  draftCount: number;
+  publishing: boolean;
   weekStart: number;
   onWeekStartChange: (day: number) => void;
   onPrevious: () => void;
   onToday: () => void;
   onNext: () => void;
   onPost: () => void;
+  onPublish: () => void;
 };
 
-export function BoardHeader({ days, openSeats, weekStart, onWeekStartChange, onPrevious, onToday, onNext, onPost }: BoardHeaderProps) {
+export function BoardHeader({
+  days, openSeats, filledSeats, postedSeats, projected, currency, draftCount, publishing,
+  weekStart, onWeekStartChange, onPrevious, onToday, onNext, onPost, onPublish,
+}: BoardHeaderProps) {
   return (
     <div className="bd-header">
       <div className="bd-nav">
@@ -30,7 +41,9 @@ export function BoardHeader({ days, openSeats, weekStart, onWeekStartChange, onP
       </div>
       <h1 className="bd-title">{boardLabel(days)}</h1>
       <span className={`bd-seats ${openSeats > 0 ? "" : "ok"}`}>
-        {openSeats > 0 ? `${openSeats} open seat${openSeats === 1 ? "" : "s"}` : "All covered"}
+        {postedSeats > 0
+          ? `${filledSeats} of ${postedSeats} seats filled · ${openSeats > 0 ? `${openSeats} still open` : "all covered"} · ${formatMoney(projected, currency)} projected`
+          : "Nothing planned yet"}
       </span>
       <div className="bd-header-actions">
         <label className="bd-week-start">
@@ -41,7 +54,15 @@ export function BoardHeader({ days, openSeats, weekStart, onWeekStartChange, onP
             ))}
           </select>
         </label>
-        <button type="button" className="ov-btn ov-btn-primary bd-post" onClick={onPost}>
+        <button
+          type="button"
+          className={`ov-btn ${draftCount > 0 ? "ov-btn-primary" : ""} bd-publish`}
+          disabled={publishing}
+          onClick={onPublish}
+        >
+          {publishing ? "Publishing..." : draftCount > 0 ? `Publish week · ${draftCount} draft${draftCount === 1 ? "" : "s"}` : "Publish week"}
+        </button>
+        <button type="button" className={`ov-btn ${draftCount > 0 ? "" : "ov-btn-primary"} bd-post`} onClick={onPost}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
             <path d="M12 5v14M5 12h14" />
           </svg>

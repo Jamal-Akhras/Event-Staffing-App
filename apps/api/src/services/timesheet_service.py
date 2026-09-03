@@ -43,6 +43,7 @@ ZERO = Decimal("0.00")
 class TimesheetRow:
     day: date
     booking: Booking
+    charge_id: str | None
     shift_role: str
     scheduled_hours: Decimal
     worked: Decimal | None
@@ -323,6 +324,7 @@ class TimesheetService:
         return TimesheetRow(
             day=local_day(booking.start_time, zone),
             booking=booking,
+            charge_id=charge.charge_id if charge is not None else None,
             shift_role=role,
             scheduled_hours=scheduled,
             worked=clocked,

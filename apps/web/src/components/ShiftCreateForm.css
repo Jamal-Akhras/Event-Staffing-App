@@ -1,3 +1,13 @@
+.sc-hint {
+  margin: -6px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 165, 36, 0.35);
+  background: rgba(245, 165, 36, 0.1);
+  color: #b45309;
+  font-size: 12.5px;
+}
+
 .stepper-control {
   display: flex;
   align-items: center;

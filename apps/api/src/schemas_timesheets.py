@@ -16,6 +16,7 @@ ApprovalResultCode = Literal[
 class TimesheetDayResponse(BaseModel):
     day: date
     booking_id: str
+    charge_id: str | None
     shift_id: str
     role: str
     state: str

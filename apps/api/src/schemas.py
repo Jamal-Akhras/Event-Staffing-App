@@ -39,6 +39,7 @@ class BookingResponse(BaseModel):
     payment_recorded_by_user_id: str | None = None
     check_in_code: str | None = None
     completion_code: str | None = None
+    check_in_requires_code: bool = True
     shift: ShiftSummaryResponse | None = None
 
 

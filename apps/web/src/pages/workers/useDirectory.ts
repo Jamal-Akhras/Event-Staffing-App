@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { deleteJson, fetchJson, postJson } from "../../lib/api";
+import { deleteJson, fetchJson, postJson, putJson } from "../../lib/api";
 import type { EmployedType } from "../../types/workforce";
 import type { DirectoryEntry } from "./directory";
 
@@ -8,12 +8,23 @@ const KEY = ["venue-people"];
 
 type Notify = (type: "success" | "error", message: string) => void;
 
-export function useDirectory(notify: Notify) {
-  const client = useQueryClient();
-  const people = useQuery({
+export function usePeople() {
+  return useQuery({
     queryKey: KEY,
     queryFn: () => fetchJson<DirectoryEntry[]>("/venues/me/people"),
   });
+}
+
+export type TermsInput = {
+  workerId: string;
+  agreed_rate: string | null;
+  contracted_hours_per_week: string | null;
+  default_role: string | null;
+};
+
+export function useDirectory(notify: Notify) {
+  const client = useQueryClient();
+  const people = usePeople();
 
   const settle = (message: string) => {
     client.invalidateQueries({ queryKey: KEY });
@@ -48,5 +59,12 @@ export function useDirectory(notify: Notify) {
     onError: fail,
   });
 
-  return { people, addToPool, removeFromPool, invite, end };
+  const setTerms = useMutation({
+    mutationFn: ({ workerId, ...terms }: TermsInput) =>
+      putJson(`/venues/me/people/${workerId}/terms`, terms),
+    onSuccess: () => settle("Terms saved"),
+    onError: fail,
+  });
+
+  return { people, addToPool, removeFromPool, invite, end, setTerms };
 }

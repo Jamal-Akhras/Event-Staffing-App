@@ -55,6 +55,7 @@ def _booking_view(
         payload["completion_code"] = None
     if viewer not in {ActorRole.OPERATOR, ActorRole.SYSTEM} or booking.state != BookingState.CONFIRMED:
         payload["check_in_code"] = None
+    payload["check_in_requires_code"] = booking.attendance_mode != "employed"
     payload["shift"] = _summary_view(summary)
     return BookingResponse(**payload)
 

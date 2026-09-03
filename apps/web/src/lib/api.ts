@@ -110,6 +110,32 @@ export async function uploadFile<T>(path: string, file: File): Promise<T> {
   });
 }
 
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      headers: { Authorization: `Bearer ${getAuthToken()}`, ...clientHeaders() },
+    });
+  } catch (err) {
+    throw new ApiError(NETWORK_ERROR_MESSAGE, { path, method: "GET", cause: err });
+  }
+  if (!response.ok) {
+    const serverDetail = await readServerDetail(response);
+    throw new ApiError(getFriendlyErrorMessage(response.status, path, serverDetail), {
+      status: response.status,
+      path,
+      method: "GET",
+      serverDetail,
+    });
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 async function requestJson<T>(path: string, init: RequestInit): Promise<T> {
   const method = init.method ?? "GET";
   let response: Response;

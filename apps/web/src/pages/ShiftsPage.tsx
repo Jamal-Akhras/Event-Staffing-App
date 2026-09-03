@@ -14,13 +14,26 @@ import { StatRow } from "./dashboard/StatRow";
 import { completedCounts, describeOldest, sortedPending, tonightRows } from "./dashboard/dashboardUtils";
 import { useDecideApplication } from "./dashboard/useOverviewData";
 import { BoardHeader } from "./shifts/BoardHeader";
+import { ContractedStrip } from "./shifts/ContractedStrip";
 import { PostShiftModal, type PostDraft } from "./shifts/PostShiftModal";
+import { PublishBar } from "./shifts/PublishBar";
 import { ShiftManagementModal } from "./shifts/ShiftManagementModal";
 import { TemplateChips } from "./shifts/TemplateChips";
 import { TonightRail } from "./shifts/TonightRail";
 import { WeekBoard } from "./shifts/WeekBoard";
-import { boardDays, defaultStartFor, missingSeats, shiftDays, weekStartFor } from "./shifts/boardUtils";
+import {
+  boardDays,
+  defaultStartFor,
+  isoDay,
+  missingSeats,
+  projectedCost,
+  scheduledHoursByWorker,
+  shiftDays,
+  weekStartFor,
+} from "./shifts/boardUtils";
 import { useBoardData } from "./shifts/useBoardData";
+import { usePublications, useRotaActions } from "./shifts/useRota";
+import { usePeople } from "./workers/useDirectory";
 import "./DashboardPage.css";
 import "./dashboard/OverviewCards.css";
 import "./ShiftsPage.css";
@@ -40,14 +53,22 @@ export function ShiftsPage() {
   const [selected, setSelected] = useState<Shift | null>(null);
 
   const days = boardDays(weekStartFor(anchor, weekStart));
+  const weekKey = isoDay(days[0]);
   const data = useBoardData(days, now);
+  const people = usePeople();
+  const publications = usePublications(weekKey);
+  const rota = useRotaActions(weekKey, (type, message) => toast({ type, message }));
   const location = venue.data?.default_location ?? "";
   const currency = venue.data?.currency ?? "GBP";
+  const peopleNames = Object.fromEntries(
+    (people.data ?? []).map((entry) => [entry.worker_id, entry.display_name])
+  );
   const weekShifts = data.shifts.filter((shift) => shift.status !== "cancelled");
   const openSeats = weekShifts.reduce((sum, shift) => sum + missingSeats(shift), 0);
   const openShifts = weekShifts.filter((shift) => missingSeats(shift) > 0).length;
   const bookedSeats = weekShifts.reduce((sum, shift) => sum + shift.workers_filled, 0);
   const postedSeats = weekShifts.reduce((sum, shift) => sum + shift.workers_needed, 0);
+  const draftCount = weekShifts.filter((shift) => shift.rota_state === "draft").length;
   const pending = sortedPending(data.applications.filter((application) => application.status === "applied"));
 
   const refresh = async () => {
@@ -77,12 +98,19 @@ export function ShiftsPage() {
         <BoardHeader
           days={days}
           openSeats={openSeats}
+          filledSeats={bookedSeats}
+          postedSeats={postedSeats}
+          projected={projectedCost(weekShifts)}
+          currency={currency}
+          draftCount={draftCount}
+          publishing={rota.publish.isPending}
           weekStart={weekStart}
           onWeekStartChange={changeWeekStart}
           onPrevious={() => setAnchor(shiftDays(anchor, -7))}
           onToday={() => setAnchor(new Date())}
           onNext={() => setAnchor(shiftDays(anchor, 7))}
           onPost={() => setDraft({ initial: { location } })}
+          onPublish={() => rota.publish.mutate()}
         />
         <TemplateChips currency={currency} onPick={postFromTemplate} />
         {data.error ? (
@@ -91,10 +119,13 @@ export function ShiftsPage() {
           <SkeletonCard lines={8} />
         ) : (
           <>
+            <PublishBar publications={publications.data ?? []} people={peopleNames} />
             <WeekBoard
               days={days}
               shifts={data.shifts}
               applications={data.applications}
+              people={peopleNames}
+              currency={currency}
               now={now}
               onAdd={(day) => setDraft({ initial: { location, start_time: defaultStartFor(day) } })}
               onSelect={(shift) => {
@@ -102,6 +133,7 @@ export function ShiftsPage() {
                 setSelected(shift);
               }}
             />
+            <ContractedStrip entries={people.data ?? []} scheduled={scheduledHoursByWorker(weekShifts)} />
             <div className="bd-summary">
               <StatRow
                 stats={[

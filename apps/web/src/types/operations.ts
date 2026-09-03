@@ -21,6 +21,8 @@ export type Shift = {
   assigned_worker_id?: string | null;
   offer_pool_at?: string | null;
   publish_market_at?: string | null;
+  rota_state?: "draft" | "published";
+  needs_attention?: boolean;
 };
 
 export type Application = {

@@ -14,6 +14,7 @@ const NAV = [
   { path: "/app/applications", label: "Applications" },
   { path: "/app/templates", label: "Templates" },
   { path: "/app/workers", label: "Workers" },
+  { path: "/app/timesheet", label: "Timesheet" },
   { path: "/app/analytics", label: "Analytics" },
   { path: "/app/settings", label: "Settings" },
 ];

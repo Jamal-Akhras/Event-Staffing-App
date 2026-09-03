@@ -65,3 +65,47 @@ export function defaultStartFor(day: Date) {
   start.setHours(18, 0, 0, 0);
   return toLocalInput(start);
 }
+
+export function isoDay(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+export function shiftHours(shift: Shift) {
+  return (new Date(shift.end_time).getTime() - new Date(shift.start_time).getTime()) / 3_600_000;
+}
+
+export function isCostable(shift: Shift) {
+  return shift.status !== "cancelled" && shift.status !== "closed";
+}
+
+export function projectedCost(shifts: Shift[]) {
+  return shifts
+    .filter(isCostable)
+    .reduce((sum, shift) => sum + shiftHours(shift) * Number(shift.pay_rate) * shift.workers_needed, 0);
+}
+
+export function seatsOn(shifts: Shift[]) {
+  return shifts.filter(isCostable).reduce((sum, shift) => sum + shift.workers_needed, 0);
+}
+
+export function roleCosts(shifts: Shift[]) {
+  const rollup = new Map<string, { role: string; hours: number; cost: number }>();
+  for (const shift of shifts.filter(isCostable)) {
+    const entry = rollup.get(shift.role) ?? { role: shift.role, hours: 0, cost: 0 };
+    entry.hours += shiftHours(shift) * shift.workers_needed;
+    entry.cost += shiftHours(shift) * Number(shift.pay_rate) * shift.workers_needed;
+    rollup.set(shift.role, entry);
+  }
+  return [...rollup.values()].sort((left, right) => right.cost - left.cost);
+}
+
+export function scheduledHoursByWorker(shifts: Shift[]) {
+  const hours = new Map<string, number>();
+  for (const shift of shifts.filter(isCostable)) {
+    if (!shift.assigned_worker_id) continue;
+    hours.set(shift.assigned_worker_id, (hours.get(shift.assigned_worker_id) ?? 0) + shiftHours(shift));
+  }
+  return hours;
+}
