@@ -24,11 +24,14 @@ const TAB_ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> 
   Profile: { active: "person", inactive: "person-outline" },
 };
 
-export function BottomTabNavigator() {
+export type HomeTab = "Browse" | "Shifts";
+
+export function BottomTabNavigator({ initialTab }: { initialTab: HomeTab }) {
   const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
+      initialRouteName={initialTab}
       screenOptions={({ route }) => ({
         headerShown: true,
         headerRight: () => <NotificationBell />,

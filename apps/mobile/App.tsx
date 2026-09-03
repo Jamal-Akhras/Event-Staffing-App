@@ -16,7 +16,7 @@ import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
 import { PushNotificationProvider } from "./src/contexts/PushNotificationContext";
 import { RatingPromptProvider } from "./src/contexts/RatingPromptContext";
-import { BottomTabNavigator } from "./src/navigation/BottomTabNavigator";
+import { BottomTabNavigator, type HomeTab } from "./src/navigation/BottomTabNavigator";
 import { ForgotPasswordScreen } from "./src/screens/auth/ForgotPasswordScreen";
 import { LoginScreen } from "./src/screens/auth/LoginScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
@@ -25,7 +25,7 @@ import { RegisterScreen } from "./src/screens/auth/RegisterScreen";
 import { COLORS } from "./src/theme/colors";
 import { fetchWorker } from "./src/lib/api";
 import { CLERK_PUBLISHABLE_KEY, SSO_ENABLED } from "./src/lib/clerk";
-import type { WorkerProfile } from "./src/types";
+import type { WorkerContext, WorkerProfile } from "./src/types";
 import { flushPendingNotificationTarget, navigationRef } from "./src/navigation/navigationRef";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -47,17 +47,23 @@ function AppContent() {
   const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(false);
+  const [homeTab, setHomeTab] = useState<HomeTab>("Browse");
 
   useEffect(() => {
     if (!user || user.role !== "worker" || !user.worker_profile_id) {
       setNeedsOnboarding(false);
+      setHomeTab("Browse");
       return;
     }
     setCheckingProfile(true);
-    fetchWorker<WorkerProfile>(`/workers/${user.worker_profile_id}`)
-      .then((p) => setNeedsOnboarding(!p.display_name || p.display_name.trim() === ""))
-      .catch(() => setNeedsOnboarding(false))
-      .finally(() => setCheckingProfile(false));
+    Promise.all([
+      fetchWorker<WorkerProfile>(`/workers/${user.worker_profile_id}`)
+        .then((p) => setNeedsOnboarding(!p.display_name || p.display_name.trim() === ""))
+        .catch(() => setNeedsOnboarding(false)),
+      fetchWorker<WorkerContext>("/me/work-context")
+        .then((context) => setHomeTab(context.home_mode === "shifts" ? "Shifts" : "Browse"))
+        .catch(() => setHomeTab("Browse")),
+    ]).finally(() => setCheckingProfile(false));
   }, [user]);
 
   if (isLoading || checkingProfile) {
@@ -107,7 +113,7 @@ function AppContent() {
         <RatingPromptProvider>
           <NavigationContainer ref={navigationRef} onReady={flushPendingNotificationTarget}>
             <BottomSheetModalProvider>
-              <BottomTabNavigator />
+              <BottomTabNavigator initialTab={homeTab} />
             </BottomSheetModalProvider>
           </NavigationContainer>
         </RatingPromptProvider>

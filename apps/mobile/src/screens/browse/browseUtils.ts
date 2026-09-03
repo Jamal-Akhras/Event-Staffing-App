@@ -31,11 +31,20 @@ export function getShiftStats(shift: Shift) {
   return { capacityPct, durationHours, filled, needed, remaining, totalPay };
 }
 
+export function getAudienceTag(shift: Shift): string | null {
+  if (shift.origin === "assigned") return "For you";
+  if (shift.origin === "team") return "Your team";
+  if (shift.origin === "pool") return "Your pool";
+  return null;
+}
+
 export function getShiftTags(shift: Shift, highPayThreshold?: number | null) {
   const startDate = new Date(shift.start_time);
   const daysUntilShift = getDaysUntil(startDate);
   const threshold = highPayThreshold ?? DEFAULT_HIGH_PAY_THRESHOLD;
   const tags: string[] = [];
+  const audience = getAudienceTag(shift);
+  if (audience) tags.push(audience);
   if (payRateValue(shift) >= threshold) tags.push("High pay");
   if (startDate.getDay() === 0 || startDate.getDay() === 6) tags.push("Weekend");
   if (daysUntilShift <= 2) tags.push("Soon");

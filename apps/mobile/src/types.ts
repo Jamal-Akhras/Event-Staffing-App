@@ -13,6 +13,7 @@ export type Shift = {
   currency?: string;
   latitude?: number | null;
   longitude?: number | null;
+  origin?: "assigned" | "team" | "pool" | "market";
 };
 
 export type Market = {
@@ -28,6 +29,12 @@ export type FeedVenue = {
   venue_id: string;
   name: string;
   avatar_url?: string | null;
+};
+
+export type WorkerContext = {
+  home_mode: "shifts" | "browse";
+  employed: boolean;
+  active_relationships: number;
 };
 
 export type FeedShift = Shift & {
