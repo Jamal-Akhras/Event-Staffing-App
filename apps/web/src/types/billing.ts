@@ -37,6 +37,6 @@ export type BillingSummary = {
   lines: BillingLine[];
   wages_total: string;
   fee_total: string;
-  grand_total: string;
+  amount_due: string;
   completed_shifts_all_time: number;
 };

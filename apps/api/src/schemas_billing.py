@@ -47,7 +47,7 @@ class BillingSummaryResponse(BaseModel):
     lines: list[BillingLineResponse]
     wages_total: MoneyAmount
     fee_total: MoneyAmount
-    grand_total: MoneyAmount
+    amount_due: MoneyAmount
     completed_shifts_all_time: int
 
 

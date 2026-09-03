@@ -170,7 +170,8 @@ def test_summary_charges_fee_on_completed_bookings_only():
     line = body["lines"][0]
     assert (line["hours"], line["wages"], line["fee"], line["total"]) == ("5.00", "72.50", "5.80", "78.30")
     assert line["waived"] is False
-    assert (body["wages_total"], body["fee_total"], body["grand_total"]) == ("72.50", "5.80", "78.30")
+    assert (body["wages_total"], body["fee_total"], body["amount_due"]) == ("72.50", "5.80", "5.80")
+    assert "grand_total" not in body
     assert body["completed_shifts_all_time"] == 1
 
 
@@ -202,8 +203,8 @@ def test_summary_lists_signed_corrections_and_includes_them_in_totals():
     assert (correction["hours"], correction["wages"], correction["fee"], correction["total"]) == (
         "-1.00", "-14.50", "-1.16", "-15.66"
     )
-    assert (body["wages_total"], body["fee_total"], body["grand_total"]) == (
-        "58.00", "4.64", "62.64"
+    assert (body["wages_total"], body["fee_total"], body["amount_due"]) == (
+        "58.00", "4.64", "4.64"
     )
     assert body["completed_shifts_all_time"] == 1
 
@@ -228,6 +229,7 @@ def test_redeeming_a_partner_code_waives_the_fee():
     assert body["lines"][0]["waived"] is True
     assert body["lines"][0]["fee"] == "0.00"
     assert body["fee_total"] == "0.00"
+    assert body["amount_due"] == "0.00"
     assert body["waiver"]["shifts_used"] == 1
     assert body["waiver"]["shift_cap"] == 20
     assert body["waiver"]["fee_waived_until"].startswith("2030-06-01")

@@ -99,12 +99,12 @@ export function BillingPane() {
       />
       <Group
         title="Statement"
-        hint="Every completed shift with wages, platform fee and the total cost to you."
+        hint="Wages are information — you pay workers directly. The platform fee is the only amount owed to Venue OS."
         rows={[
           {
             key: "statement",
             label: monthLabel(month),
-            hint: data.lines.length ? `${data.completed_shifts_all_time} completed shifts, with corrections shown separately` : "No completed shifts this month",
+            hint: data.lines.length ? "Corrections are shown as their own lines against the original shift" : "No completed shifts this month",
             stack: true,
             control: (
               <div className="bl-statement">
@@ -113,10 +113,24 @@ export function BillingPane() {
                   <button type="button" className="st-btn" onClick={() => setMonth(currentMonth())}>This month</button>
                   <button type="button" className="st-btn" disabled={month >= currentMonth()} onClick={() => setMonth(shiftMonth(month, 1))}>{monthLabel(shiftMonth(month, 1))} ›</button>
                 </div>
+                <div className="bl-due">
+                  <span>
+                    <b>Owed to Venue OS · {monthLabel(month)}</b>
+                    <em>Platform fees only. Wages below are paid by you, directly to your workers.</em>
+                  </span>
+                  <strong>{money(data.amount_due)}</strong>
+                </div>
                 {data.lines.length > 0 && (
                   <table className="bl-table">
                     <thead>
-                      <tr><th>Date</th><th>Worker</th><th>Role</th><th className="r">Hours</th><th className="r">Wages</th><th className="r">Fee</th><th className="r">Total</th></tr>
+                      <tr>
+                        <th>Date</th>
+                        <th>Worker</th>
+                        <th>Role</th>
+                        <th className="r">Hours</th>
+                        <th className="r">Wages · paid by you</th>
+                        <th className="r">Fee · owed to us</th>
+                      </tr>
                     </thead>
                     <tbody>
                       {data.lines.map((line) => (
@@ -127,12 +141,16 @@ export function BillingPane() {
                           <td className="r">{line.hours}</td>
                           <td className="r">{money(line.wages)}</td>
                           <td className="r">{line.waived ? <span className="bl-waived">waived</span> : money(line.fee)}</td>
-                          <td className="r">{money(line.total)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr><td colSpan={4}>Total</td><td className="r">{money(data.wages_total)}</td><td className="r">{money(data.fee_total)}</td><td className="r">{money(data.grand_total)}</td></tr>
+                      <tr>
+                        <td colSpan={3}>Totals</td>
+                        <td />
+                        <td className="r">{money(data.wages_total)}</td>
+                        <td className="r bl-due-cell">{money(data.fee_total)}</td>
+                      </tr>
                     </tfoot>
                   </table>
                 )}

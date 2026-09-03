@@ -65,7 +65,7 @@ def _summary_view(summary: BillingSummary) -> BillingSummaryResponse:
         lines=[BillingLineResponse(**line.__dict__) for line in summary.lines],
         wages_total=summary.wages_total,
         fee_total=summary.fee_total,
-        grand_total=summary.grand_total,
+        amount_due=summary.amount_due,
         completed_shifts_all_time=summary.completed_shifts_all_time,
     )
 

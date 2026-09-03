@@ -67,7 +67,7 @@ class BillingSummary:
     lines: list[BillingLine]
     wages_total: Decimal
     fee_total: Decimal
-    grand_total: Decimal
+    amount_due: Decimal
     completed_shifts_all_time: int
 
 
@@ -113,7 +113,7 @@ class BillingService:
             lines=lines,
             wages_total=wages_total,
             fee_total=fee_total,
-            grand_total=money(wages_total + fee_total),
+            amount_due=fee_total,
             completed_shifts_all_time=len(charges),
         )
 
