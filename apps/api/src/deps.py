@@ -16,6 +16,7 @@ from apps.api.src.repository_dependencies import (
     get_account_repo,
     get_booking_allocator,
     get_booking_charge_adjustment_repo,
+    get_shift_offer_repo,
     get_rota_publication_repo,
     get_application_decision_repo,
     get_application_message_history_repo,
@@ -67,6 +68,7 @@ from apps.api.src.services.join_code_service import JoinCodeService
 from apps.api.src.services.people_service import PeopleService
 from apps.api.src.services.escalation_service import EscalationService
 from apps.api.src.services.rota_service import RotaService
+from apps.api.src.services.shift_offer_service import ShiftOfferService
 from apps.api.src.services.timesheet_service import TimesheetService
 from apps.api.src.services.relationship_service import RelationshipService
 from apps.api.src.services.billing_service import BillingService
@@ -185,8 +187,9 @@ def get_escalation_service(
     relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
     account_repo: AccountRepository = Depends(get_account_repo),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
+    offer_repo=Depends(get_shift_offer_repo),
 ) -> EscalationService:
-    return EscalationService(shift_repo, relationship_repo, account_repo, outbox)
+    return EscalationService(shift_repo, relationship_repo, account_repo, outbox, offers=offer_repo)
 
 
 def get_join_code_service(
@@ -285,6 +288,26 @@ def get_worker_shift_feed_service(
     return WorkerShiftFeedService(profile_repo, market_repo, query_repo)
 
 
+def get_shift_offer_service(
+    offer_repo=Depends(get_shift_offer_repo),
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    allocator=Depends(get_booking_allocator),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    transitions: BookingTransitionRepository = Depends(get_booking_transition_repo),
+    escalations: EscalationService = Depends(get_escalation_service),
+    outbox: OutboxPublisher = Depends(get_outbox_publisher),
+) -> ShiftOfferService:
+    return ShiftOfferService(
+        offer_repo,
+        shift_repo,
+        allocator,
+        relationship_repo,
+        transitions,
+        escalations,
+        outbox,
+    )
+
+
 def get_rota_service(
     shift_repo: ShiftRepository = Depends(get_shift_repo),
     booking_repo: BookingRepository = Depends(get_booking_repo),
@@ -298,6 +321,7 @@ def get_rota_service(
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
     account_repo: AccountRepository = Depends(get_account_repo),
     market_repo: MarketRepository = Depends(get_market_repo),
+    offers: ShiftOfferService = Depends(get_shift_offer_service),
 ) -> RotaService:
     return RotaService(
         shift_repo,
@@ -312,6 +336,7 @@ def get_rota_service(
         outbox,
         account_repo,
         market_repo,
+        offers,
     )
 
 

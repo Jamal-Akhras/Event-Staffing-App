@@ -29,6 +29,7 @@ from apps.api.src.services.rota_revisions import (
     RotaRevisionService,
     live_bookings,
 )
+from apps.api.src.services.shift_offer_service import ShiftOfferService
 from apps.api.src.services.rota_week import local_day, week_window
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
@@ -49,6 +50,7 @@ class RotaService:
         outbox: OutboxPublisher,
         accounts: AccountRepository,
         markets: MarketRepository,
+        offers: ShiftOfferService,
     ) -> None:
         self._shifts = shifts
         self._bookings = bookings
@@ -59,6 +61,7 @@ class RotaService:
         self._lifecycle = lifecycle
         self._escalations = escalations
         self._outbox = outbox
+        self._offers = offers
         self._revisions = RotaRevisionService(shifts, bookings, publications, outbox, accounts, markets)
 
     def publish(self, venue_id: str, week_start: date, actor_user_id: str, now: datetime) -> PublishOutcome:
@@ -111,7 +114,10 @@ class RotaService:
                 booked.append(draft.assigned_worker_id)
             else:
                 published = replace(draft, rota_state="published")
-                self._shifts.save(self._escalations.stamp_new_shift(published, now))
+                stamped = self._shifts.save(self._escalations.stamp_new_shift(published, now))
+                self._offers.offer(
+                    stamped, draft.assigned_worker_id, "rota", now, _next_stamp(stamped)
+                )
                 offered.append(draft.assigned_worker_id)
 
         synced = self._sync_booking_times(venue_id, window_start, window_end, actor_user_id, now)
@@ -211,13 +217,15 @@ class RotaService:
             )
             drafted = self._shifts.get(shift_id)
 
+        self._offers.withdraw_for_shift(shift_id, now)
         employed = relationship.relationship_type in EMPLOYED_TYPES
         if employed:
             self._book_employed(drafted, actor_user_id, now)
         else:
-            self._shifts.save(
+            stamped = self._shifts.save(
                 self._escalations.stamp_new_shift(replace(drafted, rota_state="published"), now)
             )
+            self._offers.offer(stamped, new_worker_id, "rota", now, _next_stamp(stamped))
             self._notify_worker(
                 new_worker_id, drafted, "shift.offered_to_pool", "A shift was offered to you",
                 f"{drafted.role} is yours to take.", booking_id=None,
@@ -351,3 +359,10 @@ class RotaService:
 
     def _live_bookings(self, shift_id: str) -> list[Booking]:
         return live_bookings(self._bookings, shift_id)
+
+
+def _next_stamp(shift: Shift):
+    for stamp in (shift.offer_team_at, shift.offer_pool_at, shift.publish_market_at):
+        if stamp is not None:
+            return stamp
+    return None

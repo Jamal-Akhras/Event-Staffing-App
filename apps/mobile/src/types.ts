@@ -31,6 +31,20 @@ export type FeedVenue = {
   avatar_url?: string | null;
 };
 
+export type ShiftOffer = {
+  offer_id: string;
+  shift_id: string;
+  venue_id: string;
+  worker_id: string;
+  source: "rota" | "cover" | "manual";
+  status: "pending" | "accepted" | "declined" | "withdrawn" | "expired";
+  offered_at: string;
+  expires_at: string | null;
+  responded_at: string | null;
+  response_source: "manual" | "auto" | null;
+  shift?: ShiftSummary | null;
+};
+
 export type WorkerContext = {
   home_mode: "shifts" | "browse";
   employed: boolean;

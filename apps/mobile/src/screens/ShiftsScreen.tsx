@@ -14,6 +14,7 @@ import type { Application, Booking } from "../types";
 import { CancellationReasonModal } from "./shifts/CancellationReasonModal";
 import { MessagingModal } from "./shifts/MessagingModal";
 import { InvitationCard } from "./shifts/InvitationCard";
+import { OfferCard } from "./shifts/OfferCard";
 import { NextShiftCard } from "./shifts/NextShiftCard";
 import { PastShiftItem, ShiftListItem } from "./shifts/ShiftListItem";
 import {
@@ -98,6 +99,7 @@ export function ShiftsScreen() {
         {target.targetError ? <Text style={styles.error}>{target.targetError}</Text> : null}
 
         {tab === "upcoming" && <InvitationCard />}
+        {tab === "upcoming" && <OfferCard onChanged={() => void load()} />}
 
         {tab === "upcoming" &&
           (next ? (

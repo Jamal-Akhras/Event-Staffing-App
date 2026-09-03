@@ -40,6 +40,7 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
         "worker_availability_rules",
         "worker_availability_exceptions",
         "time_off_requests",
+        "shift_offers",
     }
     assert expected_tables.issubset(set(inspector.get_table_names()))
 
@@ -99,7 +100,7 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "047"
+        assert version == "048"
 
     command.downgrade(config, "022")
     downgraded_rating_columns = {

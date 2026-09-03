@@ -19,6 +19,7 @@ from apps.api.src.repository_dependencies import (
     get_worker_profile_repo,
 )
 from apps.api.src.repository_dependencies import get_booking_transition_repo
+from apps.api.src.repository_dependencies import shared_shift_offer_repository
 from apps.api.src.repository_dependencies_workforce import (
     shared_relationship_transition_repository,
     shared_worker_relationship_repository,
@@ -35,10 +36,10 @@ POOLER = {"X-Actor-Role": "worker", "X-Actor-Id": "pool-1"}
 
 @pytest.fixture(autouse=True)
 def clear_state():
-    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository()):
+    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository()):
         repo.clear()
     yield
-    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository()):
+    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository()):
         repo.clear()
 
 
@@ -140,6 +141,11 @@ def test_publishing_books_employed_staff_and_offers_to_pool_members(client, in_m
     assert (pooled_shift.rota_state, pooled_shift.origin) == ("published", "assigned")
     assert pooled_shift.offer_pool_at is not None
     assert in_memory_repos[get_booking_repo].list_by_worker("pool-1") == []
+    offers = shared_shift_offer_repository().list_for_worker("pool-1")
+    assert [(offer.status, offer.source, offer.shift_id) for offer in offers] == [
+        ("pending", "rota", pooled["shift_id"])
+    ]
+    assert offers[0].expires_at == pooled_shift.offer_pool_at
 
     notified = in_memory_repos[get_notification_repo].list_for_worker("staff-1", limit=10)
     staff_notice = next(item for item in notified if item.type == "rota.published")
@@ -230,6 +236,8 @@ def test_reassignment_is_one_revision_and_never_leaks_an_offer(client, in_memory
 
     cancelled = in_memory_repos[get_booking_repo].get(booking.booking_id)
     assert cancelled.state == BookingState.CANCELLED_BY_OPERATOR
+    offers = shared_shift_offer_repository().list_for_worker("pool-1")
+    assert [(offer.status, offer.source) for offer in offers] == [("pending", "rota")]
 
     publications = client.get(
         "/venues/me/rota/publications", params={"week_start": WEEK_START.isoformat()}, headers=OPERATOR

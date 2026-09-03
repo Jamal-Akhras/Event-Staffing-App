@@ -39,6 +39,7 @@ def in_memory_repositories() -> dict[Callable[..., Any], Any]:
         rd.get_booking_allocator: InMemoryBookingAllocator(rd._BOOKINGS, rd._SHIFTS),
         rd.get_outbox_publisher: InMemoryOutboxPublisher(rd._NOTIFICATIONS, LoggingEmailTransport()),
         rd.get_booking_charge_adjustment_repo: rd._CHARGE_ADJUSTMENTS,
+        rd.get_shift_offer_repo: rd._SHIFT_OFFERS,
         rda.get_availability_rule_repo: rda._AVAILABILITY_RULES,
         rda.get_availability_exception_repo: rda._AVAILABILITY_EXCEPTIONS,
         rda.get_time_off_repo: rda._TIME_OFF,

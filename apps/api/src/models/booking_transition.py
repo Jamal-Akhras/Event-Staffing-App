@@ -15,6 +15,9 @@ ReasonCode = Literal[
     "rota_published",
     "venue_recorded",
     "hours_adjusted",
+    "offer_accepted",
+    "cover_approved",
+    "release_approved",
     "other",
 ]
 

@@ -5,6 +5,9 @@ from datetime import datetime
 from apps.api.src.datetime_utils import utc_now
 from apps.api.src.db.database import SessionLocal
 from apps.api.src.repositories.sqlalchemy_account_repository import SqlAlchemyAccountRepository
+from apps.api.src.repositories.sqlalchemy_shift_offer_repository import (
+    SqlAlchemyShiftOfferRepository,
+)
 from apps.api.src.repositories.sqlalchemy_shift_repository import SqlAlchemyShiftRepository
 from apps.api.src.repositories.sqlalchemy_worker_relationship_repository import (
     SqlAlchemyWorkerRelationshipRepository,
@@ -20,6 +23,7 @@ def run(now: datetime | None = None) -> int:
             SqlAlchemyWorkerRelationshipRepository(session),
             SqlAlchemyAccountRepository(session),
             SqlAlchemyOutboxPublisher(session),
+            offers=SqlAlchemyShiftOfferRepository(session),
         )
         return len(service.sweep(now or utc_now()))
 

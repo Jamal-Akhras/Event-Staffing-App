@@ -21,11 +21,13 @@ class EscalationService:
         relationships: WorkerRelationshipRepository,
         accounts: AccountRepository,
         outbox: OutboxPublisher,
+        offers=None,
     ) -> None:
         self._shifts = shifts
         self._relationships = relationships
         self._accounts = accounts
         self._outbox = outbox
+        self._offers = offers
 
     def stamp_new_shift(self, shift: Shift, now: datetime) -> Shift:
         policy = self._policy_for(shift.account_id)
@@ -127,6 +129,10 @@ class EscalationService:
 
     def _advance(self, shift: Shift, target: str, now: datetime, reason: str) -> Shift:
         previous = shift.origin
+        if self._offers is not None and previous == "assigned":
+            pending = self._offers.get_pending_for_shift(shift.shift_id)
+            if pending is not None:
+                self._offers.save(replace(pending, status="expired"))
         market = target == "market"
         moved = self._shifts.save(
             replace(

@@ -109,6 +109,18 @@ _CHARGE_ADJUSTMENTS = _ChargeAdjustmentRepo()
 
 def shared_booking_charge_adjustment_repository():
     return _CHARGE_ADJUSTMENTS
+
+
+from apps.api.src.repositories.in_memory_shift_offer_repository import (
+    InMemoryShiftOfferRepository as _ShiftOfferRepo,
+)
+
+_SHIFT_OFFERS = _ShiftOfferRepo()
+
+
+def shared_shift_offer_repository():
+    return _SHIFT_OFFERS
+
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
@@ -301,3 +313,13 @@ def get_booking_charge_adjustment_repo(session: Session | None = Depends(get_req
     if use_in_memory_repositories():
         return _CHARGE_ADJUSTMENTS
     return SqlAlchemyBookingChargeAdjustmentRepository(_session(session))
+
+
+def get_shift_offer_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_shift_offer_repository import (
+        SqlAlchemyShiftOfferRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _SHIFT_OFFERS
+    return SqlAlchemyShiftOfferRepository(_session(session))

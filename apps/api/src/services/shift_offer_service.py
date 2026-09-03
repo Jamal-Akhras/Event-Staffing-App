@@ -63,6 +63,11 @@ class ShiftOfferService:
     def list_for_worker(self, worker_id: str) -> list[ShiftOffer]:
         return self._offers.list_for_worker(worker_id)
 
+    def withdraw_for_shift(self, shift_id: str, now: datetime) -> None:
+        pending = self._offers.get_pending_for_shift(shift_id)
+        if pending is not None:
+            self._offers.save(replace(pending, status="withdrawn", responded_at=now))
+
     def accept(
         self, offer_id: str, worker_id: str, now: datetime, response_source: str = "manual"
     ) -> Booking:

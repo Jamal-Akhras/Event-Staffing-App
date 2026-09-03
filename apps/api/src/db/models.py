@@ -36,6 +36,7 @@ from apps.api.src.db.idempotency_models import IdempotencyRecordModel
 from apps.api.src.db.billing_models import PartnerCodeModel, PartnerCodeRedemptionModel
 from apps.api.src.db.event_models import EventModel
 from apps.api.src.db.booking_charge_models import BookingChargeModel
+from apps.api.src.db.shift_offer_models import ShiftOfferModel
 from apps.api.src.db.booking_transition_models import BookingTransitionModel
 from apps.api.src.db.workforce_models import (
     RelationshipTransitionModel,
