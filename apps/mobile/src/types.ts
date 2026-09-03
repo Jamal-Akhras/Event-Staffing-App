@@ -35,6 +35,7 @@ export type WorkerContext = {
   home_mode: "shifts" | "browse";
   employed: boolean;
   active_relationships: number;
+  marketplace_enabled: boolean;
 };
 
 export type FeedShift = Shift & {

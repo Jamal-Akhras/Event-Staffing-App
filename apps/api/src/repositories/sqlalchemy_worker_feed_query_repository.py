@@ -28,7 +28,7 @@ class SqlAlchemyWorkerFeedQueryRepository:
             .where(ShiftModel.workers_filled < ShiftModel.workers_needed)
             .where(~_passed_exists(query.worker_id))
             .where(~_application_exists(query.worker_id))
-            .where(_reaches_worker(query.worker_id))
+            .where(_reaches_worker(query.worker_id, query.marketplace_enabled))
         )
         if query.search:
             pattern = f"%{_escape_search(query.search)}%"
@@ -88,9 +88,14 @@ def _escape_search(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _reaches_worker(worker_id: str):
+def _reaches_worker(worker_id: str, marketplace_enabled: bool):
+    market_arm = (
+        ShiftModel.origin == "market"
+        if marketplace_enabled
+        else and_(ShiftModel.origin == "market", _pool_member_exists(worker_id))
+    )
     return or_(
-        ShiftModel.origin == "market",
+        market_arm,
         and_(ShiftModel.origin == "assigned", ShiftModel.assigned_worker_id == worker_id),
         and_(ShiftModel.origin == "pool", _pool_member_exists(worker_id)),
     )

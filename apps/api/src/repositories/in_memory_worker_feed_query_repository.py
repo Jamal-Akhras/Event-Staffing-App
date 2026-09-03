@@ -25,17 +25,20 @@ class InMemoryWorkerFeedQueryRepository:
         self._feed_states = feed_states
         self._relationships = relationships
 
-    def _reaches_worker(self, shift, worker_id: str) -> bool:
-        if shift.origin == "market":
-            return True
-        if shift.origin == "assigned":
-            return shift.assigned_worker_id == worker_id
+    def _is_related(self, shift, worker_id: str) -> bool:
         relationship = self._relationships.get_for_venue_worker(shift.account_id or "", worker_id)
         return (
             relationship is not None
             and relationship.status in ("active", "invited")
             and relationship.relationship_type != "one_off"
         )
+
+    def _reaches_worker(self, shift, worker_id: str, marketplace_enabled: bool) -> bool:
+        if shift.origin == "market":
+            return marketplace_enabled or self._is_related(shift, worker_id)
+        if shift.origin == "assigned":
+            return shift.assigned_worker_id == worker_id
+        return self._is_related(shift, worker_id)
 
     def list_page(self, query: WorkerFeedQuery) -> list[WorkerFeedItem]:
         local_zone = ZoneInfo(query.timezone)
@@ -51,7 +54,7 @@ class InMemoryWorkerFeedQueryRepository:
                 continue
             if shift.workers_filled >= shift.workers_needed:
                 continue
-            if not self._reaches_worker(shift, query.worker_id):
+            if not self._reaches_worker(shift, query.worker_id, query.marketplace_enabled):
                 continue
             if self._feed_states.get(query.worker_id, shift.shift_id) is not None:
                 continue

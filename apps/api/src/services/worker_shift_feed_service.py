@@ -78,6 +78,7 @@ class WorkerShiftFeedService:
             position=position,
             today_start=today_start,
             today_end=today_end,
+            marketplace_enabled=profile.marketplace_enabled,
         )
         rows = self._queries.list_page(query)
         items = rows[:limit]

@@ -25,3 +25,4 @@ class WorkerContextResponse(BaseModel):
     home_mode: Literal["shifts", "browse"]
     employed: bool
     active_relationships: int
+    marketplace_enabled: bool

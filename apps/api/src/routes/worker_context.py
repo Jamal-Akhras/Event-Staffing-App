@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends
 from apps.api.src.auth import ActorContext, ActorRole, get_actor_context, require_role
 from apps.api.src.models.worker_relationship import EMPLOYED_TYPES, WorkerRelationship
 from apps.api.src.repositories.account_repository import AccountRepository
+from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
-from apps.api.src.repository_dependencies import get_account_repo
+from apps.api.src.repository_dependencies import get_account_repo, get_worker_profile_repo
 from apps.api.src.repository_dependencies_workforce import get_worker_relationship_repo
 from apps.api.src.schemas_worker_context import MyRelationshipResponse, WorkerContextResponse
 
@@ -30,6 +31,7 @@ def list_my_relationships(
 def work_context(
     actor: ActorContext = Depends(get_actor_context),
     relationships: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    profiles: WorkerProfileRepository = Depends(get_worker_profile_repo),
 ) -> WorkerContextResponse:
     require_role(actor.role, {ActorRole.WORKER})
     active = [
@@ -38,10 +40,12 @@ def work_context(
         if item.status == "active"
     ]
     employed = any(item.relationship_type in EMPLOYED_TYPES for item in active)
+    profile = profiles.get(actor.effective_worker_id)
     return WorkerContextResponse(
         home_mode="shifts" if employed else "browse",
         employed=employed,
         active_relationships=len(active),
+        marketplace_enabled=profile.marketplace_enabled if profile else True,
     )
 
 

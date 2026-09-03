@@ -12,6 +12,7 @@ import { ProfileHeaderCard } from "./ProfileHeaderCard";
 import { PrivateProfileFields, PublicProfileFields } from "./ProfileFormFields";
 import { SettingsRow } from "./SettingsRow";
 import { useWorkerProfile } from "./useWorkerProfile";
+import { useWorkPreferences } from "./useWorkPreferences";
 
 export function ProfileDetailsScreen() {
   const { form, setForm, profile, status, uploading, save, pickAvatar } = useWorkerProfile();
@@ -54,6 +55,7 @@ export function NotificationSettingsScreen() {
 
 export function PrivacySettingsScreen() {
   const { allowRecontact, setAllowRecontact, persist } = useWorkerProfile();
+  const workPreferences = useWorkPreferences();
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -74,6 +76,24 @@ export function PrivacySettingsScreen() {
           thumbColor="#fff"
         />
       </View>
+
+      <View style={styles.toggleRow}>
+        <View style={styles.grow}>
+          <Text style={styles.toggleLabel}>Open marketplace shifts</Text>
+          <Text style={styles.toggleHint}>
+            Show open-market shifts in Browse. Work from your venues' teams and pools always shows.
+          </Text>
+        </View>
+        <Switch
+          value={workPreferences.marketplaceEnabled ?? true}
+          disabled={workPreferences.marketplaceEnabled === null}
+          onValueChange={(value) => void workPreferences.setMarketplace(value)}
+          trackColor={{ false: COLORS.border, true: COLORS.primary }}
+          thumbColor="#fff"
+        />
+      </View>
+      {workPreferences.error ? <Text style={styles.error}>{workPreferences.error}</Text> : null}
+
       <Text style={styles.hint}>
         Ratings you give a venue are never shown to that venue.
       </Text>
@@ -117,6 +137,7 @@ const styles = StyleSheet.create({
   },
   actionText: { ...TYPE.action, color: COLORS.onPrimary },
   status: { ...TYPE.meta, color: COLORS.inkMuted, textAlign: "center" },
+  error: { ...TYPE.meta, color: COLORS.error },
   toggleRow: { flexDirection: "row", alignItems: "center", gap: SPACE.s4 },
   toggleLabel: { ...TYPE.body, fontSize: 15, color: COLORS.ink },
   toggleHint: { ...TYPE.meta, color: COLORS.inkMuted, marginTop: 2 },

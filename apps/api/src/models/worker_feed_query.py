@@ -27,6 +27,7 @@ class WorkerFeedQuery:
     timing: str = "all"
     minimum_pay: Decimal | None = None
     position: FeedPosition | None = None
+    marketplace_enabled: bool = True
 
 
 @dataclass(frozen=True)

@@ -69,7 +69,12 @@ def test_work_context_is_shifts_first_for_employed_workers(client):
     _relationship("rel-2", "venue-2", "pool")
 
     body = client.get("/me/work-context", headers=WORKER).json()
-    assert body == {"home_mode": "shifts", "employed": True, "active_relationships": 2}
+    assert body == {
+        "home_mode": "shifts",
+        "employed": True,
+        "active_relationships": 2,
+        "marketplace_enabled": True,
+    }
 
 
 def test_work_context_is_browse_first_without_employment(client):
@@ -77,12 +82,22 @@ def test_work_context_is_browse_first_without_employment(client):
     _relationship("rel-2", "venue-2", "permanent", status="invited")
 
     body = client.get("/me/work-context", headers=WORKER).json()
-    assert body == {"home_mode": "browse", "employed": False, "active_relationships": 1}
+    assert body == {
+        "home_mode": "browse",
+        "employed": False,
+        "active_relationships": 1,
+        "marketplace_enabled": True,
+    }
 
 
 def test_a_worker_with_no_relationships_lands_on_browse(client):
     body = client.get("/me/work-context", headers=WORKER).json()
-    assert body == {"home_mode": "browse", "employed": False, "active_relationships": 0}
+    assert body == {
+        "home_mode": "browse",
+        "employed": False,
+        "active_relationships": 0,
+        "marketplace_enabled": True,
+    }
     assert client.get("/me/relationships", headers=WORKER).json() == []
 
 
