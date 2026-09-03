@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict
 
 from apps.api.src.models.insights import AttendanceSummary, WorkerActivity
+from apps.api.src.repositories.booking_repository import LIVE_BOOKING_STATES
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
@@ -74,6 +75,17 @@ class InMemoryBookingRepository:
         items = [booking for booking in self._bookings.values() if booking.shift_id in wanted]
         items.sort(key=lambda item: item.start_time)
         return items
+
+    def list_live_for_workers(self, worker_ids: list[str], at: datetime) -> list[Booking]:
+        wanted = set(worker_ids)
+        items = [
+            booking
+            for booking in self._bookings.values()
+            if booking.worker_id in wanted
+            and booking.state in LIVE_BOOKING_STATES
+            and booking.start_time <= at < booking.end_time
+        ]
+        return sorted(items, key=lambda booking: (booking.start_time, booking.booking_id))
 
     def attendance_summary(self, account_id: str, since: datetime, until: datetime) -> AttendanceSummary:
         window = [

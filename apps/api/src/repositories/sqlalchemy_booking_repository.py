@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import BookingModel, ShiftModel
 from apps.api.src.models.insights import AttendanceSummary, WorkerActivity
+from apps.api.src.repositories.booking_repository import LIVE_BOOKING_STATES
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
 
@@ -88,6 +89,20 @@ class SqlAlchemyBookingRepository:
             self._session.query(BookingModel)
             .filter(BookingModel.shift_id.in_(shift_ids))
             .order_by(BookingModel.start_time)
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
+    def list_live_for_workers(self, worker_ids: list[str], at: datetime) -> list[Booking]:
+        if not worker_ids:
+            return []
+        rows = (
+            self._session.query(BookingModel)
+            .filter(BookingModel.worker_id.in_(worker_ids))
+            .filter(BookingModel.state.in_(LIVE_BOOKING_STATES))
+            .filter(BookingModel.start_time <= at)
+            .filter(BookingModel.end_time > at)
+            .order_by(BookingModel.start_time, BookingModel.booking_id)
             .all()
         )
         return [_to_domain(row) for row in rows]

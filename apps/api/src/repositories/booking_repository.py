@@ -7,6 +7,14 @@ from apps.api.src.models.insights import AttendanceSummary, WorkerActivity
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
 
+LIVE_BOOKING_STATES = (
+    BookingState.CONFIRMED,
+    BookingState.CHECKED_IN,
+    BookingState.CHECKED_OUT,
+    BookingState.APPROVED,
+    BookingState.PAID,
+)
+
 
 class BookingRepository(Protocol):
     def get(self, booking_id: str) -> Booking | None:
@@ -49,6 +57,9 @@ class BookingRepository(Protocol):
         ...
 
     def list_for_shifts(self, shift_ids: list[str]) -> list[Booking]:
+        ...
+
+    def list_live_for_workers(self, worker_ids: list[str], at: datetime) -> list[Booking]:
         ...
 
     def attendance_summary(self, account_id: str, since: datetime, until: datetime) -> AttendanceSummary:
