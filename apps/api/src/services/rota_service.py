@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from datetime import date, datetime, timedelta
+from dataclasses import replace
+from datetime import date, datetime
 from typing import Any
 from uuid import uuid4
 from zoneinfo import ZoneInfo
-
-from sqlalchemy.exc import IntegrityError
 
 from apps.api.src.models.booking_transition import BookingTransition
 from apps.api.src.models.rota_publication import RotaPublication
@@ -16,29 +14,24 @@ from apps.api.src.repositories.application_repository import ApplicationReposito
 from apps.api.src.repositories.booking_allocator import BookingAllocator, OverlappingBookingError
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.booking_transition_repository import BookingTransitionRepository
-from apps.api.src.repositories.in_memory_rota_publication_repository import DuplicateRevisionError
 from apps.api.src.repositories.rota_publication_repository import RotaPublicationRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.schemas_recovery import CancellationRequest
 from apps.api.src.services.booking_lifecycle_service import BookingLifecycleService
-from apps.api.src.services.errors import ConflictError, NotFoundError, ValidationError
+from apps.api.src.services.errors import NotFoundError, ValidationError
 from apps.api.src.services.escalation_service import EscalationService
 from apps.api.src.services.outbox_publisher import OutboxPublisher
 from apps.api.src.repositories.account_repository import AccountRepository
 from apps.api.src.repositories.market_repository import MarketRepository
-from apps.api.src.services.rota_diff import _diff, _entry, _normalize
-from apps.api.src.services.rota_week import local_day, venue_timezone, week_window
+from apps.api.src.services.rota_revisions import (
+    PublishOutcome,
+    RotaRevisionService,
+    live_bookings,
+)
+from apps.api.src.services.rota_week import local_day, week_window
 from packages.domain.src.booking import Booking
 from packages.domain.src.booking_state import BookingState
-
-
-@dataclass(frozen=True)
-class PublishOutcome:
-    publication: RotaPublication
-    changes: list[dict[str, Any]]
-    booked_worker_ids: list[str]
-    offered_worker_ids: list[str]
 
 
 class RotaService:
@@ -61,17 +54,15 @@ class RotaService:
         self._bookings = bookings
         self._applications = applications
         self._allocator = allocator
-        self._publications = publications
         self._relationships = relationships
         self._transitions = transitions
         self._lifecycle = lifecycle
         self._escalations = escalations
         self._outbox = outbox
-        self._accounts = accounts
-        self._markets = markets
+        self._revisions = RotaRevisionService(shifts, bookings, publications, outbox, accounts, markets)
 
     def publish(self, venue_id: str, week_start: date, actor_user_id: str, now: datetime) -> PublishOutcome:
-        zone = self._zone_for(venue_id)
+        zone = self._revisions.zone_for(venue_id)
         window_start, window_end = week_window(week_start, zone)
         week_shifts = [
             shift
@@ -124,8 +115,8 @@ class RotaService:
                 offered.append(draft.assigned_worker_id)
 
         synced = self._sync_booking_times(venue_id, window_start, window_end, actor_user_id, now)
-        outcome = self._mint_revision(venue_id, week_start, actor_user_id, now)
-        self._notify(outcome, exclude=synced)
+        outcome = self._revisions.mint(venue_id, week_start, actor_user_id, now)
+        self._revisions.notify(outcome, exclude=synced)
         return PublishOutcome(
             publication=outcome.publication,
             changes=outcome.changes,
@@ -176,8 +167,8 @@ class RotaService:
                 booking_id=booking.booking_id,
             )
 
-        outcome = self._mint_revision(venue_id, self._week_of(shift), actor_user_id, now)
-        self._notify(outcome, exclude={b.worker_id for b in live})
+        outcome = self._revisions.mint(venue_id, self._revisions.week_of(shift), actor_user_id, now)
+        self._revisions.notify(outcome, exclude={b.worker_id for b in live})
         return self._shifts.get(shift_id)
 
     def reassign(
@@ -232,11 +223,11 @@ class RotaService:
                 f"{drafted.role} is yours to take.", booking_id=None,
             )
 
-        outcome = self._mint_revision(venue_id, self._week_of(shift), actor_user_id, now)
+        outcome = self._revisions.mint(venue_id, self._revisions.week_of(shift), actor_user_id, now)
         exclude = {live[0].worker_id} if live else set()
         if not employed:
             exclude.add(new_worker_id)
-        self._notify(outcome, exclude=exclude)
+        self._revisions.notify(outcome, exclude=exclude)
         return self._shifts.get(shift_id)
 
     def remove(
@@ -259,18 +250,12 @@ class RotaService:
                     actor_user_id,
                     actor_role="operator",
                 )
-        outcome = self._mint_revision(venue_id, self._week_of(shift), actor_user_id, now)
-        self._notify(outcome, exclude={booking.worker_id for booking in live})
+        outcome = self._revisions.mint(venue_id, self._revisions.week_of(shift), actor_user_id, now)
+        self._revisions.notify(outcome, exclude={booking.worker_id for booking in live})
         return self._shifts.get(shift_id)
 
     def publications_for_week(self, venue_id: str, week_start: date) -> list[tuple[RotaPublication, list[dict[str, Any]]]]:
-        revisions = self._publications.list_for_week(venue_id, week_start)
-        result = []
-        previous: list[dict[str, Any]] = []
-        for publication in revisions:
-            result.append((publication, _diff(previous, publication.assignments)))
-            previous = publication.assignments
-        return result
+        return self._revisions.publications_for_week(venue_id, week_start)
 
     def _book_employed(self, draft: Shift, actor_user_id: str, now: datetime) -> Booking:
         allocated = self._allocator.allocate(
@@ -315,84 +300,6 @@ class RotaService:
                 )
                 synced.add(booking.worker_id)
         return synced
-
-    def _mint_revision(self, venue_id: str, week_start: date, actor_user_id: str, now: datetime) -> PublishOutcome:
-        snapshot = self._snapshot(venue_id, week_start, self._zone_for(venue_id))
-        previous = self._publications.latest_for_week(venue_id, week_start)
-        previous_entries = previous.assignments if previous else []
-        if previous is not None and _normalize(previous_entries) == _normalize(snapshot):
-            return PublishOutcome(previous, [], [], [])
-        publication = RotaPublication(
-            publication_id=str(uuid4()),
-            venue_id=venue_id,
-            week_start=week_start,
-            revision=(previous.revision + 1) if previous else 1,
-            published_at=now,
-            published_by_user_id=actor_user_id,
-            assignments=snapshot,
-        )
-        try:
-            self._publications.save(publication)
-        except (IntegrityError, DuplicateRevisionError) as exc:
-            raise ConflictError("The rota was published concurrently: reload and try again.") from exc
-        return PublishOutcome(publication, _diff(previous_entries, snapshot), [], [])
-
-    def _snapshot(self, venue_id: str, week_start: date, zone: ZoneInfo) -> list[dict[str, Any]]:
-        window_start, window_end = week_window(week_start, zone)
-        entries: dict[tuple[str, str], dict[str, Any]] = {}
-        for shift in self._shifts.list_in_range(venue_id, window_start, window_end):
-            if shift.status == "cancelled" or shift.rota_state != "published":
-                continue
-            if shift.origin == "assigned" and shift.assigned_worker_id:
-                entries[(shift.shift_id, shift.assigned_worker_id)] = _entry(shift, shift.assigned_worker_id)
-            for booking in self._live_bookings(shift.shift_id):
-                entries[(shift.shift_id, booking.worker_id)] = _entry(shift, booking.worker_id)
-        return sorted(entries.values(), key=lambda item: (item["shift_id"], item["worker_id"]))
-
-    def _notify(
-        self,
-        outcome: PublishOutcome,
-        exclude: set[str] | None = None,
-    ) -> None:
-        exclude = exclude or set()
-        if outcome.publication.revision == 1 and not outcome.changes:
-            targets = {entry["worker_id"] for entry in outcome.publication.assignments}
-        else:
-            targets = {
-                worker_id
-                for change in outcome.changes
-                for worker_id in (change.get("worker_id"), change.get("previous_worker_id"))
-                if worker_id
-            }
-        for worker_id in sorted(targets - exclude):
-            entry = next(
-                (e for e in outcome.publication.assignments if e["worker_id"] == worker_id), None
-            )
-            booking = next(
-                (
-                    candidate
-                    for candidate in self._live_bookings(entry["shift_id"])
-                    if candidate.worker_id == worker_id
-                ),
-                None,
-            ) if entry else None
-            body = "Open the app to see your week." if entry else "One of your shifts changed."
-            self._outbox.publish_notification(
-                event_type="rota.published",
-                aggregate_type="rota_publication",
-                aggregate_id=f"{outcome.publication.publication_id}:{worker_id}",
-                recipient_kind="worker",
-                recipient_id=worker_id,
-                category="shift_changes",
-                title="Your rota was published",
-                body=body,
-                action_kind="booking" if booking is not None else "shift",
-                action_entity_id=(
-                    booking.booking_id
-                    if booking is not None
-                    else entry["shift_id"] if entry else outcome.publication.publication_id
-                ),
-            )
 
     def _notify_worker(
         self, worker_id: str, shift: Shift, event_type: str, title: str, body: str,
@@ -440,22 +347,7 @@ class RotaService:
         return shift
 
     def _zone_for(self, venue_id: str) -> ZoneInfo:
-        return venue_timezone(venue_id, self._accounts, self._markets)
+        return self._revisions.zone_for(venue_id)
 
     def _live_bookings(self, shift_id: str) -> list[Booking]:
-        live_states = {
-            BookingState.CONFIRMED,
-            BookingState.CHECKED_IN,
-            BookingState.CHECKED_OUT,
-            BookingState.APPROVED,
-            BookingState.PAID,
-        }
-        return [b for b in self._bookings.list_by_shift(shift_id) if b.state in live_states]
-
-    def _week_of(self, shift: Shift) -> date:
-        day = local_day(shift.start_time, self._zone_for(shift.account_id))
-        for offset in range(7):
-            candidate = day - timedelta(days=offset)
-            if self._publications.latest_for_week(shift.account_id, candidate) is not None:
-                return candidate
-        return day
+        return live_bookings(self._bookings, shift_id)
