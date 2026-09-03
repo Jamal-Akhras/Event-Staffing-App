@@ -34,3 +34,19 @@ export const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
   pool: "Pool",
   one_off: "Worked once",
 };
+
+export type TimeOffStatus = "pending" | "approved" | "declined" | "withdrawn";
+
+export type TimeOffRequest = {
+  request_id: string;
+  worker_id: string;
+  venue_id: string;
+  start_time: string;
+  end_time: string;
+  status: TimeOffStatus;
+  reason: string;
+  created_at: string;
+  updated_at: string;
+  decided_at: string | null;
+  decided_by_user_id: string | null;
+};

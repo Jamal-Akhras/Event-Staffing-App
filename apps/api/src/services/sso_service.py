@@ -100,6 +100,7 @@ class SsoService:
                 pay_rate=None,
                 notes=None,
                 updated_at=now,
+                marketplace_enabled=True,
             )
         )
         return user

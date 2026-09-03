@@ -4,6 +4,7 @@ from typing import Any, Callable
 
 from apps.api.src import repository_dependencies as rd
 from apps.api.src import repository_dependencies_workforce as rdw
+from apps.api.src import repository_dependencies_availability as rda
 from apps.api.src.repositories.in_memory_booking_allocator import InMemoryBookingAllocator
 from apps.api.src.services.email import LoggingEmailTransport
 from apps.api.src.services.outbox_publisher import InMemoryOutboxPublisher
@@ -38,6 +39,9 @@ def in_memory_repositories() -> dict[Callable[..., Any], Any]:
         rd.get_booking_allocator: InMemoryBookingAllocator(rd._BOOKINGS, rd._SHIFTS),
         rd.get_outbox_publisher: InMemoryOutboxPublisher(rd._NOTIFICATIONS, LoggingEmailTransport()),
         rd.get_booking_charge_adjustment_repo: rd._CHARGE_ADJUSTMENTS,
+        rda.get_availability_rule_repo: rda._AVAILABILITY_RULES,
+        rda.get_availability_exception_repo: rda._AVAILABILITY_EXCEPTIONS,
+        rda.get_time_off_repo: rda._TIME_OFF,
     }
 
 

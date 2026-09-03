@@ -20,6 +20,7 @@ import { PostShiftModal, type PostDraft } from "./shifts/PostShiftModal";
 import { PublishBar } from "./shifts/PublishBar";
 import { ShiftManagementModal } from "./shifts/ShiftManagementModal";
 import { TemplateChips } from "./shifts/TemplateChips";
+import { TimeOffQueue } from "./shifts/TimeOffQueue";
 import { TonightRail } from "./shifts/TonightRail";
 import { WeekBoard } from "./shifts/WeekBoard";
 import {
@@ -34,6 +35,7 @@ import {
 } from "./shifts/boardUtils";
 import { useBoardData } from "./shifts/useBoardData";
 import { usePublications, useRotaActions } from "./shifts/useRota";
+import { useTimeOffQueue } from "./shifts/useTimeOffQueue";
 import { usePeople } from "./workers/useDirectory";
 import "./DashboardPage.css";
 import "./dashboard/OverviewCards.css";
@@ -66,6 +68,7 @@ export function ShiftsPage() {
   const people = usePeople();
   const publications = usePublications(weekKey, timezone !== null);
   const rota = useRotaActions(weekKey, (type, message) => toast({ type, message }));
+  const timeOff = useTimeOffQueue((type, message) => toast({ type, message }));
   const location = venue.data?.default_location ?? "";
   const currency = venue.data?.currency ?? "GBP";
   const peopleNames = Object.fromEntries(
@@ -166,6 +169,15 @@ export function ShiftsPage() {
       </div>
 
       <aside className="board-rail">
+        <TimeOffQueue
+          requests={timeOff.query.data ?? []}
+          people={peopleNames}
+          timezone={timezone}
+          loading={timeOff.query.isLoading}
+          error={timeOff.query.error as Error | null}
+          busyId={timeOff.decision.isPending ? timeOff.decision.variables?.requestId ?? null : null}
+          onDecide={(requestId, action) => timeOff.decision.mutate({ requestId, action })}
+        />
         <DecisionList
           pending={pending}
           shifts={data.shifts}

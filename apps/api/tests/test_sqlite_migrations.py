@@ -37,6 +37,9 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
         "booking_charges",
         "rota_publications",
         "booking_charge_adjustments",
+        "worker_availability_rules",
+        "worker_availability_exceptions",
+        "time_off_requests",
     }
     assert expected_tables.issubset(set(inspector.get_table_names()))
 
@@ -70,6 +73,8 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
 
     user_columns = {column["name"] for column in inspector.get_columns("users")}
     assert {"session_version", "deactivated_at", "anonymized_at"}.issubset(user_columns)
+    worker_columns = {column["name"] for column in inspector.get_columns("worker_profiles")}
+    assert "marketplace_enabled" in worker_columns
 
     shift_indexes = {index["name"] for index in inspector.get_indexes("shifts")}
     assert "ix_shifts_open_venue_start" in shift_indexes
@@ -94,13 +99,55 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "045"
+        assert version == "046"
 
     command.downgrade(config, "022")
     downgraded_rating_columns = {
         column["name"] for column in inspect(engine).get_columns("ratings")
     }
     assert "rater_id" not in downgraded_rating_columns
+
+
+def test_availability_migration_backfills_and_reverses(tmp_path, monkeypatch):
+    database_path = tmp_path / "availability-backfill.db"
+    database_url = f"sqlite+pysqlite:///{database_path.as_posix()}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    config = Config(str(PROJECT_ROOT / "apps/api/alembic.ini"))
+    command.upgrade(config, "045")
+    engine = create_engine(database_url)
+
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO worker_profiles "
+                "(worker_id, display_name, role, city, experience_years, reliability_score, "
+                "badges, languages, updated_at) VALUES "
+                "('worker-1', 'Alex', 'Bartender', 'Bath', 2, 1, '[]', '[]', "
+                "'2030-01-01 10:00:00')"
+            )
+        )
+
+    command.upgrade(config, "046")
+    with engine.connect() as connection:
+        assert connection.execute(
+            text("SELECT marketplace_enabled FROM worker_profiles WHERE worker_id = 'worker-1'")
+        ).scalar_one() in (True, 1)
+    assert {
+        "worker_availability_rules",
+        "worker_availability_exceptions",
+        "time_off_requests",
+    }.issubset(set(inspect(engine).get_table_names()))
+
+    command.downgrade(config, "045")
+    downgraded = inspect(engine)
+    assert "marketplace_enabled" not in {
+        column["name"] for column in downgraded.get_columns("worker_profiles")
+    }
+    assert "time_off_requests" not in downgraded.get_table_names()
+
+    command.upgrade(config, "046")
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "046"
 
 
 def test_organisation_migration_backfills_and_reverses(tmp_path, monkeypatch):

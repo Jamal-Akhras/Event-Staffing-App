@@ -172,6 +172,7 @@ class WorkerProfilePrivateResponse(WorkerProfilePublicResponse):
     pay_rate: MoneyAmount | None = None
     notes: str | None = None
     allow_venue_recontact: bool = False
+    marketplace_enabled: bool = True
 
 
 class ErrorResponse(BaseModel):

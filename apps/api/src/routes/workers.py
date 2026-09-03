@@ -152,6 +152,7 @@ def update_worker_profile(
     reliability_score = 0.0 if existing is None else existing.reliability_score
     badges = [] if existing is None else existing.badges
     avatar_url = None if existing is None else existing.avatar_url
+    marketplace_enabled = True if existing is None else existing.marketplace_enabled
     market_id = request.market_id if request.market_id is not None else (existing.market_id if existing else None)
     if market_id is not None:
         market = market_repo.get(market_id)
@@ -177,5 +178,6 @@ def update_worker_profile(
         avatar_url=avatar_url,
         allow_venue_recontact=request.allow_venue_recontact,
         market_id=market_id,
+        marketplace_enabled=marketplace_enabled,
     )
     return _worker_private_view(repo.save(profile))

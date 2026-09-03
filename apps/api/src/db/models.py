@@ -45,6 +45,11 @@ from apps.api.src.db.workforce_models import (
 )
 from apps.api.src.db.template_models import RecurringScheduleModel, ShiftTemplateModel
 from apps.api.src.db.rota_models import RotaPublicationModel
+from apps.api.src.db.availability_models import (
+    AvailabilityExceptionModel,
+    AvailabilityRuleModel,
+    TimeOffRequestModel,
+)
 
 AccountModel = VenueModel
 
@@ -219,6 +224,7 @@ class WorkerProfileModel(Base):
     updated_at = Column(UtcDateTime(), nullable=False)
     avatar_url = Column(String, nullable=True)
     allow_venue_recontact = Column(Boolean, nullable=False, default=False)
+    marketplace_enabled = Column(Boolean, nullable=False, default=True, server_default=true())
     market_id = Column(String, ForeignKey("markets.market_id", ondelete="RESTRICT"), nullable=True, index=True)
 
 

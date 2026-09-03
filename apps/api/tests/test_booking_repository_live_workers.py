@@ -101,3 +101,28 @@ def test_list_live_for_workers_filters_state_worker_and_interval(repositories):
     assert [booking.booking_id for booking in result] == ["earlier", "selected"]
     assert result[1] == selected
     assert bookings.list_live_for_workers([], AT) == []
+
+
+def test_list_live_overlapping_for_worker_returns_every_overlap(repositories):
+    bookings, shifts, session = repositories
+    selected = _booking("selected-overlap", "worker-1", BookingState.APPROVED, 10)
+    ended_at_point = replace(
+        _booking("ended-overlap", "worker-1", BookingState.CONFIRMED), end_time=AT
+    )
+    cancelled = _booking("cancelled-overlap", "worker-1", BookingState.CANCELLED_BY_WORKER)
+    stranger = _booking("stranger-overlap", "worker-2", BookingState.CONFIRMED)
+    for booking in (selected, ended_at_point, cancelled, stranger):
+        shifts.save(_shift(booking.shift_id, booking.start_time, booking.end_time))
+        bookings.save(booking)
+    if session is not None:
+        session.flush()
+        session.expunge_all()
+
+    result = bookings.list_live_overlapping_for_worker(
+        "worker-1", AT - timedelta(minutes=30), AT + timedelta(minutes=30)
+    )
+
+    assert [booking.booking_id for booking in result] == [
+        "ended-overlap",
+        "selected-overlap",
+    ]

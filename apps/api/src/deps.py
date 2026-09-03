@@ -46,6 +46,11 @@ from apps.api.src.repository_dependencies_workforce import (
     get_venue_join_code_repo,
     get_worker_relationship_repo,
 )
+from apps.api.src.repository_dependencies_availability import (
+    get_availability_exception_repo,
+    get_availability_rule_repo,
+    get_time_off_repo,
+)
 from apps.api.src.config import get_platform_fee_percent
 from apps.api.src.repositories.partner_code_repository import PartnerCodeRepository
 from apps.api.src.services.application_service import ApplicationService
@@ -115,6 +120,9 @@ __all__ = [
     "get_worker_shift_feed_service",
     "get_worker_feed_state_repo",
     "get_worker_profile_repo",
+    "get_availability_exception_repo",
+    "get_availability_rule_repo",
+    "get_time_off_repo",
 ]
 
 

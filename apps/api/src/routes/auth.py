@@ -108,6 +108,7 @@ def register(
             pay_rate=None,
             notes=None,
             updated_at=now,
+            marketplace_enabled=payload.join_code is None,
         )
     )
     if payload.join_code is not None:

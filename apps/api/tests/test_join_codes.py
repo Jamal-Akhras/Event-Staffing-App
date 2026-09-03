@@ -179,6 +179,9 @@ def test_registering_with_a_code_joins_the_venue_team(client):
     assert [(item.worker_id, item.relationship_type) for item in relationships] == [
         (worker_profile_id, "permanent")
     ]
+    assert main.app.dependency_overrides[get_worker_profile_repo]().get(
+        worker_profile_id
+    ).marketplace_enabled is False
 
 
 def test_registering_without_a_code_joins_nobodys_team(client):
@@ -188,6 +191,10 @@ def test_registering_without_a_code_joins_nobodys_team(client):
     )
     assert response.status_code == 200, response.text
     assert shared_worker_relationship_repository().list_for_venue(VENUE_ID) == []
+    worker_id = response.json()["worker_profile_id"]
+    assert main.app.dependency_overrides[get_worker_profile_repo]().get(
+        worker_id
+    ).marketplace_enabled is True
 
 
 def test_registering_with_a_bad_code_creates_no_account(client):

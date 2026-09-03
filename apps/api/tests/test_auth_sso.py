@@ -68,6 +68,7 @@ def test_first_sso_sign_in_creates_a_verified_worker(repos):
     assert user.sso_provider == "clerk" and user.sso_subject == "user_abc123"
     profile = worker_repo.get(body["worker_profile_id"])
     assert profile.display_name == "Priya Shah"
+    assert profile.marketplace_enabled is True
 
 
 def test_sso_links_an_existing_password_account_by_email(repos):

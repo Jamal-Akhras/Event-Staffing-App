@@ -107,6 +107,27 @@ class SqlAlchemyBookingRepository:
         )
         return [_to_domain(row) for row in rows]
 
+    def list_live_overlapping_for_worker(
+        self,
+        worker_id: str,
+        start_time: datetime,
+        end_time: datetime,
+        venue_id: str | None = None,
+    ) -> list[Booking]:
+        query = self._session.query(BookingModel)
+        if venue_id is not None:
+            query = query.join(ShiftModel, ShiftModel.shift_id == BookingModel.shift_id)
+            query = query.filter(ShiftModel.account_id == venue_id)
+        rows = (
+            query.filter(BookingModel.worker_id == worker_id)
+            .filter(BookingModel.state.in_(LIVE_BOOKING_STATES))
+            .filter(BookingModel.start_time < end_time)
+            .filter(BookingModel.end_time > start_time)
+            .order_by(BookingModel.start_time, BookingModel.booking_id)
+            .all()
+        )
+        return [_to_domain(row) for row in rows]
+
     def attendance_summary(self, account_id: str, since: datetime, until: datetime) -> AttendanceSummary:
         completed = func.count(case((BookingModel.state.in_(COMPLETED_STATES), 1)))
         no_shows = func.count(case((BookingModel.state == BookingState.NO_SHOW, 1)))

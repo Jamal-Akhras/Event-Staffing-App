@@ -82,6 +82,7 @@ def _to_domain(model: WorkerProfileModel) -> WorkerProfile:
         avatar_url=getattr(model, "avatar_url", None),
         allow_venue_recontact=bool(getattr(model, "allow_venue_recontact", False)),
         market_id=model.market_id,
+        marketplace_enabled=bool(model.marketplace_enabled),
     )
 
 
@@ -104,3 +105,4 @@ def _apply_domain(model: WorkerProfileModel, profile: WorkerProfile) -> None:
     model.avatar_url = profile.avatar_url
     model.allow_venue_recontact = profile.allow_venue_recontact
     model.market_id = profile.market_id
+    model.marketplace_enabled = profile.marketplace_enabled

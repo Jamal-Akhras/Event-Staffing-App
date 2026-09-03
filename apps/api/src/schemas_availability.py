@@ -10,6 +10,7 @@ from apps.api.src.models.availability import (
     TimeOffStatus,
     WorkerAvailabilityStatus,
 )
+from apps.api.src.validation_types import UtcTimestamp
 
 
 class AvailabilityRuleInput(BaseModel):
@@ -42,16 +43,20 @@ class AvailabilityRulesReplaceRequest(BaseModel):
 class AvailabilityRuleResponse(AvailabilityRuleInput):
     rule_id: str
     worker_id: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcTimestamp
+    updated_at: UtcTimestamp
+
+
+class AvailabilityRulesResponse(BaseModel):
+    rules: list[AvailabilityRuleResponse]
 
 
 class AvailabilityExceptionCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: AvailabilityExceptionKind
-    start_time: datetime
-    end_time: datetime
+    start_time: UtcTimestamp
+    end_time: UtcTimestamp
     note: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
@@ -63,16 +68,16 @@ class AvailabilityExceptionCreateRequest(BaseModel):
 class AvailabilityExceptionResponse(AvailabilityExceptionCreateRequest):
     exception_id: str
     worker_id: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: UtcTimestamp
+    updated_at: UtcTimestamp
 
 
 class TimeOffCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     venue_id: str
-    start_time: datetime
-    end_time: datetime
+    start_time: UtcTimestamp
+    end_time: UtcTimestamp
     reason: str = Field(min_length=1, max_length=1000)
 
     @model_validator(mode="after")
@@ -85,9 +90,9 @@ class TimeOffResponse(TimeOffCreateRequest):
     request_id: str
     worker_id: str
     status: TimeOffStatus
-    created_at: datetime
-    updated_at: datetime
-    decided_at: datetime | None = None
+    created_at: UtcTimestamp
+    updated_at: UtcTimestamp
+    decided_at: UtcTimestamp | None = None
     decided_by_user_id: str | None = None
 
 
@@ -95,6 +100,16 @@ class WorkerCurrentStatusResponse(BaseModel):
     worker_id: str
     status: WorkerAvailabilityStatus
     availability_configured: bool
+
+
+class WorkPreferencesUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    marketplace_enabled: bool
+
+
+class WorkPreferencesResponse(BaseModel):
+    marketplace_enabled: bool
 
 
 def _validate_interval(start_time: datetime, end_time: datetime) -> None:

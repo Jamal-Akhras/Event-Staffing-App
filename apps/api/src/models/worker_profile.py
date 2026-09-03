@@ -26,3 +26,4 @@ class WorkerProfile:
     avatar_url: str | None = None
     allow_venue_recontact: bool = False
     market_id: str | None = None
+    marketplace_enabled: bool = True

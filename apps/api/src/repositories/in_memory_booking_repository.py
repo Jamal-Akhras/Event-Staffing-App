@@ -87,6 +87,30 @@ class InMemoryBookingRepository:
         ]
         return sorted(items, key=lambda booking: (booking.start_time, booking.booking_id))
 
+    def list_live_overlapping_for_worker(
+        self,
+        worker_id: str,
+        start_time: datetime,
+        end_time: datetime,
+        venue_id: str | None = None,
+    ) -> list[Booking]:
+        if venue_id is not None and self._shift_repo is None:
+            raise RuntimeError("InMemoryBookingRepository requires a shift repo for venue filtering.")
+        items = [
+            booking
+            for booking in self._bookings.values()
+            if booking.worker_id == worker_id
+            and booking.state in LIVE_BOOKING_STATES
+            and booking.start_time < end_time
+            and booking.end_time > start_time
+        ]
+        if venue_id is not None:
+            venue_shift_ids = {
+                shift.shift_id for shift in self._shift_repo.list_for_account(venue_id, limit=10_000)
+            }
+            items = [booking for booking in items if booking.shift_id in venue_shift_ids]
+        return sorted(items, key=lambda booking: (booking.start_time, booking.booking_id))
+
     def attendance_summary(self, account_id: str, since: datetime, until: datetime) -> AttendanceSummary:
         window = [
             booking

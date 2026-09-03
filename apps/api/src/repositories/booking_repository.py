@@ -62,6 +62,15 @@ class BookingRepository(Protocol):
     def list_live_for_workers(self, worker_ids: list[str], at: datetime) -> list[Booking]:
         ...
 
+    def list_live_overlapping_for_worker(
+        self,
+        worker_id: str,
+        start_time: datetime,
+        end_time: datetime,
+        venue_id: str | None = None,
+    ) -> list[Booking]:
+        ...
+
     def attendance_summary(self, account_id: str, since: datetime, until: datetime) -> AttendanceSummary:
         ...
 

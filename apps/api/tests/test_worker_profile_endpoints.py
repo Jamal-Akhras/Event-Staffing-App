@@ -57,5 +57,17 @@ def test_worker_profile_update_and_public_view():
     assert private.status_code == 200
     assert private.json()["email"] == "alex@example.com"
 
+    preferences = client.put(
+        "/me/work-preferences",
+        json={"marketplace_enabled": False},
+        headers=WORKER_HEADERS,
+    )
+    assert preferences.status_code == 200
+    second_update = client.put("/workers/worker-1", json=payload, headers=WORKER_HEADERS)
+    assert second_update.status_code == 200
+    assert client.get("/workers/worker-1", headers=WORKER_HEADERS).json()[
+        "marketplace_enabled"
+    ] is False
+
     forbidden = client.get("/workers/worker-1", headers=OTHER_WORKER_HEADERS)
     assert forbidden.status_code == 403
