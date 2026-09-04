@@ -72,6 +72,15 @@ export function BrowseFeedCard({
           </View>
         )}
 
+        {shift.reasons && shift.reasons.length > 0 && (
+          <View style={styles.reasons}>
+            <Ionicons name="sparkles-outline" size={13} color={COLORS.primary} />
+            <Text style={styles.reasonsText} numberOfLines={2}>
+              {shift.reasons.join(" · ")}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.capacityRow}>
           <View style={styles.capacityTrack}>
             <View style={[styles.capacityFill, { width: `${stats.capacityPct}%` }]} />
@@ -146,6 +155,13 @@ const styles = StyleSheet.create({
   totalPay: { ...TYPE.caption, color: COLORS.inkMuted, marginTop: 2 },
   window: { ...TYPE.caption, color: COLORS.inkMuted, textAlign: "right" },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: SPACE.s2, marginBottom: SPACE.s3 },
+  reasons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACE.s2,
+    marginBottom: SPACE.s3,
+  },
+  reasonsText: { ...TYPE.caption, color: COLORS.primary, flex: 1, fontWeight: "600" },
   tag: {
     paddingHorizontal: SPACE.s2,
     paddingVertical: 4,

@@ -58,6 +58,7 @@ export type FeedShift = Shift & {
   created_at?: string;
   venue?: FeedVenue | null;
   boosted?: boolean;
+  reasons?: string[];
 };
 
 export type WorkerFeedPage = {
@@ -65,6 +66,7 @@ export type WorkerFeedPage = {
   items: FeedShift[];
   next_cursor: string | null;
   market: Market;
+  personalized?: boolean;
 };
 
 export type ShiftSummary = {
