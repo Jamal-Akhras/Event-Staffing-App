@@ -14,6 +14,7 @@ from apps.api.src.services.availability_service import AvailabilityService
 from apps.api.src.services.billing_math import money
 from apps.api.src.services.commercial_service import agreement_as_of, fee_percent_for
 from apps.api.src.repositories.commercial_repository import CommercialAgreementRepository
+from packages.domain.src.booking_state import BookingState
 
 SOURCE_OF_BASIS = {
     "venue_employed": "team",
@@ -22,6 +23,23 @@ SOURCE_OF_BASIS = {
     "outside": "market",
 }
 ZERO = Decimal("0.00")
+MIN_SAMPLE = 4
+CHECKED_IN_STATES = frozenset(
+    {
+        BookingState.CHECKED_IN,
+        BookingState.CHECKED_OUT,
+        BookingState.APPROVED,
+        BookingState.PAID,
+    }
+)
+SOURCE_DEPTH = {
+    "assigned": 0,
+    "named": 0,
+    "team": 0,
+    "cover": 0,
+    "pool": 1,
+    "market": 2,
+}
 
 
 @dataclass(frozen=True)
@@ -57,6 +75,37 @@ class SavingOpportunity:
 class SavingsAvailable:
     opportunities: list[SavingOpportunity]
     total_fee_avoided: Decimal
+
+
+@dataclass(frozen=True)
+class FillBucket:
+    label: str
+    shifts: int
+    filled: int
+    fill_rate: Decimal | None
+
+
+@dataclass(frozen=True)
+class FillFactors:
+    lookback_days: int
+    by_lead_time: list[FillBucket]
+    by_weekday: list[FillBucket]
+    by_pay_band: list[FillBucket]
+
+
+@dataclass(frozen=True)
+class PlanningBucket:
+    label: str
+    shifts: int
+    filled: int
+    fill_rate: Decimal | None
+    average_escalation_depth: Decimal | None
+
+
+@dataclass(frozen=True)
+class PlanningValue:
+    lookback_days: int
+    by_posting_lead: list[PlanningBucket]
 
 
 class InsightAggregatesService:
@@ -170,6 +219,65 @@ class InsightAggregatesService:
         return venue.organisation_id if venue is not None else venue_id
 
 
+    def what_helps_fill(self, venue_id: str, now: datetime, lookback_days: int = 90) -> FillFactors:
+        shifts, filled = self._history(venue_id, now, lookback_days)
+        median_pay = _median([Decimal(shift.pay_rate) for shift in shifts])
+        lead = _bucketise(shifts, filled, _lead_bucket)
+        weekday = _bucketise(shifts, filled, lambda shift: _WEEKDAYS[shift.start_time.weekday()])
+        pay = _bucketise(
+            shifts, filled, lambda shift: _pay_band(Decimal(shift.pay_rate), median_pay)
+        )
+        return FillFactors(
+            lookback_days=lookback_days,
+            by_lead_time=[_fill_bucket(label, s, f) for label, (s, f) in lead.items()],
+            by_weekday=[_fill_bucket(label, s, f) for label, (s, f) in weekday.items()],
+            by_pay_band=[_fill_bucket(label, s, f) for label, (s, f) in pay.items()],
+        )
+
+    def value_of_planning(self, venue_id: str, now: datetime, lookback_days: int = 90) -> PlanningValue:
+        shifts, filled = self._history(venue_id, now, lookback_days)
+        buckets: dict[str, list] = {}
+        for shift in shifts:
+            label = _lead_bucket(shift)
+            entry = buckets.setdefault(label, [0, 0, []])
+            entry[0] += 1
+            source = filled.get(shift.shift_id)
+            if source is not None:
+                entry[1] += 1
+                entry[2].append(SOURCE_DEPTH.get(source, 2))
+        ordered = [
+            PlanningBucket(
+                label=label,
+                shifts=entry[0],
+                filled=entry[1],
+                fill_rate=_rate(entry[1], entry[0]),
+                average_escalation_depth=(
+                    money(Decimal(sum(entry[2])) / Decimal(len(entry[2])))
+                    if entry[2] and entry[0] >= MIN_SAMPLE
+                    else None
+                ),
+            )
+            for label, entry in buckets.items()
+        ]
+        return PlanningValue(
+            lookback_days=lookback_days,
+            by_posting_lead=sorted(ordered, key=lambda bucket: _LEAD_ORDER.index(bucket.label)),
+        )
+
+    def _history(self, venue_id: str, now: datetime, lookback_days: int):
+        window_start = now - timedelta(days=lookback_days)
+        shifts = [
+            shift
+            for shift in self._shifts.list_in_range(venue_id, window_start, now)
+            if shift.status != "cancelled"
+        ]
+        bookings = self._bookings.list_for_shifts([shift.shift_id for shift in shifts])
+        filled: dict[str, str] = {}
+        for booking in bookings:
+            if booking.state in CHECKED_IN_STATES:
+                filled[booking.shift_id] = booking.allocation_source or "market"
+        return shifts, filled
+
 def _empty_bucket() -> dict[str, Decimal | int]:
     return {"shifts": 0, "hours": ZERO, "wages": ZERO, "fees": ZERO}
 
@@ -178,3 +286,58 @@ def _per_hour(cost: Decimal, hours: Decimal) -> Decimal | None:
     if hours <= 0:
         return None
     return money(cost / hours)
+
+
+_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+_LEAD_ORDER = ["<2d", "2-7d", "7-14d", "14d+"]
+
+
+def _lead_bucket(shift) -> str:
+    days = (shift.start_time - (shift.created_at or shift.start_time)).days
+    if days < 2:
+        return "<2d"
+    if days < 7:
+        return "2-7d"
+    if days < 14:
+        return "7-14d"
+    return "14d+"
+
+
+def _pay_band(pay: Decimal, median: Decimal | None) -> str:
+    if median is None:
+        return "at typical"
+    if pay < median:
+        return "below typical"
+    if pay > median:
+        return "above typical"
+    return "at typical"
+
+
+def _bucketise(shifts, filled, key):
+    buckets: dict[str, list] = {}
+    for shift in shifts:
+        entry = buckets.setdefault(key(shift), [0, 0])
+        entry[0] += 1
+        if shift.shift_id in filled:
+            entry[1] += 1
+    return {label: (entry[0], entry[1]) for label, entry in buckets.items()}
+
+
+def _fill_bucket(label: str, shifts: int, filled: int) -> FillBucket:
+    return FillBucket(label=label, shifts=shifts, filled=filled, fill_rate=_rate(filled, shifts))
+
+
+def _rate(filled: int, shifts: int):
+    if shifts < MIN_SAMPLE:
+        return None
+    return money(Decimal(filled) / Decimal(shifts) * Decimal(100))
+
+
+def _median(values):
+    if not values:
+        return None
+    ordered = sorted(values)
+    mid = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return ordered[mid]
+    return money((ordered[mid - 1] + ordered[mid]) / Decimal(2))

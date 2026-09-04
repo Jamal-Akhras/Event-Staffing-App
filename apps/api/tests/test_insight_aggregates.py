@@ -157,3 +157,61 @@ def test_savings_available_is_empty_without_available_members():
     result = service.savings_available(VENUE, NOW)
     assert result.opportunities == []
     assert result.total_fee_avoided == Decimal("0.00")
+
+
+def _booking(shift_id: str, state, source: str):
+    from packages.domain.src.booking import Booking
+
+    return Booking(
+        booking_id=f"bk-{shift_id}", shift_id=shift_id, worker_id="w-1", operator_id="op-1",
+        start_time=NOW, end_time=NOW + timedelta(hours=5), state=state, created_at=NOW,
+        allocation_source=source,
+    )
+
+
+def test_what_helps_fill_buckets_by_lead_time_with_denominators_and_insufficient_data():
+    from packages.domain.src.booking_state import BookingState
+
+    service, charges, shifts, relationships, rules = _harness()
+    bookings = service._bookings
+    # 5 well-ahead shifts (created 20d before start), 4 filled -> sufficient sample
+    for index in range(5):
+        start = NOW - timedelta(days=1) + timedelta(hours=index)
+        created = start - timedelta(days=20)
+        shifts.save(_shift(f"ahead-{index}", start, created_at=created, status="open"))
+        if index < 4:
+            bookings.save(_booking(f"ahead-{index}", BookingState.CHECKED_IN, "pool"))
+    # 2 last-minute shifts (created 1d before) -> below MIN_SAMPLE
+    for index in range(2):
+        start = NOW - timedelta(hours=index + 1)
+        shifts.save(_shift(f"late-{index}", start, created_at=start - timedelta(days=1), status="open"))
+
+    factors = service.what_helps_fill(VENUE, NOW)
+    lead = {bucket.label: bucket for bucket in factors.by_lead_time}
+    assert lead["14d+"].shifts == 5
+    assert lead["14d+"].filled == 4
+    assert lead["14d+"].fill_rate == Decimal("80.00")
+    assert lead["<2d"].shifts == 2
+    assert lead["<2d"].fill_rate is None  # below minimum sample
+
+
+def test_value_of_planning_reports_fill_and_escalation_depth_by_lead():
+    from packages.domain.src.booking_state import BookingState
+
+    service, charges, shifts, relationships, rules = _harness()
+    bookings = service._bookings
+    for index in range(5):
+        start = NOW - timedelta(days=1) + timedelta(hours=index)
+        shifts.save(_shift(f"ahead-{index}", start, created_at=start - timedelta(days=20), status="open"))
+        source = "team" if index < 3 else "market"
+        if index < 4:
+            bookings.save(_booking(f"ahead-{index}", BookingState.APPROVED, source))
+
+    value = service.value_of_planning(VENUE, NOW)
+    by_lead = {bucket.label: bucket for bucket in value.by_posting_lead}
+    ahead = by_lead["14d+"]
+    assert ahead.shifts == 5
+    assert ahead.filled == 4
+    assert ahead.fill_rate == Decimal("80.00")
+    # three team (depth 0) + one market (depth 2) filled -> avg 0.5
+    assert ahead.average_escalation_depth == Decimal("0.50")
