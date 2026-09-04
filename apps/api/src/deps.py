@@ -519,3 +519,15 @@ def get_insight_aggregates_service(
         charge_repo, shift_repo, booking_repo, relationship_repo,
         availability, organisation_repo, agreement_repo,
     )
+
+
+def get_assistant_service(
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    organisation_repo=Depends(get_organisation_repo),
+) -> "AssistantService":
+    from apps.api.src.services.assistant.assistant_service import AssistantService
+    from apps.api.src.services.assistant.provider import DeterministicAssistant, GuardedProvider
+
+    provider = GuardedProvider(DeterministicAssistant(), DeterministicAssistant())
+    return AssistantService(provider, shift_repo, relationship_repo, organisation_repo)
