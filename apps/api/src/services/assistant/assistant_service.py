@@ -14,6 +14,8 @@ from apps.api.src.services.assistant.provider import (
     AssistantProvider,
 )
 from apps.api.src.services.billing_math import money
+from apps.api.src.services.errors import NotFoundError
+from apps.api.src.services.org_affiliation import sibling_employed_now
 
 ZERO = Decimal("0.00")
 
@@ -123,8 +125,21 @@ class AssistantService:
         )
 
     def offer_message(
-        self, venue_id: str, worker_name: str, role: str, start_time: datetime, pay_rate: Decimal
+        self,
+        venue_id: str,
+        worker_id: str,
+        worker_name: str,
+        role: str,
+        start_time: datetime,
+        pay_rate: Decimal,
     ) -> OfferMessageDraft:
+        relationship = self._relationships.get_for_venue_worker(venue_id, worker_id)
+        if relationship is None or relationship.status != "active":
+            sibling = sibling_employed_now(
+                self._organisations, self._relationships, venue_id, worker_id
+            )
+            if sibling is None:
+                raise NotFoundError("That worker was not found.")
         venue = self._organisations.get_venue(venue_id)
         deid = deidentify(
             {

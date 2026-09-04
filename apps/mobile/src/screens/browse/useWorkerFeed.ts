@@ -26,6 +26,7 @@ export function useWorkerFeed() {
 
   const requestSeq = useRef(0);
   const nextCursorRef = useRef<string | null>(null);
+  const slateIdRef = useRef<string | null>(null);
   const loadingMoreRef = useRef(false);
   const marketRef = useRef<Market | null>(null);
   const filtersRef = useRef<FeedFilters>({ query: "", filter: "all" });
@@ -50,6 +51,7 @@ export function useWorkerFeed() {
       if (seq !== requestSeq.current) return;
       setItems(appendUnique([], page.items, getShiftId));
       setSlateId(page.slate_id);
+      slateIdRef.current = page.slate_id;
       nextCursorRef.current = page.next_cursor;
       setHasMore(page.next_cursor !== null);
       marketRef.current = page.market;
@@ -94,8 +96,12 @@ export function useWorkerFeed() {
         buildFeedPath(filtersRef.current, nextCursorRef.current, marketRef.current)
       );
       if (seq !== requestSeq.current) return;
-      setItems((current) => appendUnique(current, page.items, getShiftId));
+      const rankedSlateChanged = page.personalized && page.slate_id !== slateIdRef.current;
+      setItems((current) =>
+        appendUnique(rankedSlateChanged ? [] : current, page.items, getShiftId)
+      );
       setSlateId(page.slate_id);
+      slateIdRef.current = page.slate_id;
       nextCursorRef.current = page.next_cursor;
       setHasMore(page.next_cursor !== null);
       marketRef.current = page.market;

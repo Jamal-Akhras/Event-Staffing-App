@@ -37,6 +37,8 @@ class SqlAlchemyWorkerFeedQueryRepository:
             .where(~_application_exists(query.worker_id))
             .where(_reaches_worker(query.worker_id, query.marketplace_enabled))
         )
+        if query.shift_ids is not None:
+            statement = statement.where(ShiftModel.shift_id.in_(query.shift_ids))
         if query.search:
             pattern = f"%{_escape_search(query.search)}%"
             statement = statement.where(

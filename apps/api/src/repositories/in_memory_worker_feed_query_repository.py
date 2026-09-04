@@ -67,6 +67,8 @@ class InMemoryWorkerFeedQueryRepository:
         normalized_search = (query.search or "").casefold()
         items: list[WorkerFeedItem] = []
         for shift in self._shifts.list_recent(10_000):
+            if query.shift_ids is not None and shift.shift_id not in query.shift_ids:
+                continue
             venue = self._organisations.get_venue(shift.account_id or "")
             if venue is None or venue.market_id != query.market_id:
                 continue

@@ -9,6 +9,10 @@ from fastapi.testclient import TestClient
 from apps.api.src import main
 from apps.api.src.db.models import ApplicationModel, ShiftModel, WorkerFeedStateModel
 from apps.api.src.db.tenancy_models import MarketModel, OrganisationModel, VenueModel
+from apps.api.src.models.worker_feed_query import WorkerFeedQuery
+from apps.api.src.repositories.sqlalchemy_worker_feed_query_repository import (
+    SqlAlchemyWorkerFeedQueryRepository,
+)
 
 pytestmark = pytest.mark.postgres
 
@@ -285,3 +289,31 @@ def test_keyset_cursor_is_stable_signed_and_filter_bound(client: TestClient):
         headers=headers,
     )
     assert mismatched.status_code == 422
+
+
+def test_query_can_live_filter_an_exact_slate_id_set():
+    _seed_venues()
+    start = BASE_NOW + timedelta(hours=3)
+    with _session() as session:
+        session.add_all(
+            [
+                _shift("outside-slate", start),
+                _shift("inside-slate", start + timedelta(hours=1)),
+            ]
+        )
+        session.commit()
+
+        rows = SqlAlchemyWorkerFeedQueryRepository(session).list_page(
+            WorkerFeedQuery(
+                worker_id="worker-exact-slate",
+                market_id="bath-gb",
+                timezone="Europe/London",
+                now=BASE_NOW,
+                limit=2,
+                today_start=BASE_NOW,
+                today_end=BASE_NOW + timedelta(days=1),
+                shift_ids=frozenset({"inside-slate"}),
+            )
+        )
+
+    assert [item.shift.shift_id for item in rows] == ["inside-slate"]

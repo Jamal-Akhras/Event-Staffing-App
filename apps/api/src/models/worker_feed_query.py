@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from apps.api.src.models.organisation import Venue
 from apps.api.src.models.shift import Shift
@@ -13,6 +14,7 @@ class FeedPosition:
     start_time: datetime
     shift_id: str
     bucket: int = 2
+    mode: Literal["keyset", "ranked"] = "keyset"
     slate_id: str | None = None
     slate_position: int = 0
 
@@ -31,6 +33,7 @@ class WorkerFeedQuery:
     minimum_pay: Decimal | None = None
     position: FeedPosition | None = None
     marketplace_enabled: bool = True
+    shift_ids: frozenset[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -41,3 +44,4 @@ class WorkerFeedItem:
     boosted: bool = False
     boost_tier: str | None = None
     reasons: list[str] = field(default_factory=list)
+    slate_position: int | None = None

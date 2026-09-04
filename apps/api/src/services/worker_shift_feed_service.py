@@ -85,10 +85,17 @@ class WorkerShiftFeedService:
             if cursor
             else None
         )
+        expected_mode = "ranked" if rank else "keyset"
+        if position is not None and position.mode != expected_mode:
+            position = None
         current_time = normalize_utc(now or utc_now())
         today_start, today_end = _today_bounds(current_time, market.timezone)
 
-        def _query(query_limit: int, query_position: FeedPosition | None) -> WorkerFeedQuery:
+        def _query(
+            query_limit: int,
+            query_position: FeedPosition | None,
+            shift_ids: frozenset[str] | None = None,
+        ) -> WorkerFeedQuery:
             return WorkerFeedQuery(
                 worker_id=worker_id,
                 market_id=market.market_id,
@@ -102,6 +109,7 @@ class WorkerShiftFeedService:
                 today_start=today_start,
                 today_end=today_end,
                 marketplace_enabled=profile.marketplace_enabled,
+                shift_ids=shift_ids,
             )
 
         if rank:
@@ -144,10 +152,6 @@ class WorkerShiftFeedService:
         build_query,
         profiling_consent: bool,
     ) -> WorkerFeedPage:
-        candidates = self._queries.list_page(build_query(SLATE_CANDIDATE_CAP, None))[
-            :SLATE_CANDIDATE_CAP
-        ]
-        by_id = {item.shift.shift_id: item for item in candidates}
         store = self._slates or get_feed_slate_store()
 
         order: list[SlateEntry] | None = None
@@ -156,6 +160,9 @@ class WorkerShiftFeedService:
         if slate_id is not None:
             order = store.get(worker_id, slate_id)
         if order is None:
+            candidates = self._queries.list_page(build_query(SLATE_CANDIDATE_CAP, None))[
+                :SLATE_CANDIDATE_CAP
+            ]
             familiar = self._familiar_venue_ids(worker_id, profiling_consent)
             ctx = RankerContext(
                 now=current_time,
@@ -172,6 +179,16 @@ class WorkerShiftFeedService:
             slate_id = uuid4().hex
             store.save(worker_id, slate_id, order)
             start = 0
+        else:
+            remaining_ids = frozenset(entry.shift_id for entry in order[start:])
+            candidates = (
+                self._queries.list_page(
+                    build_query(len(remaining_ids), None, remaining_ids)
+                )[: len(remaining_ids)]
+                if remaining_ids
+                else []
+            )
+        by_id = {item.shift.shift_id: item for item in candidates}
 
         page_items: list[WorkerFeedItem] = []
         consumed = 0
@@ -192,6 +209,7 @@ class WorkerShiftFeedService:
                     current_time,
                     "",
                     2,
+                    mode="ranked",
                     slate_id=slate_id,
                     slate_position=next_position,
                 ),
@@ -199,8 +217,12 @@ class WorkerShiftFeedService:
                 market.market_id,
                 fingerprint,
             )
+        presented_items = [
+            replace(item, slate_position=start + offset)
+            for offset, item in enumerate(_promote_boosts(page_items, limit))
+        ]
         return WorkerFeedPage(
-            items=_promote_boosts(page_items, limit),
+            items=presented_items,
             next_cursor=next_cursor,
             market=market,
             slate_id=slate_id,

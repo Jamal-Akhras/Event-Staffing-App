@@ -17,7 +17,9 @@ from apps.api.src.schemas_assistant import (
     ShiftPostResponse,
 )
 from apps.api.src.services.assistant.assistant_service import AssistantService
+from apps.api.src.services.errors import ServiceError
 from apps.api.src.services.event_recorder import EventRecorder
+from apps.api.src.routes.service_errors import raise_service_error
 
 router = APIRouter(tags=["assistant"])
 
@@ -74,11 +76,21 @@ def offer_message(
 ) -> OfferMessageResponse:
     venue_id = _venue(actor)
     profile = workers.get(payload.worker_id)
-    worker_name = profile.display_name if profile and profile.display_name else "there"
+    if profile is None:
+        raise HTTPException(status_code=404, detail="That worker was not found.")
+    worker_name = profile.display_name or "there"
     _audit(recorder, actor, "offer_message")
-    draft = service.offer_message(
-        venue_id, worker_name, payload.role, payload.start_time, payload.pay_rate
-    )
+    try:
+        draft = service.offer_message(
+            venue_id,
+            payload.worker_id,
+            worker_name,
+            payload.role,
+            payload.start_time,
+            payload.pay_rate,
+        )
+    except ServiceError as exc:
+        raise_service_error(exc)
     return OfferMessageResponse(message=draft.message)
 
 

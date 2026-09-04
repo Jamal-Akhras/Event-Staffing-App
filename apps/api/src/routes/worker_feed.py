@@ -76,7 +76,7 @@ def list_worker_feed(
     except FeedCursorError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     slate_id = page.slate_id or str(uuid4())
-    for position, item in enumerate(page.items):
+    for page_position, item in enumerate(page.items):
         recorder.record(
             "shift.served",
             "behaviour",
@@ -85,7 +85,7 @@ def list_worker_feed(
             subject_id=item.shift.shift_id,
             venue_id=item.venue.venue_id,
             slate_id=slate_id,
-            position=position,
+            position=item.slate_position if item.slate_position is not None else page_position,
             context={"market_id": page.market.market_id, "timing": timing},
         )
     return WorkerFeedPageResponse(

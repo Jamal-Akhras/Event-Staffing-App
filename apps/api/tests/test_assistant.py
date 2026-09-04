@@ -63,6 +63,59 @@ def test_deidentify_hides_pii_and_rehydrate_restores_it():
     assert filled == "Hi Ana Ruiz, it's £14.50/hr"
 
 
+def test_rehydrate_does_not_replace_placeholder_text_inside_real_values():
+    deid = deidentify({"worker": "Ana {rate}", "rate": "£14.50"})
+    assert rehydrate("Hi {worker}, it's {rate}/hr", deid.rehydration) == (
+        "Hi Ana {rate}, it's £14.50/hr"
+    )
+
+
+def test_offer_message_refuses_a_worker_unrelated_to_the_venue(in_memory_repos):
+    from fastapi.testclient import TestClient
+
+    from apps.api.src import main
+    from apps.api.src.models.worker_profile import WorkerProfile
+    from apps.api.src.repository_dependencies import (
+        get_organisation_repo,
+        get_worker_profile_repo,
+    )
+
+    organisations = in_memory_repos[get_organisation_repo]
+    organisations.save_organisation(
+        Organisation(
+            organisation_id="org-1", name="Group", country="GB", currency="GBP", created_at=NOW
+        )
+    )
+    organisations.save_venue(
+        Venue(
+            venue_id=VENUE, organisation_id="org-1", name="The Grapes", country="GB",
+            currency="GBP", created_at=NOW, market_id="bath-gb",
+        )
+    )
+    in_memory_repos[get_worker_profile_repo].save(
+        WorkerProfile(
+            worker_id="foreign-worker", display_name="Private Person", role="Bartender",
+            city="Bath", experience_years=1, reliability_score=1.0, badges=[], bio=None,
+            languages=["en"], email=None, phone=None, address=None, emergency_contact=None,
+            pay_rate=None, notes=None, updated_at=NOW,
+        )
+    )
+
+    response = TestClient(main.app).post(
+        "/assistant/offer-message",
+        json={
+            "worker_id": "foreign-worker", "role": "Bartender",
+            "start_time": START.isoformat(), "pay_rate": 14.5,
+        },
+        headers={
+            "X-Actor-Role": "operator", "X-Actor-Id": VENUE,
+            "X-Account-Id": VENUE, "X-Organisation-Id": "org-1",
+        },
+    )
+    assert response.status_code == 404
+    assert "Private Person" not in response.text
+
+
 def test_a_model_never_sees_raw_pii_only_placeholders():
     seen = {}
 
@@ -71,9 +124,17 @@ def test_a_model_never_sees_raw_pii_only_placeholders():
             seen.update(fields)
             return "Hi {worker}!"
 
-    service, *_ = _harness()
+    service, _, relationships = _harness()
+    relationships.save(
+        WorkerRelationship(
+            relationship_id="rel-offer", venue_id=VENUE, worker_id="worker-1",
+            relationship_type="pool", status="active", created_at=NOW, updated_at=NOW,
+        )
+    )
     service._provider = Spy()
-    draft = service.offer_message(VENUE, "Ana Ruiz", "Bartender", START, Decimal("14.50"))
+    draft = service.offer_message(
+        VENUE, "worker-1", "Ana Ruiz", "Bartender", START, Decimal("14.50")
+    )
     assert "Ana" not in "".join(seen.values())
     assert seen["worker"] == "{worker}"
     assert draft.message == "Hi Ana Ruiz!"
@@ -105,8 +166,16 @@ def test_shift_post_pay_suggestion_is_empty_without_history():
 
 
 def test_offer_message_is_warm_named_and_carries_no_leak():
-    service, *_ = _harness()
-    draft = service.offer_message(VENUE, "Ana", "Bartender", START, Decimal("14.50"))
+    service, _, relationships = _harness()
+    relationships.save(
+        WorkerRelationship(
+            relationship_id="rel-offer", venue_id=VENUE, worker_id="worker-1",
+            relationship_type="pool", status="active", created_at=NOW, updated_at=NOW,
+        )
+    )
+    draft = service.offer_message(
+        VENUE, "worker-1", "Ana", "Bartender", START, Decimal("14.50")
+    )
     assert draft.message.startswith("Hi Ana!")
     assert "The Grapes" in draft.message
     assert "£14.50" in draft.message
@@ -175,9 +244,18 @@ def test_assistant_endpoints_are_operator_scoped_and_audited():
             notes=None, updated_at=NOW,
         )
     )
+    relationships = InMemoryWorkerRelationshipRepository()
+    relationships.save(
+        WorkerRelationship(
+            relationship_id="rel-endpoint", venue_id=VENUE, worker_id="w-1",
+            relationship_type="pool", status="active", created_at=NOW, updated_at=NOW,
+        )
+    )
     main.app.dependency_overrides[get_shift_repo] = lambda: shifts
     main.app.dependency_overrides[get_organisation_repo] = lambda: organisations
     main.app.dependency_overrides[get_worker_profile_repo] = lambda: workers
+    from apps.api.src.repository_dependencies_workforce import get_worker_relationship_repo
+    main.app.dependency_overrides[get_worker_relationship_repo] = lambda: relationships
     try:
         client = TestClient(main.app)
         operator = {"X-Actor-Role": "operator", "X-Actor-Id": VENUE, "X-Account-Id": VENUE, "X-Organisation-Id": "org-1"}
@@ -213,3 +291,4 @@ def test_assistant_endpoints_are_operator_scoped_and_audited():
         main.app.dependency_overrides.pop(get_shift_repo, None)
         main.app.dependency_overrides.pop(get_organisation_repo, None)
         main.app.dependency_overrides.pop(get_worker_profile_repo, None)
+        main.app.dependency_overrides.pop(get_worker_relationship_repo, None)

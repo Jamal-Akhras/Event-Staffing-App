@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 
 
 @dataclass
@@ -22,6 +23,8 @@ def deidentify(pairs: dict[str, str | None]) -> Deidentified:
 
 
 def rehydrate(text: str, rehydration: dict[str, str]) -> str:
-    for placeholder, value in rehydration.items():
-        text = text.replace(placeholder, value)
-    return text
+    if not rehydration:
+        return text
+    placeholders = sorted(rehydration, key=len, reverse=True)
+    pattern = re.compile("|".join(re.escape(placeholder) for placeholder in placeholders))
+    return pattern.sub(lambda match: rehydration[match.group(0)], text)

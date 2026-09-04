@@ -66,10 +66,14 @@ def decode_feed_cursor(
         if payload["fingerprint"] != fingerprint:
             raise FeedCursorError("Feed cursor does not match the active filters.")
         position = payload["position"]
+        mode = position.get("mode", "keyset")
+        if mode not in ("keyset", "ranked"):
+            raise FeedCursorError("Invalid feed cursor.")
         return FeedPosition(
             start_time=normalize_utc(datetime.fromisoformat(position["start_time"])),
             shift_id=position["shift_id"],
             bucket=int(position.get("bucket", 2)),
+            mode=mode,
             slate_id=position.get("slate_id"),
             slate_position=int(position.get("slate_position", 0)),
         )
