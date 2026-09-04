@@ -31,6 +31,7 @@ from apps.api.src.models.worker_relationship import EMPLOYED_TYPES
 from apps.api.src.repositories.booking_allocator import OverlappingBookingError
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.services.errors import ConflictError, ForbiddenError, NotFoundError, ValidationError
+from apps.api.src.services.certification_gate import CertificationGate
 from apps.api.src.services.shift_visibility import worker_can_see_shift
 from apps.api.src.services.outbox_publisher import OutboxPublisher
 
@@ -44,6 +45,7 @@ class ApplicationService:
         history_repo: ApplicationMessageHistoryRepository,
         outbox: OutboxPublisher,
         relationships: WorkerRelationshipRepository,
+        certifications: CertificationGate,
     ) -> None:
         self._applications = application_repo
         self._shifts = shift_repo
@@ -51,6 +53,7 @@ class ApplicationService:
         self._history = history_repo
         self._outbox = outbox
         self._relationships = relationships
+        self._certifications = certifications
 
     def create_application(self, request: ApplicationCreateRequest) -> Application:
         shift = self._shifts.get(request.shift_id)
@@ -62,6 +65,7 @@ class ApplicationService:
             raise ValidationError("Shift is already fully staffed.")
         if not worker_can_see_shift(shift, request.worker_id, self._relationships):
             raise ForbiddenError("This shift is not open to you.")
+        self._certifications.ensure_certified(request.worker_id, shift)
         if self._applications.find_by_worker_and_shift(request.worker_id, request.shift_id):
             raise ValidationError("You have already applied to this shift. You can only apply once per shift.")
 
@@ -130,6 +134,10 @@ class ApplicationService:
         return "pin"
 
     def approve_application(self, application_id: str, request: ApplicationDecisionRequest) -> Application:
+        pending = self._get_application(application_id)
+        pending_shift = self._shifts.get(pending.shift_id)
+        if pending_shift is not None:
+            self._certifications.ensure_certified(pending.worker_id, pending_shift)
         try:
             result = self._decisions.approve(
                 application_id,

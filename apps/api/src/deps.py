@@ -18,6 +18,7 @@ from apps.api.src.repository_dependencies import (
     get_booking_charge_adjustment_repo,
     get_shift_change_request_repo,
     get_shift_change_transition_repo,
+    get_worker_certification_repo,
     get_shift_offer_repo,
     get_rota_publication_repo,
     get_application_decision_repo,
@@ -71,6 +72,7 @@ from apps.api.src.services.people_service import PeopleService
 from apps.api.src.services.escalation_service import EscalationService
 from apps.api.src.services.rota_service import RotaService
 from apps.api.src.services.availability_gate import AvailabilityGate
+from apps.api.src.services.certification_gate import CertificationGate
 from apps.api.src.services.availability_service import AvailabilityService
 from apps.api.src.services.shift_change_service import ShiftChangeService
 from apps.api.src.services.shift_offer_service import ShiftOfferService
@@ -180,6 +182,12 @@ def get_relationship_service(
     return RelationshipService(relationship_repo, transition_repo, worker_repo)
 
 
+def get_certification_gate(
+    certification_repo=Depends(get_worker_certification_repo),
+) -> CertificationGate:
+    return CertificationGate(certification_repo)
+
+
 def get_availability_service(
     rule_repo=Depends(get_availability_rule_repo),
     exception_repo=Depends(get_availability_exception_repo),
@@ -244,9 +252,11 @@ def get_application_service(
     history_repo: ApplicationMessageHistoryRepository = Depends(get_application_message_history_repo),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
     relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    certifications: CertificationGate = Depends(get_certification_gate),
 ) -> ApplicationService:
     return ApplicationService(
-        application_repo, shift_repo, decision_repo, history_repo, outbox, relationship_repo
+        application_repo, shift_repo, decision_repo, history_repo, outbox, relationship_repo,
+        certifications,
     )
 
 
@@ -318,6 +328,7 @@ def get_shift_offer_service(
     transitions: BookingTransitionRepository = Depends(get_booking_transition_repo),
     escalations: EscalationService = Depends(get_escalation_service),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
+    certifications: CertificationGate = Depends(get_certification_gate),
 ) -> ShiftOfferService:
     return ShiftOfferService(
         offer_repo,
@@ -327,6 +338,7 @@ def get_shift_offer_service(
         transitions,
         escalations,
         outbox,
+        certifications,
     )
 
 
@@ -345,6 +357,7 @@ def get_rota_service(
     market_repo: MarketRepository = Depends(get_market_repo),
     offers: ShiftOfferService = Depends(get_shift_offer_service),
     gate: AvailabilityGate = Depends(get_availability_gate),
+    certifications: CertificationGate = Depends(get_certification_gate),
 ) -> RotaService:
     return RotaService(
         shift_repo,
@@ -361,6 +374,7 @@ def get_rota_service(
         market_repo,
         offers,
         gate,
+        certifications,
     )
 
 
@@ -403,6 +417,7 @@ def get_shift_change_service(
     account_repo: AccountRepository = Depends(get_account_repo),
     market_repo: MarketRepository = Depends(get_market_repo),
     gate: AvailabilityGate = Depends(get_availability_gate),
+    certifications: CertificationGate = Depends(get_certification_gate),
 ) -> ShiftChangeService:
     return ShiftChangeService(
         request_repo,
@@ -417,4 +432,5 @@ def get_shift_change_service(
         outbox,
         RotaRevisionService(shift_repo, booking_repo, publications, outbox, account_repo, market_repo),
         gate,
+        certifications,
     )

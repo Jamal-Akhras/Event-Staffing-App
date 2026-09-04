@@ -47,6 +47,7 @@ class ShiftUpdateRequest(BaseModel):
     pay_rate: MoneyAmount
     notes: str | None = Field(default=None, max_length=2000)
     workers_needed: int = Field(ge=1, le=100)
+    required_certification: str | None = Field(default=None, max_length=120)
     now: UtcTimestamp | None = None
 
     @model_validator(mode="after")

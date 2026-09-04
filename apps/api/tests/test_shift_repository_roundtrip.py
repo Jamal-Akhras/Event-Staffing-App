@@ -37,6 +37,7 @@ def test_every_shift_field_survives_a_sql_round_trip(repo_session):
         assigned_worker_id="worker-1",
         billable=False,
         offer_team_at=START,
+        required_certification="Personal Licence",
         rota_state="draft",
         needs_attention=False,
     )

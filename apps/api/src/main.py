@@ -27,7 +27,7 @@ from apps.api.src.routes import uploads, accounts, notifications, ratings, auth_
 from apps.api.src.routes import reports, auth_sso, billing, events, insights
 from apps.api.src.routes import rota, timesheets, venue_join_codes, venue_people, worker_context, worker_invitations
 from apps.api.src.routes import worker_availability, worker_time_off, venue_time_off
-from apps.api.src.routes import shift_changes, shift_offers
+from apps.api.src.routes import shift_changes, shift_offers, worker_certifications
 from apps.api.src.storage.config import get_storage_settings
 from apps.api.src.services.health import readiness_snapshot
 from apps.api.src.db.schema_guard import ensure_schema_current
@@ -114,6 +114,7 @@ app.include_router(worker_time_off.router)
 app.include_router(venue_time_off.router)
 app.include_router(shift_offers.router)
 app.include_router(shift_changes.router)
+app.include_router(worker_certifications.router)
 
 if storage_settings.backend == "local":
     storage_settings.local_directory.mkdir(parents=True, exist_ok=True)

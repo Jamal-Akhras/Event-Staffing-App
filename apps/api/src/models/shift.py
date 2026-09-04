@@ -38,3 +38,4 @@ class Shift:
     publish_market_at: datetime | None = None
     rota_state: str = "published"
     needs_attention: bool = False
+    required_certification: str | None = None

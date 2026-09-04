@@ -15,8 +15,12 @@ from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRe
 from apps.api.src.repositories.in_memory_worker_relationship_repository import (
     InMemoryWorkerRelationshipRepository,
 )
+from apps.api.src.repositories.in_memory_worker_certification_repository import (
+    InMemoryWorkerCertificationRepository,
+)
 from apps.api.src.repositories.shift_offer_repository import DuplicatePendingOfferError
 from apps.api.src.services.errors import NotFoundError, ValidationError
+from apps.api.src.services.certification_gate import CertificationGate
 from apps.api.src.services.shift_offer_service import ShiftOfferService
 
 NOW = datetime(2030, 6, 3, 9, 0, tzinfo=UTC)
@@ -49,6 +53,7 @@ class Harness:
         self.relationships = InMemoryWorkerRelationshipRepository()
         self.transitions = InMemoryBookingTransitionRepository()
         self.outbox = RecordingOutbox()
+        self.certifications = InMemoryWorkerCertificationRepository()
         self.escalations = RecordingEscalations()
         self.service = ShiftOfferService(
             self.offers,
@@ -58,6 +63,7 @@ class Harness:
             self.transitions,
             self.escalations,
             self.outbox,
+            CertificationGate(self.certifications),
         )
 
     def shift(self, shift_id: str = "shift-1", worker_id: str = "worker-1", **overrides) -> Shift:
@@ -194,3 +200,29 @@ def test_only_the_named_worker_can_answer_and_only_once(harness):
     with pytest.raises(ValidationError, match="answered"):
         harness.service.accept(offer.offer_id, "worker-1", NOW)
     assert harness.escalations.restarts == [(shift.shift_id, NOW)]
+
+
+def test_accepting_requires_the_shifts_certification(harness):
+    from datetime import UTC, datetime
+    from apps.api.src.models.worker_certification import WorkerCertification
+
+    shift = harness.shift(required_certification="Personal Licence")
+    harness.relationship("pool")
+    offer = harness.service.offer(shift, "worker-1", "rota", NOW, None)
+
+    with pytest.raises(ValidationError):
+        harness.service.accept(offer.offer_id, "worker-1", NOW)
+
+    harness.certifications.save(
+        WorkerCertification(
+            certification_id="cert-1",
+            worker_id="worker-1",
+            name="personal licence",
+            display_name="Personal Licence",
+            expires_at=datetime(2031, 1, 1, tzinfo=UTC),
+            created_at=NOW,
+            updated_at=NOW,
+        )
+    )
+    booking = harness.service.accept(offer.offer_id, "worker-1", NOW)
+    assert booking.worker_id == "worker-1"

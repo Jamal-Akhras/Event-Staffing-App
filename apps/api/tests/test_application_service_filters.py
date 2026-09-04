@@ -13,10 +13,14 @@ from apps.api.src.repositories.in_memory_application_repository import InMemoryA
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
 from apps.api.src.repositories.in_memory_notification_repository import InMemoryNotificationRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
+from apps.api.src.repositories.in_memory_worker_certification_repository import (
+    InMemoryWorkerCertificationRepository,
+)
 from apps.api.src.repositories.in_memory_worker_relationship_repository import (
     InMemoryWorkerRelationshipRepository,
 )
 from apps.api.src.services.application_service import ApplicationService
+from apps.api.src.services.certification_gate import CertificationGate
 from apps.api.src.services.email import LoggingEmailTransport
 from apps.api.src.services.outbox_publisher import InMemoryOutboxPublisher
 
@@ -32,6 +36,7 @@ def test_list_applications_by_worker_filters_before_limit():
         InMemoryApplicationMessageHistoryRepository(),
         InMemoryOutboxPublisher(InMemoryNotificationRepository(), LoggingEmailTransport()),
         InMemoryWorkerRelationshipRepository(),
+        CertificationGate(InMemoryWorkerCertificationRepository()),
     )
     now = datetime(2030, 1, 1, 12, 0, 0, tzinfo=UTC)
     application_repo.save(_application("target-app", "target-worker", "target-shift", now))

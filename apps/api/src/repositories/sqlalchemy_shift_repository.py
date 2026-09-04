@@ -148,6 +148,7 @@ def _to_domain(model: ShiftModel) -> Shift:
         publish_market_at=model.publish_market_at,
         rota_state=model.rota_state,
         needs_attention=model.needs_attention,
+        required_certification=model.required_certification,
     )
 
 
@@ -180,3 +181,4 @@ def _apply_domain(model: ShiftModel, shift: Shift) -> None:
     model.publish_market_at = shift.publish_market_at
     model.rota_state = shift.rota_state
     model.needs_attention = shift.needs_attention
+    model.required_certification = shift.required_certification

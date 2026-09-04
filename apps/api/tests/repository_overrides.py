@@ -42,6 +42,7 @@ def in_memory_repositories() -> dict[Callable[..., Any], Any]:
         rd.get_shift_offer_repo: rd._SHIFT_OFFERS,
         rd.get_shift_change_request_repo: rd._SHIFT_CHANGES,
         rd.get_shift_change_transition_repo: rd._SHIFT_CHANGE_TRANSITIONS,
+        rd.get_worker_certification_repo: rd._WORKER_CERTIFICATIONS,
         rda.get_availability_rule_repo: rda._AVAILABILITY_RULES,
         rda.get_availability_exception_repo: rda._AVAILABILITY_EXCEPTIONS,
         rda.get_time_off_repo: rda._TIME_OFF,

@@ -43,6 +43,7 @@ class ShiftService:
             currency=currency,
             latitude=None,
             longitude=None,
+            required_certification=request.required_certification,
         )
         return self._repo.save(shift)
 

@@ -19,6 +19,7 @@ from apps.api.src.repository_dependencies import (
     get_worker_profile_repo,
 )
 from apps.api.src.repository_dependencies import get_booking_transition_repo
+from apps.api.src.repository_dependencies import shared_worker_certification_repository
 from apps.api.src.repository_dependencies import shared_shift_offer_repository
 from apps.api.src import repository_dependencies_availability as rda
 from apps.api.src.models.availability import TimeOffRequest, TimeOffStatus
@@ -38,10 +39,10 @@ POOLER = {"X-Actor-Role": "worker", "X-Actor-Id": "pool-1"}
 
 @pytest.fixture(autouse=True)
 def clear_state():
-    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository(), rda._TIME_OFF):
+    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository(), rda._TIME_OFF, shared_worker_certification_repository()):
         repo.clear()
     yield
-    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository(), rda._TIME_OFF):
+    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository(), rda._TIME_OFF, shared_worker_certification_repository()):
         repo.clear()
 
 
@@ -437,3 +438,44 @@ def test_reassignment_refuses_a_worker_on_approved_time_off(client, in_memory_re
     assert "approved time off" in response.json()["detail"]
     bookings = in_memory_repos[get_booking_repo].list_by_worker("staff-1")
     assert [b.state for b in bookings] == [BookingState.CONFIRMED]
+
+
+def test_publishing_refuses_an_uncertified_assignee(client, in_memory_repos):
+    from apps.api.src.models.worker_certification import WorkerCertification
+
+    start = datetime(2030, 6, 10, 18, 0, tzinfo=UTC)
+    response = client.post(
+        "/shifts",
+        json={
+            "role": "Bartender",
+            "location": "Main bar",
+            "start_time": start.isoformat(),
+            "end_time": (start + timedelta(hours=5)).isoformat(),
+            "pay_rate": 14.5,
+            "workers_needed": 1,
+            "assigned_worker_id": "staff-1",
+            "rota_state": "draft",
+            "required_certification": "Personal Licence",
+            "now": NOW.isoformat(),
+        },
+        headers={**OPERATOR, "X-Actor-Verified": "true"},
+    )
+    assert response.status_code == 200, response.text
+
+    refused = _publish(client)
+    assert refused.status_code == 400
+    assert "Personal Licence" in refused.json()["detail"]
+    assert in_memory_repos[get_booking_repo].list_by_worker("staff-1") == []
+
+    shared_worker_certification_repository().save(
+        WorkerCertification(
+            certification_id="cert-1",
+            worker_id="staff-1",
+            name="personal licence",
+            display_name="Personal Licence",
+            expires_at=start + timedelta(days=30),
+            created_at=NOW,
+            updated_at=NOW,
+        )
+    )
+    assert _publish(client).status_code == 200

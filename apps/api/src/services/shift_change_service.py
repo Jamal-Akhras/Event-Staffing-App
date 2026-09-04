@@ -24,6 +24,7 @@ from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.schemas_recovery import CancellationRequest
 from apps.api.src.services.availability_gate import ApprovedTimeOffConflictError, AvailabilityGate
+from apps.api.src.services.certification_gate import CertificationGate
 from apps.api.src.services.booking_lifecycle_service import BookingLifecycleService
 from apps.api.src.services.errors import ConflictError, NotFoundError, ValidationError
 from apps.api.src.services.outbox_publisher import OutboxPublisher
@@ -47,6 +48,7 @@ class ShiftChangeService:
         outbox: OutboxPublisher,
         revisions: RotaRevisionService,
         gate: AvailabilityGate,
+        certifications: CertificationGate,
     ) -> None:
         self._requests = requests
         self._change_transitions = change_transitions
@@ -60,6 +62,7 @@ class ShiftChangeService:
         self._outbox = outbox
         self._revisions = revisions
         self._gate = gate
+        self._certifications = certifications
 
     def list_requests_for_worker(self, worker_id: str):
         return self._requests.list_for_worker(worker_id)
@@ -219,6 +222,9 @@ class ShiftChangeService:
             raise ValidationError(
                 "The replacement has approved time off during this shift."
             ) from exc
+        cover_shift = self._shifts.get(request.shift_id)
+        if cover_shift is not None:
+            self._certifications.ensure_certified(replacement, cover_shift)
         attendance_mode = (
             "employed" if relationship.relationship_type in EMPLOYED_TYPES else "pin"
         )

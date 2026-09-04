@@ -138,6 +138,17 @@ def shared_shift_change_request_repository():
 def shared_shift_change_transition_repository():
     return _SHIFT_CHANGE_TRANSITIONS
 
+
+from apps.api.src.repositories.in_memory_worker_certification_repository import (
+    InMemoryWorkerCertificationRepository as _CertRepo,
+)
+
+_WORKER_CERTIFICATIONS = _CertRepo()
+
+
+def shared_worker_certification_repository():
+    return _WORKER_CERTIFICATIONS
+
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
@@ -360,3 +371,13 @@ def get_shift_change_transition_repo(session: Session | None = Depends(get_reque
     if use_in_memory_repositories():
         return _SHIFT_CHANGE_TRANSITIONS
     return SqlAlchemyShiftChangeTransitionRepository(_session(session))
+
+
+def get_worker_certification_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_worker_certification_repository import (
+        SqlAlchemyWorkerCertificationRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _WORKER_CERTIFICATIONS
+    return SqlAlchemyWorkerCertificationRepository(_session(session))

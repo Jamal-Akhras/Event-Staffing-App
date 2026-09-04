@@ -60,6 +60,7 @@ class ShiftLifecycleService:
                 pay_rate=request.pay_rate,
                 notes=request.notes.strip() if request.notes else None,
                 workers_needed=request.workers_needed,
+                required_certification=request.required_certification,
                 status=status,
                 updated_at=now,
             )
