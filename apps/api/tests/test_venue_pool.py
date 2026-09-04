@@ -262,3 +262,32 @@ def test_a_worker_cannot_accept_someone_elses_invitation(client):
     intruder = {"X-Actor-Role": "worker", "X-Actor-Id": "worker-9"}
     response = client.post(f"/me/invitations/{invited['relationship_id']}/accept", headers=intruder)
     assert response.status_code == 404
+
+
+def test_ending_a_relationship_that_starts_in_the_future_ends_at_its_start(client):
+    from datetime import timedelta
+
+    from apps.api.src.models.worker_relationship import WorkerRelationship
+
+    future_start = NOW + timedelta(days=3)
+    shared_worker_relationship_repository().save(
+        WorkerRelationship(
+            relationship_id="rel-future",
+            venue_id=VENUE_ID,
+            worker_id=WORKER_ID,
+            relationship_type="one_off",
+            status="active",
+            created_at=NOW,
+            updated_at=NOW,
+            start_date=future_start,
+        )
+    )
+
+    response = client.post(
+        f"/venues/me/people/{WORKER_ID}/end", json={}, headers=OPERATOR
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "ended"
+    assert body["end_date"] == future_start.isoformat().replace("+00:00", "Z")

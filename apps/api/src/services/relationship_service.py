@@ -246,6 +246,9 @@ class RelationshipService:
         existing = self._relationships.get_for_venue_worker(venue_id, worker_id)
         if existing is None:
             raise NotFoundError("This worker has no relationship with your venue.")
+        ended_at = now
+        if existing.start_date is not None and existing.start_date > now:
+            ended_at = existing.start_date
         relationship = self._save(
             existing,
             venue_id,
@@ -255,7 +258,7 @@ class RelationshipService:
             actor_user_id,
             existing.default_role,
             status="ended",
-            end_date=now,
+            end_date=ended_at,
         )
         self._record(existing, relationship, now, actor_user_id, reason or "Relationship ended.")
         return relationship
