@@ -39,6 +39,7 @@ from apps.api.src.db.booking_charge_models import BookingChargeModel
 from apps.api.src.db.shift_offer_models import ShiftOfferModel
 from apps.api.src.db.certification_models import WorkerCertificationModel
 from apps.api.src.db.shift_change_models import ShiftChangeRequestModel, ShiftChangeTransitionModel
+from apps.api.src.db.auto_accept_models import AutoAcceptAttemptModel, WorkerAutoAcceptRuleModel
 from apps.api.src.db.booking_transition_models import BookingTransitionModel
 from apps.api.src.db.workforce_models import (
     RelationshipTransitionModel,

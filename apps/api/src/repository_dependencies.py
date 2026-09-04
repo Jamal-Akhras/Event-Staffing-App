@@ -381,3 +381,40 @@ def get_worker_certification_repo(session: Session | None = Depends(get_request_
     if use_in_memory_repositories():
         return _WORKER_CERTIFICATIONS
     return SqlAlchemyWorkerCertificationRepository(_session(session))
+
+
+from apps.api.src.repositories.in_memory_auto_accept_repository import (
+    InMemoryAutoAcceptAttemptRepository as _AutoAcceptAttemptRepo,
+    InMemoryWorkerAutoAcceptRuleRepository as _AutoAcceptRuleRepo,
+)
+
+_AUTO_ACCEPT_RULES = _AutoAcceptRuleRepo()
+_AUTO_ACCEPT_ATTEMPTS = _AutoAcceptAttemptRepo(_SHIFT_OFFERS)
+
+
+def shared_auto_accept_rule_repository():
+    return _AUTO_ACCEPT_RULES
+
+
+def shared_auto_accept_attempt_repository():
+    return _AUTO_ACCEPT_ATTEMPTS
+
+
+def get_auto_accept_rule_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_auto_accept_repository import (
+        SqlAlchemyWorkerAutoAcceptRuleRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _AUTO_ACCEPT_RULES
+    return SqlAlchemyWorkerAutoAcceptRuleRepository(_session(session))
+
+
+def get_auto_accept_attempt_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_auto_accept_repository import (
+        SqlAlchemyAutoAcceptAttemptRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _AUTO_ACCEPT_ATTEMPTS
+    return SqlAlchemyAutoAcceptAttemptRepository(_session(session))

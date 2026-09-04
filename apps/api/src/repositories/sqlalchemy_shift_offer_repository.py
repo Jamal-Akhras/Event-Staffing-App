@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import fields
+from datetime import datetime
 
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -64,6 +65,19 @@ class SqlAlchemyShiftOfferRepository:
             .all()
         )
         return [_to_domain(row) for row in rows]
+
+    def claim_pending_unexpired(self, now: datetime) -> list[ShiftOffer]:
+        query = (
+            self._session.query(ShiftOfferModel)
+            .filter(ShiftOfferModel.status == "pending")
+            .filter(
+                or_(ShiftOfferModel.expires_at.is_(None), ShiftOfferModel.expires_at > now)
+            )
+            .order_by(ShiftOfferModel.offered_at)
+        )
+        if self._session.bind is not None and self._session.bind.dialect.name == "postgresql":
+            query = query.with_for_update(skip_locked=True)
+        return [_to_domain(row) for row in query.all()]
 
 
 def _to_domain(model: ShiftOfferModel) -> ShiftOffer:

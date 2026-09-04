@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from apps.api.src.models.shift_offer import ShiftOffer
 from apps.api.src.repositories.shift_offer_repository import DuplicatePendingOfferError
 
@@ -36,6 +38,17 @@ class InMemoryShiftOfferRepository:
 
     def list_pending_for_worker(self, worker_id: str) -> list[ShiftOffer]:
         return [offer for offer in self.list_for_worker(worker_id) if offer.status == "pending"]
+
+    def claim_pending_unexpired(self, now: datetime) -> list[ShiftOffer]:
+        return sorted(
+            (
+                offer
+                for offer in self._offers.values()
+                if offer.status == "pending"
+                and (offer.expires_at is None or offer.expires_at > now)
+            ),
+            key=lambda offer: offer.offered_at,
+        )
 
     def clear(self) -> None:
         self._offers.clear()
