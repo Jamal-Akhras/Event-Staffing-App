@@ -59,14 +59,34 @@ class Waiver:
 
 
 @dataclass(frozen=True)
+class SubscriptionLine:
+    subscription_charge_id: str
+    period: str
+    plan: str
+    amount: Decimal
+
+
+@dataclass(frozen=True)
+class BoostLine:
+    boost_id: str
+    shift_id: str
+    tier: str
+    price: Decimal
+
+
+@dataclass(frozen=True)
 class BillingSummary:
     month: str
     fee_percent: Decimal
     plan: str
     waiver: Waiver | None
     lines: list[BillingLine]
+    subscription_lines: list[SubscriptionLine]
+    boost_lines: list[BoostLine]
     wages_total: Decimal
     fee_total: Decimal
+    subscription_total: Decimal
+    boost_total: Decimal
     amount_due: Decimal
     completed_shifts_all_time: int
 
@@ -79,12 +99,20 @@ class BillingService:
         adjustments: BookingChargeAdjustmentRepository,
         partner_codes: PartnerCodeRepository,
         fee_percent: Decimal,
+        subscriptions=None,
+        boosts=None,
+        organisations=None,
+        agreements=None,
     ) -> None:
         self._bookings = bookings
         self._charges = charges
         self._adjustments = adjustments
         self._codes = partner_codes
         self._fee_percent = fee_percent
+        self._subscriptions = subscriptions
+        self._boosts = boosts
+        self._organisations = organisations
+        self._agreements = agreements
 
     def summary(self, account_id: str, month: str, now: datetime) -> BillingSummary:
         charges = self._charges.list_for_account(account_id)
@@ -105,17 +133,57 @@ class BillingService:
             )
         wages_total = money(sum((line.wages for line in lines), Decimal(0)))
         fee_total = money(sum((line.fee for line in lines), Decimal(0)))
+        subscription_lines, boost_lines, plan = self._commercial_lines(account_id, month, now)
+        subscription_total = money(sum((line.amount for line in subscription_lines), Decimal(0)))
+        boost_total = money(sum((line.price for line in boost_lines), Decimal(0)))
         return BillingSummary(
             month=month,
             fee_percent=self._fee_percent,
-            plan="founding_partner" if waiver and waiver.active else "standard",
+            plan="founding_partner" if waiver and waiver.active else (plan or "classic"),
             waiver=waiver,
             lines=lines,
+            subscription_lines=subscription_lines,
+            boost_lines=boost_lines,
             wages_total=wages_total,
             fee_total=fee_total,
-            amount_due=fee_total,
+            subscription_total=subscription_total,
+            boost_total=boost_total,
+            amount_due=money(fee_total + subscription_total + boost_total),
             completed_shifts_all_time=len(charges),
         )
+
+    def _commercial_lines(self, account_id: str, month: str, now: datetime):
+        if self._subscriptions is None or self._boosts is None or self._organisations is None:
+            return [], [], None
+        subscription_lines = [
+            SubscriptionLine(
+                subscription_charge_id=charge.subscription_charge_id,
+                period=charge.period,
+                plan=charge.plan,
+                amount=charge.amount,
+            )
+            for charge in [self._subscriptions.get_for_venue_period(account_id, month)]
+            if charge is not None
+        ]
+        boost_lines = [
+            BoostLine(
+                boost_id=boost.boost_id,
+                shift_id=boost.shift_id,
+                tier=boost.tier,
+                price=boost.price,
+            )
+            for boost in self._boosts.list_for_venue_period(account_id, month)
+            if boost.status == "active"
+        ]
+        plan = None
+        venue = self._organisations.get_venue(account_id)
+        if venue is not None and self._agreements is not None:
+            from apps.api.src.services.commercial_service import agreement_as_of
+
+            plan = agreement_as_of(
+                self._agreements, venue.organisation_id, venue.currency, now
+            ).plan
+        return subscription_lines, boost_lines, plan
 
     def redeem(self, raw_code: str, account_id: str, user_id: str, now: datetime) -> Waiver:
         code = self._codes.get_code_for_redemption(raw_code.strip().upper(), account_id)

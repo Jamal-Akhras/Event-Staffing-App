@@ -164,7 +164,7 @@ def test_summary_charges_fee_on_completed_bookings_only():
     response = client.get("/billing/summary?month=2030-03", headers=VENUE)
     assert response.status_code == 200
     body = response.json()
-    assert body["plan"] == "standard"
+    assert body["plan"] == "classic"
     assert body["fee_percent"] == "8"
     assert [line["booking_id"] for line in body["lines"]] == ["bk-1"]
     line = body["lines"][0]
@@ -256,7 +256,7 @@ def test_waiver_stops_at_the_shift_cap():
     assert [line["waived"] for line in body["lines"]] == [True, False]
     assert body["fee_total"] == "5.80"
     assert body["waiver"]["active"] is False
-    assert body["plan"] == "standard"
+    assert body["plan"] == "classic"
 
 
 def test_new_founding_code_has_fixed_three_month_twenty_shift_terms():

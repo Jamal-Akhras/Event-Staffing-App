@@ -39,6 +39,7 @@ class BookingChargeModel(Base):
     waiver_code = Column(String(40), nullable=True)
     fee_basis = Column(String(24), nullable=True)
     source_venue_id = Column(String, nullable=True)
+    plan = Column(String(16), nullable=True)
     recorded_at = Column(UtcDateTime(), nullable=False)
     worker_relationship = Column(String(20), nullable=True)
 

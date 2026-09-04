@@ -14,8 +14,10 @@ from apps.api.src.repositories.worker_relationship_repository import (
     RelationshipTransitionRepository,
     WorkerRelationshipRepository,
 )
+from apps.api.src.repositories.commercial_repository import CommercialAgreementRepository
 from apps.api.src.repositories.organisation_repository import OrganisationRepository
 from apps.api.src.services.billing_math import completed_at, money, worked_hours
+from apps.api.src.services.commercial_service import agreement_as_of, fee_percent_for
 from apps.api.src.services.org_affiliation import (
     relationship_type_as_of,
     sibling_employed_venue_as_of,
@@ -35,6 +37,7 @@ class ChargeRecorder:
         relationships: WorkerRelationshipRepository,
         relationship_transitions: RelationshipTransitionRepository,
         organisations: OrganisationRepository,
+        agreements: CommercialAgreementRepository,
     ) -> None:
         self._charges = charges
         self._shifts = shifts
@@ -44,6 +47,7 @@ class ChargeRecorder:
         self._relationships = relationships
         self._relationship_transitions = relationship_transitions
         self._organisations = organisations
+        self._agreements = agreements
 
     def freeze(self, booking: Booking, now: datetime) -> BookingCharge:
         existing = self._charges.get_for_booking(booking.booking_id)
@@ -76,8 +80,14 @@ class ChargeRecorder:
                 fee_basis = "venue_pool"
             else:
                 fee_basis = "outside"
+        venue = self._organisations.get_venue(shift.account_id)
+        organisation_id = venue.organisation_id if venue is not None else shift.account_id
+        agreement = agreement_as_of(
+            self._agreements, organisation_id, shift.currency, booking.start_time
+        )
+        plan = agreement.plan
         exempt = fee_basis in ("venue_employed", "organisation_employed")
-        fee_percent = Decimal("0.00") if exempt else self._fee_percent
+        fee_percent = fee_percent_for(agreement, fee_basis)
         fee = Decimal("0.00") if (waiver_code or exempt) else money(wages * fee_percent / Decimal(100))
         completed = completed_at(booking)
         return self._charges.record(
@@ -106,6 +116,7 @@ class ChargeRecorder:
                 worker_relationship=relationship_at_start,
                 fee_basis=fee_basis,
                 source_venue_id=source_venue_id,
+                plan=plan,
             )
         )
 

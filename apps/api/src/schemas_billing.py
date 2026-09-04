@@ -39,14 +39,32 @@ class WaiverResponse(BaseModel):
     active: bool
 
 
+class SubscriptionLineResponse(BaseModel):
+    subscription_charge_id: str
+    period: str
+    plan: str
+    amount: MoneyAmount
+
+
+class BoostLineResponse(BaseModel):
+    boost_id: str
+    shift_id: str
+    tier: str
+    price: MoneyAmount
+
+
 class BillingSummaryResponse(BaseModel):
     month: str
     fee_percent: Decimal
     plan: str
     waiver: WaiverResponse | None
     lines: list[BillingLineResponse]
+    subscription_lines: list[SubscriptionLineResponse]
+    boost_lines: list[BoostLineResponse]
     wages_total: MoneyAmount
     fee_total: MoneyAmount
+    subscription_total: MoneyAmount
+    boost_total: MoneyAmount
     amount_due: MoneyAmount
     completed_shifts_all_time: int
 

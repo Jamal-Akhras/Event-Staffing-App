@@ -29,14 +29,32 @@ export type Waiver = {
   active: boolean;
 };
 
+export type SubscriptionLine = {
+  subscription_charge_id: string;
+  period: string;
+  plan: string;
+  amount: string;
+};
+
+export type BoostLine = {
+  boost_id: string;
+  shift_id: string;
+  tier: string;
+  price: string;
+};
+
 export type BillingSummary = {
   month: string;
   fee_percent: string;
-  plan: "founding_partner" | "standard";
+  plan: string;
   waiver: Waiver | null;
   lines: BillingLine[];
+  subscription_lines: SubscriptionLine[];
+  boost_lines: BoostLine[];
   wages_total: string;
   fee_total: string;
+  subscription_total: string;
+  boost_total: string;
   amount_due: string;
   completed_shifts_all_time: number;
 };

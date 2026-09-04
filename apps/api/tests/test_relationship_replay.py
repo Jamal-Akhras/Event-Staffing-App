@@ -26,9 +26,13 @@ def repos():
 
 
 def _recorder(relationships, transitions) -> ChargeRecorder:
+    from apps.api.src.repositories.in_memory_commercial_repository import (
+        InMemoryCommercialAgreementRepository,
+    )
+
     return ChargeRecorder(
         None, None, None, None, Decimal("8.00"), relationships, transitions,
-        InMemoryOrganisationRepository(),
+        InMemoryOrganisationRepository(), InMemoryCommercialAgreementRepository(),
     )
 
 

@@ -38,6 +38,11 @@ from apps.api.src.db.event_models import EventModel
 from apps.api.src.db.booking_charge_models import BookingChargeModel
 from apps.api.src.db.shift_offer_models import ShiftOfferModel
 from apps.api.src.db.certification_models import WorkerCertificationModel
+from apps.api.src.db.commercial_models import (
+    CommercialAgreementModel,
+    ShiftBoostModel,
+    SubscriptionChargeModel,
+)
 from apps.api.src.db.notification_models import NotificationReceiptModel
 from apps.api.src.db.tenancy_models import ManagerInvitationModel
 from apps.api.src.db.shift_change_models import ShiftChangeRequestModel, ShiftChangeTransitionModel

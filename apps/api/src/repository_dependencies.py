@@ -160,6 +160,29 @@ _MANAGER_INVITATIONS = _InvitationRepo()
 def shared_manager_invitation_repository():
     return _MANAGER_INVITATIONS
 
+
+from apps.api.src.repositories.in_memory_commercial_repository import (
+    InMemoryCommercialAgreementRepository as _AgreementRepo,
+    InMemoryShiftBoostRepository as _BoostRepo,
+    InMemorySubscriptionChargeRepository as _SubscriptionRepo,
+)
+
+_COMMERCIAL_AGREEMENTS = _AgreementRepo()
+_SUBSCRIPTION_CHARGES = _SubscriptionRepo()
+_SHIFT_BOOSTS = _BoostRepo()
+
+
+def shared_commercial_agreement_repository():
+    return _COMMERCIAL_AGREEMENTS
+
+
+def shared_subscription_charge_repository():
+    return _SUBSCRIPTION_CHARGES
+
+
+def shared_shift_boost_repository():
+    return _SHIFT_BOOSTS
+
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
@@ -402,6 +425,36 @@ def get_manager_invitation_repo(session: Session | None = Depends(get_request_se
     if use_in_memory_repositories():
         return _MANAGER_INVITATIONS
     return SqlAlchemyManagerInvitationRepository(_session(session))
+
+
+def get_commercial_agreement_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_commercial_repository import (
+        SqlAlchemyCommercialAgreementRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _COMMERCIAL_AGREEMENTS
+    return SqlAlchemyCommercialAgreementRepository(_session(session))
+
+
+def get_subscription_charge_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_commercial_repository import (
+        SqlAlchemySubscriptionChargeRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _SUBSCRIPTION_CHARGES
+    return SqlAlchemySubscriptionChargeRepository(_session(session))
+
+
+def get_shift_boost_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_commercial_repository import (
+        SqlAlchemyShiftBoostRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _SHIFT_BOOSTS
+    return SqlAlchemyShiftBoostRepository(_session(session))
 
 
 from apps.api.src.repositories.in_memory_auto_accept_repository import (

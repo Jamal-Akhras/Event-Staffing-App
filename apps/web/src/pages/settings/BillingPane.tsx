@@ -120,6 +120,24 @@ export function BillingPane() {
                   </span>
                   <strong>{money(data.amount_due)}</strong>
                 </div>
+                {(data.subscription_lines.length > 0 || data.boost_lines.length > 0) && (
+                  <table className="bl-table">
+                    <tbody>
+                      {data.subscription_lines.map((line) => (
+                        <tr key={line.subscription_charge_id}>
+                          <td colSpan={5}>{`Subscription · ${line.plan} · ${line.period}`}</td>
+                          <td className="r bl-due-cell">{money(line.amount)}</td>
+                        </tr>
+                      ))}
+                      {data.boost_lines.map((line) => (
+                        <tr key={line.boost_id}>
+                          <td colSpan={5}>{`Priority posting · ${line.tier}`}</td>
+                          <td className="r bl-due-cell">{money(line.price)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
                 {data.lines.length > 0 && (
                   <table className="bl-table">
                     <thead>

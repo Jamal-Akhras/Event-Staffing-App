@@ -31,3 +31,4 @@ class BookingCharge:
     worker_relationship: str | None = None
     fee_basis: str | None = None
     source_venue_id: str | None = None
+    plan: str | None = None

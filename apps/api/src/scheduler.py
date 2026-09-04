@@ -43,6 +43,17 @@ def run_workforce_expiry_sweep() -> None:
         log.exception("workforce expiry sweep failed")
 
 
+def run_subscription_minting() -> None:
+    from apps.api.src.jobs.run_subscription_minting import run
+
+    try:
+        minted = run()
+        if minted:
+            log.info("subscription minting: %d charge(s) created", minted)
+    except Exception:
+        log.exception("subscription minting failed")
+
+
 def run_certification_expiry_sweep() -> None:
     from apps.api.src.jobs.run_certification_expiry_sweep import run
 
@@ -160,6 +171,7 @@ def create_scheduler() -> BackgroundScheduler:
     scheduler.add_job(run_workforce_expiry_sweep, "interval", minutes=10, id="workforce_expiry_sweep", replace_existing=True)
     scheduler.add_job(run_recurring_generation, "cron", hour=3, minute=0, id="recurring_gen", replace_existing=True)
     scheduler.add_job(run_certification_expiry_sweep, "cron", hour=7, minute=0, id="certification_expiry_sweep", replace_existing=True)
+    scheduler.add_job(run_subscription_minting, "cron", day=1, hour=2, minute=0, id="subscription_minting", replace_existing=True)
     scheduler.add_job(
         run_auto_accept_sweep,
         "interval",

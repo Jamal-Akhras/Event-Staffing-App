@@ -9,6 +9,8 @@ from apps.api.src.deps import get_billing_service
 from apps.api.src.rate_limit import actor_or_ip, limiter
 from apps.api.src.routes.service_errors import raise_service_error
 from apps.api.src.schemas_billing import (
+    BoostLineResponse,
+    SubscriptionLineResponse,
     BillingLineResponse,
     BillingSummaryResponse,
     RedeemPartnerCodeRequest,
@@ -66,8 +68,14 @@ def _summary_view(summary: BillingSummary) -> BillingSummaryResponse:
         plan=summary.plan,
         waiver=_waiver_view(summary.waiver) if summary.waiver else None,
         lines=[BillingLineResponse(**line.__dict__) for line in summary.lines],
+        subscription_lines=[
+            SubscriptionLineResponse(**line.__dict__) for line in summary.subscription_lines
+        ],
+        boost_lines=[BoostLineResponse(**line.__dict__) for line in summary.boost_lines],
         wages_total=summary.wages_total,
         fee_total=summary.fee_total,
+        subscription_total=summary.subscription_total,
+        boost_total=summary.boost_total,
         amount_due=summary.amount_due,
         completed_shifts_all_time=summary.completed_shifts_all_time,
     )

@@ -16,7 +16,10 @@ from apps.api.src.repository_dependencies import (
     get_account_repo,
     get_booking_allocator,
     get_booking_charge_adjustment_repo,
+    get_commercial_agreement_repo,
     get_manager_invitation_repo,
+    get_shift_boost_repo,
+    get_subscription_charge_repo,
     get_shift_change_request_repo,
     get_shift_change_transition_repo,
     get_worker_certification_repo,
@@ -151,9 +154,14 @@ def get_billing_service(
     charge_repo: BookingChargeRepository = Depends(get_booking_charge_repo),
     adjustment_repo: BookingChargeAdjustmentRepository = Depends(get_booking_charge_adjustment_repo),
     partner_code_repo: PartnerCodeRepository = Depends(get_partner_code_repo),
+    subscription_repo=Depends(get_subscription_charge_repo),
+    boost_repo=Depends(get_shift_boost_repo),
+    organisation_repo=Depends(get_organisation_repo),
+    agreement_repo=Depends(get_commercial_agreement_repo),
 ) -> BillingService:
     return BillingService(
-        booking_repo, charge_repo, adjustment_repo, partner_code_repo, get_platform_fee_percent()
+        booking_repo, charge_repo, adjustment_repo, partner_code_repo, get_platform_fee_percent(),
+        subscription_repo, boost_repo, organisation_repo, agreement_repo,
     )
 
 
@@ -165,6 +173,7 @@ def get_charge_recorder(
     relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
     relationship_transition_repo: RelationshipTransitionRepository = Depends(get_relationship_transition_repo),
     organisation_repo=Depends(get_organisation_repo),
+    agreement_repo=Depends(get_commercial_agreement_repo),
 ) -> ChargeRecorder:
     return ChargeRecorder(
         charge_repo,
@@ -175,6 +184,7 @@ def get_charge_recorder(
         relationship_repo,
         relationship_transition_repo,
         organisation_repo,
+        agreement_repo,
     )
 
 
@@ -453,4 +463,18 @@ def get_organisation_service(
 ) -> OrganisationService:
     return OrganisationService(
         organisation_repo, invitation_repo, user_repo, market_repo, outbox
+    )
+
+
+def get_commercial_service(
+    agreement_repo=Depends(get_commercial_agreement_repo),
+    subscription_repo=Depends(get_subscription_charge_repo),
+    boost_repo=Depends(get_shift_boost_repo),
+    organisation_repo=Depends(get_organisation_repo),
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+) -> "CommercialService":
+    from apps.api.src.services.commercial_service import CommercialService
+
+    return CommercialService(
+        agreement_repo, subscription_repo, boost_repo, organisation_repo, shift_repo
     )
