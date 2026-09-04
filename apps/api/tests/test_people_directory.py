@@ -9,7 +9,12 @@ from apps.api.src import main
 from apps.api.src.models.booking_charge import BookingCharge
 from apps.api.src.models.worker_profile import WorkerProfile
 from apps.api.src.models.worker_relationship import WorkerRelationship
-from apps.api.src.repository_dependencies import get_booking_charge_repo, get_worker_profile_repo
+from apps.api.src import repository_dependencies_availability as rda
+from apps.api.src.datetime_utils import utc_now
+from apps.api.src.models.availability import TimeOffRequest, TimeOffStatus
+from apps.api.src.repository_dependencies import get_booking_charge_repo, get_booking_repo, get_worker_profile_repo
+from packages.domain.src.booking import Booking
+from packages.domain.src.booking_state import BookingState
 from apps.api.src.repository_dependencies_workforce import (
     shared_relationship_transition_repository,
     shared_worker_relationship_repository,
@@ -23,10 +28,10 @@ OTHER = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-2", "X-Account-Id":
 
 @pytest.fixture(autouse=True)
 def clear_state():
-    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository()):
+    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), rda._TIME_OFF):
         repo.clear()
     yield
-    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository()):
+    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), rda._TIME_OFF):
         repo.clear()
 
 
@@ -174,3 +179,44 @@ def test_the_directory_reads_each_repository_once(client):
     finally:
         charges.list_for_account = original
     assert calls == ["charges"]
+
+
+def test_the_directory_reports_who_is_available_right_now(client, in_memory_repos):
+    _relationship("worker-1", "permanent")
+    _relationship("worker-2", "pool")
+    _relationship("worker-3", "one_off")
+    at = utc_now()
+    rda._TIME_OFF.save(
+        TimeOffRequest(
+            request_id="to-now",
+            worker_id="worker-2",
+            venue_id=VENUE,
+            start_time=at - timedelta(hours=2),
+            end_time=at + timedelta(hours=10),
+            status=TimeOffStatus.APPROVED,
+            reason="Family visit this week.",
+            created_at=at - timedelta(days=1),
+            updated_at=at - timedelta(days=1),
+            decided_at=at - timedelta(days=1),
+            decided_by_user_id="operator-1",
+        )
+    )
+    in_memory_repos[get_booking_repo].save(
+        Booking(
+            booking_id="bk-live",
+            shift_id="shift-live",
+            worker_id="worker-3",
+            operator_id="operator-1",
+            start_time=at - timedelta(hours=1),
+            end_time=at + timedelta(hours=4),
+            state=BookingState.CONFIRMED,
+            created_at=at - timedelta(days=1),
+        )
+    )
+
+    rows = {row["display_name"]: row for row in _directory(client)}
+
+    assert rows["Ana Ruiz"]["current_status"] == "available"
+    assert rows["Ana Ruiz"]["availability_configured"] is False
+    assert rows["Sam Okafor"]["current_status"] == "away"
+    assert rows["Priya Shah"]["current_status"] == "booked"

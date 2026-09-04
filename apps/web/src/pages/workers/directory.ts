@@ -19,6 +19,8 @@ export type DirectoryEntry = {
   wages_to_date: string;
   fees_to_date: string;
   last_worked: string | null;
+  current_status: "booked" | "away" | "unavailable" | "available";
+  availability_configured: boolean;
 };
 
 export type DirectoryFilter = "all" | "team" | "pool" | "once" | "ended";
@@ -70,4 +72,13 @@ export function directoryStats(entries: DirectoryEntry[]) {
   const wages = entries.reduce((sum, entry) => sum + Number(entry.wages_to_date), 0);
   const fees = entries.reduce((sum, entry) => sum + Number(entry.fees_to_date), 0);
   return { counts, wages, fees, invited: entries.filter((entry) => entry.status === "invited").length };
+}
+
+export function statusLabel(entry: DirectoryEntry): string | null {
+  if (entry.status !== "active") return null;
+  if (entry.current_status === "booked") return "Working now";
+  if (entry.current_status === "away") return "Away";
+  if (entry.current_status === "unavailable") return "Not available today";
+  if (!entry.availability_configured) return null;
+  return "Available";
 }

@@ -70,6 +70,8 @@ from apps.api.src.services.join_code_service import JoinCodeService
 from apps.api.src.services.people_service import PeopleService
 from apps.api.src.services.escalation_service import EscalationService
 from apps.api.src.services.rota_service import RotaService
+from apps.api.src.services.availability_gate import AvailabilityGate
+from apps.api.src.services.availability_service import AvailabilityService
 from apps.api.src.services.shift_change_service import ShiftChangeService
 from apps.api.src.services.shift_offer_service import ShiftOfferService
 from apps.api.src.services.rota_revisions import RotaRevisionService
@@ -178,12 +180,28 @@ def get_relationship_service(
     return RelationshipService(relationship_repo, transition_repo, worker_repo)
 
 
+def get_availability_service(
+    rule_repo=Depends(get_availability_rule_repo),
+    exception_repo=Depends(get_availability_exception_repo),
+    time_off_repo=Depends(get_time_off_repo),
+    booking_repo: BookingRepository = Depends(get_booking_repo),
+) -> AvailabilityService:
+    return AvailabilityService(rule_repo, exception_repo, time_off_repo, booking_repo)
+
+
+def get_availability_gate(
+    time_off_repo=Depends(get_time_off_repo),
+) -> AvailabilityGate:
+    return AvailabilityGate(time_off_repo)
+
+
 def get_people_service(
     relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
     worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     charge_repo: BookingChargeRepository = Depends(get_booking_charge_repo),
+    availability: AvailabilityService = Depends(get_availability_service),
 ) -> PeopleService:
-    return PeopleService(relationship_repo, worker_repo, charge_repo)
+    return PeopleService(relationship_repo, worker_repo, charge_repo, availability)
 
 
 def get_escalation_service(
@@ -326,6 +344,7 @@ def get_rota_service(
     account_repo: AccountRepository = Depends(get_account_repo),
     market_repo: MarketRepository = Depends(get_market_repo),
     offers: ShiftOfferService = Depends(get_shift_offer_service),
+    gate: AvailabilityGate = Depends(get_availability_gate),
 ) -> RotaService:
     return RotaService(
         shift_repo,
@@ -341,6 +360,7 @@ def get_rota_service(
         account_repo,
         market_repo,
         offers,
+        gate,
     )
 
 
@@ -382,6 +402,7 @@ def get_shift_change_service(
     publications=Depends(get_rota_publication_repo),
     account_repo: AccountRepository = Depends(get_account_repo),
     market_repo: MarketRepository = Depends(get_market_repo),
+    gate: AvailabilityGate = Depends(get_availability_gate),
 ) -> ShiftChangeService:
     return ShiftChangeService(
         request_repo,
@@ -395,4 +416,5 @@ def get_shift_change_service(
         escalations,
         outbox,
         RotaRevisionService(shift_repo, booking_repo, publications, outbox, account_repo, market_repo),
+        gate,
     )

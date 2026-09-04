@@ -29,7 +29,7 @@ def list_people(
     actor: ActorContext = Depends(get_actor_context),
     service: PeopleService = Depends(get_people_service),
 ) -> list[DirectoryEntryResponse]:
-    return [_entry_view(entry) for entry in service.directory(_venue_of(actor))]
+    return [_entry_view(entry) for entry in service.directory(_venue_of(actor), utc_now())]
 
 
 @router.post("/venues/me/people/{worker_id}/pool", response_model=WorkerRelationshipResponse)
@@ -160,4 +160,6 @@ def _entry_view(entry: DirectoryEntry) -> DirectoryEntryResponse:
         wages_to_date=entry.totals.wages,
         fees_to_date=entry.totals.fees,
         last_worked=entry.totals.last_worked,
+        current_status=entry.current_status,
+        availability_configured=entry.availability_configured,
     )

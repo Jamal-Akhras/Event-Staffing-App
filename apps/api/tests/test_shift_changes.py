@@ -21,6 +21,9 @@ from apps.api.src.repositories.in_memory_worker_relationship_repository import (
     InMemoryWorkerRelationshipRepository,
 )
 from apps.api.src.services.booking_ops import _decrement_workers_filled
+from apps.api.src.models.availability import TimeOffRequest, TimeOffStatus
+from apps.api.src.repositories.in_memory_availability_repository import InMemoryTimeOffRepository
+from apps.api.src.services.availability_gate import AvailabilityGate
 from apps.api.src.services.errors import ConflictError, NotFoundError, ValidationError
 from apps.api.src.services.shift_change_service import ShiftChangeService
 from packages.domain.src.booking_state import BookingState
@@ -98,6 +101,7 @@ class Harness:
         self.outbox = RecordingOutbox()
         self.escalations = RecordingEscalations()
         self.revisions = RecordingRevisions()
+        self.time_off = InMemoryTimeOffRepository()
         self.lifecycle = FakeLifecycle(self.bookings, self.shifts)
         self.service = ShiftChangeService(
             self.requests,
@@ -111,6 +115,7 @@ class Harness:
             self.escalations,
             self.outbox,
             self.revisions,
+            AvailabilityGate(self.time_off),
         )
 
     def shift(self, shift_id: str = "shift-1", start=START, workers_needed: int = 1, **overrides) -> Shift:
@@ -360,3 +365,32 @@ def test_the_replacement_sees_the_request_in_their_list(harness):
     assert [r.request_id for r in harness.service.list_requests_for_worker("worker-2")] == [
         request.request_id
     ]
+
+
+def test_a_replacement_on_approved_time_off_blocks_approval(harness):
+    harness.shift()
+    booking = harness.book("worker-1")
+    harness.relationship("worker-2")
+    request = harness.service.request_cover("worker-1", booking.booking_id, "worker-2", "swap", NOW)
+    harness.service.accept_replacement(request.request_id, "worker-2", NOW)
+    harness.time_off.save(
+        TimeOffRequest(
+            request_id="to-1",
+            worker_id="worker-2",
+            venue_id=VENUE,
+            start_time=START - timedelta(hours=1),
+            end_time=START + timedelta(hours=6),
+            status=TimeOffStatus.APPROVED,
+            reason="Holiday booked months ago.",
+            created_at=NOW,
+            updated_at=NOW,
+            decided_at=NOW,
+            decided_by_user_id="user-1",
+        )
+    )
+
+    with pytest.raises(ValidationError):
+        harness.service.approve(request.request_id, VENUE, "user-1", NOW)
+
+    assert harness.bookings.get(booking.booking_id).state == BookingState.CONFIRMED
+    assert harness.lifecycle.cancellations == []

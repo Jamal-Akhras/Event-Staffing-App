@@ -9,7 +9,7 @@ import { RELATIONSHIP_LABELS } from "../../types/workforce";
 import { shortDay } from "../dashboard/dashboardUtils";
 import { RelationshipControls } from "./RelationshipControls";
 import { TermsEditor } from "./TermsEditor";
-import type { DirectoryEntry } from "./directory";
+import { statusLabel, type DirectoryEntry } from "./directory";
 import type { useDirectory } from "./useDirectory";
 import { useWorkerHistory } from "./useWorkerHistory";
 
@@ -48,6 +48,7 @@ export function RosterRail({ entry, actions, currency }: Props) {
         </>
       }
       stats={[
+        ...(statusLabel(entry) ? [{ label: "Right now", value: statusLabel(entry) as string }] : []),
         { label: "With you", value: `${entry.shifts_with_you} shifts` },
         { label: "Hours", value: entry.shifts_with_you ? entry.hours_with_you : "—" },
         { label: "Wages to date", value: formatMoney(entry.wages_to_date, currency) },

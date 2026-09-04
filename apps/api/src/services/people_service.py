@@ -9,6 +9,7 @@ from apps.api.src.models.worker_relationship import WorkerRelationship
 from apps.api.src.repositories.booking_charge_repository import BookingChargeRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
+from apps.api.src.services.availability_service import AvailabilityService
 
 ZERO = Decimal("0.00")
 
@@ -31,6 +32,8 @@ class DirectoryEntry:
     avatar_url: str | None
     allows_recontact: bool
     totals: WorkedTotals
+    current_status: str
+    availability_configured: bool
 
 
 class PeopleService:
@@ -39,12 +42,14 @@ class PeopleService:
         relationships: WorkerRelationshipRepository,
         workers: WorkerProfileRepository,
         charges: BookingChargeRepository,
+        availability: AvailabilityService,
     ) -> None:
         self._relationships = relationships
         self._workers = workers
         self._charges = charges
+        self._availability = availability
 
-    def directory(self, venue_id: str) -> list[DirectoryEntry]:
+    def directory(self, venue_id: str, now: datetime) -> list[DirectoryEntry]:
         relationships = self._relationships.list_for_venue(venue_id)
         if not relationships:
             return []
@@ -54,9 +59,12 @@ class PeopleService:
             for profile in self._workers.list_by_ids([item.worker_id for item in relationships])
         }
         totals = self._totals_by_worker(venue_id)
+        statuses = self._availability.current_statuses(
+            venue_id, [item.worker_id for item in relationships], now
+        )
 
         entries = [
-            self._entry(relationship, profiles.get(relationship.worker_id), totals)
+            self._entry(relationship, profiles.get(relationship.worker_id), totals, statuses)
             for relationship in relationships
         ]
         return sorted(entries, key=lambda entry: entry.display_name.lower())
@@ -80,8 +88,10 @@ class PeopleService:
         relationship: WorkerRelationship,
         profile: WorkerProfile | None,
         totals: dict[str, WorkedTotals],
+        statuses: dict,
     ) -> DirectoryEntry:
         worked = totals.get(relationship.worker_id, WorkedTotals())
+        current = statuses[relationship.worker_id]
         return DirectoryEntry(
             relationship=relationship,
             display_name=profile.display_name if profile and profile.display_name else "Worker",
@@ -90,4 +100,6 @@ class PeopleService:
             avatar_url=getattr(profile, "avatar_url", None),
             allows_recontact=bool(profile.allow_venue_recontact) if profile else False,
             totals=worked,
+            current_status=current.status.value,
+            availability_configured=current.availability_configured,
         )

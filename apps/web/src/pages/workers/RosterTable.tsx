@@ -2,7 +2,7 @@ import { initials } from "../../lib/useVenue";
 import { formatMoney } from "../../lib/format";
 import { RELATIONSHIP_LABELS } from "../../types/workforce";
 import { shortDay } from "../dashboard/dashboardUtils";
-import { bucketOf, type DirectoryEntry, type DirectorySort } from "./directory";
+import { bucketOf, statusLabel, type DirectoryEntry, type DirectorySort } from "./directory";
 
 const COLUMNS: { key: DirectorySort; label: string; align: "left" | "right" }[] = [
   { key: "name", label: "Person", align: "left" },
@@ -62,7 +62,7 @@ export function RosterTable({ rows, sort, currency, selectedId, onSort, onSelect
                     <span>
                       <b>{entry.display_name}</b>
                       <span>
-                        {entry.role || "No role set"}
+                        {[statusLabel(entry), entry.role || "No role set"].filter(Boolean).join(" · ")}
                         {entry.agreed_rate ? ` · ${formatMoney(entry.agreed_rate, currency)}/hr` : ""}
                       </span>
                     </span>

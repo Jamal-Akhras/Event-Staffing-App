@@ -20,6 +20,8 @@ from apps.api.src.repository_dependencies import (
 )
 from apps.api.src.repository_dependencies import get_booking_transition_repo
 from apps.api.src.repository_dependencies import shared_shift_offer_repository
+from apps.api.src import repository_dependencies_availability as rda
+from apps.api.src.models.availability import TimeOffRequest, TimeOffStatus
 from apps.api.src.repository_dependencies_workforce import (
     shared_relationship_transition_repository,
     shared_worker_relationship_repository,
@@ -36,10 +38,10 @@ POOLER = {"X-Actor-Role": "worker", "X-Actor-Id": "pool-1"}
 
 @pytest.fixture(autouse=True)
 def clear_state():
-    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository()):
+    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository(), rda._TIME_OFF):
         repo.clear()
     yield
-    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository()):
+    for repo in (shared_worker_relationship_repository(), shared_relationship_transition_repository(), shared_shift_offer_repository(), rda._TIME_OFF):
         repo.clear()
 
 
@@ -379,3 +381,59 @@ def test_another_venue_cannot_publish_or_mutate(client):
         json={"reason": "not mine"},
         headers=other,
     ).status_code == 404
+
+
+def _approved_time_off(worker_id: str, venue_id: str = VENUE_ID) -> None:
+    rda._TIME_OFF.save(
+        TimeOffRequest(
+            request_id=f"to-{worker_id}-{venue_id}",
+            worker_id=worker_id,
+            venue_id=venue_id,
+            start_time=datetime(2030, 6, 10, 0, 0, tzinfo=UTC),
+            end_time=datetime(2030, 6, 12, 0, 0, tzinfo=UTC),
+            status=TimeOffStatus.APPROVED,
+            reason="Holiday booked months ago.",
+            created_at=NOW,
+            updated_at=NOW,
+            decided_at=NOW,
+            decided_by_user_id="operator-1",
+        )
+    )
+
+
+def test_publishing_refuses_an_assignee_on_approved_time_off(client, in_memory_repos):
+    _draft(client, "staff-1")
+    _approved_time_off("staff-1")
+
+    response = _publish(client)
+
+    assert response.status_code == 400
+    assert "approved time off" in response.json()["detail"]
+    assert in_memory_repos[get_booking_repo].list_by_worker("staff-1") == []
+
+
+def test_time_off_at_another_venue_does_not_block_publishing(client, in_memory_repos):
+    _draft(client, "staff-1")
+    _approved_time_off("staff-1", venue_id="venue-2")
+
+    response = _publish(client)
+
+    assert response.status_code == 200, response.text
+    assert len(in_memory_repos[get_booking_repo].list_by_worker("staff-1")) == 1
+
+
+def test_reassignment_refuses_a_worker_on_approved_time_off(client, in_memory_repos):
+    drafted = _draft(client, "staff-1")
+    assert _publish(client).status_code == 200
+    _approved_time_off("pool-1")
+
+    response = client.post(
+        f"/venues/me/rota/shifts/{drafted['shift_id']}/reassign",
+        json={"worker_id": "pool-1", "now": NOW.isoformat()},
+        headers=OPERATOR,
+    )
+
+    assert response.status_code == 400
+    assert "approved time off" in response.json()["detail"]
+    bookings = in_memory_repos[get_booking_repo].list_by_worker("staff-1")
+    assert [b.state for b in bookings] == [BookingState.CONFIRMED]

@@ -29,6 +29,7 @@ from apps.api.src.services.rota_revisions import (
     RotaRevisionService,
     live_bookings,
 )
+from apps.api.src.services.availability_gate import ApprovedTimeOffConflictError, AvailabilityGate
 from apps.api.src.services.shift_offer_service import ShiftOfferService
 from apps.api.src.services.rota_week import local_day, week_window
 from packages.domain.src.booking import Booking
@@ -51,6 +52,7 @@ class RotaService:
         accounts: AccountRepository,
         markets: MarketRepository,
         offers: ShiftOfferService,
+        gate: AvailabilityGate,
     ) -> None:
         self._shifts = shifts
         self._bookings = bookings
@@ -62,6 +64,7 @@ class RotaService:
         self._escalations = escalations
         self._outbox = outbox
         self._offers = offers
+        self._gate = gate
         self._revisions = RotaRevisionService(shifts, bookings, publications, outbox, accounts, markets)
 
     def publish(self, venue_id: str, week_start: date, actor_user_id: str, now: datetime) -> PublishOutcome:
@@ -82,6 +85,15 @@ class RotaService:
                     f"{draft.role} on {local_day(draft.start_time, zone)} is assigned to someone "
                     f"without an active relationship (shift {draft.shift_id}). Reassign it, then publish."
                 )
+            try:
+                self._gate.ensure_no_approved_time_off(
+                    draft.assigned_worker_id, venue_id, draft.start_time, draft.end_time
+                )
+            except ApprovedTimeOffConflictError as exc:
+                raise ValidationError(
+                    f"{draft.role} on {local_day(draft.start_time, zone)} is assigned to someone "
+                    f"with approved time off (shift {draft.shift_id}). Reassign it, then publish."
+                ) from exc
             employed = relationship.relationship_type in EMPLOYED_TYPES
             if employed:
                 try:
@@ -201,6 +213,14 @@ class RotaService:
         except OverlappingBookingError as exc:
             raise ValidationError(
                 f"That worker already has an overlapping booking on shift {exc.clashing_shift_id}."
+            ) from exc
+        try:
+            self._gate.ensure_no_approved_time_off(
+                new_worker_id, venue_id, shift.start_time, shift.end_time
+            )
+        except ApprovedTimeOffConflictError as exc:
+            raise ValidationError(
+                "That worker has approved time off during this shift."
             ) from exc
 
         drafted = self._shifts.save(

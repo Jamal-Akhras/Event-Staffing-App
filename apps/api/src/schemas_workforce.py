@@ -70,6 +70,8 @@ class DirectoryEntryResponse(BaseModel):
     wages_to_date: Decimal
     fees_to_date: Decimal
     last_worked: UtcTimestamp | None
+    current_status: str
+    availability_configured: bool
 
 
 class InvitationResponse(BaseModel):

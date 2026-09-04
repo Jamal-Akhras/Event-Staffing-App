@@ -23,6 +23,7 @@ from apps.api.src.repositories.shift_change_request_repository import (
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.schemas_recovery import CancellationRequest
+from apps.api.src.services.availability_gate import ApprovedTimeOffConflictError, AvailabilityGate
 from apps.api.src.services.booking_lifecycle_service import BookingLifecycleService
 from apps.api.src.services.errors import ConflictError, NotFoundError, ValidationError
 from apps.api.src.services.outbox_publisher import OutboxPublisher
@@ -45,6 +46,7 @@ class ShiftChangeService:
         escalations,
         outbox: OutboxPublisher,
         revisions: RotaRevisionService,
+        gate: AvailabilityGate,
     ) -> None:
         self._requests = requests
         self._change_transitions = change_transitions
@@ -57,6 +59,7 @@ class ShiftChangeService:
         self._escalations = escalations
         self._outbox = outbox
         self._revisions = revisions
+        self._gate = gate
 
     def list_requests_for_worker(self, worker_id: str):
         return self._requests.list_for_worker(worker_id)
@@ -207,6 +210,14 @@ class ShiftChangeService:
         except OverlappingBookingError as exc:
             raise ValidationError(
                 f"The replacement now has an overlapping booking on shift {exc.clashing_shift_id}."
+            ) from exc
+        try:
+            self._gate.ensure_no_approved_time_off(
+                replacement, request.venue_id, booking.start_time, booking.end_time
+            )
+        except ApprovedTimeOffConflictError as exc:
+            raise ValidationError(
+                "The replacement has approved time off during this shift."
             ) from exc
         attendance_mode = (
             "employed" if relationship.relationship_type in EMPLOYED_TYPES else "pin"
