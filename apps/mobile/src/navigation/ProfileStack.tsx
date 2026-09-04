@@ -7,6 +7,7 @@ import {
   PrivacySettingsScreen,
   ProfileDetailsScreen,
 } from "../screens/profile/SettingsDetailScreens";
+import { AutoAcceptScreen } from "../screens/profile/AutoAcceptScreen";
 import { CertificationsScreen } from "../screens/profile/CertificationsScreen";
 import { COLORS } from "../theme/colors";
 import { NotificationBell } from "./NotificationBell";
@@ -50,6 +51,11 @@ export function ProfileStack() {
         name="Certifications"
         component={CertificationsScreen}
         options={{ title: "Certifications" }}
+      />
+      <Stack.Screen
+        name="AutoAccept"
+        component={AutoAcceptScreen}
+        options={{ title: "Auto-accept" }}
       />
       <Stack.Screen
         name="AccountSettings"

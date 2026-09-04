@@ -21,6 +21,7 @@ export type ProfileStackParamList = {
   NotificationSettings: undefined;
   PrivacySettings: undefined;
   Certifications: undefined;
+  AutoAccept: undefined;
   AccountSettings: undefined;
 };
 

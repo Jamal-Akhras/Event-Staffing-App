@@ -21,7 +21,7 @@ const TABS: { key: ProfileTab; label: string }[] = [
 
 type SettingsNav = {
   navigate: (
-    screen: "ProfileDetails" | "NotificationSettings" | "PrivacySettings" | "AccountSettings" | "Certifications"
+    screen: "ProfileDetails" | "NotificationSettings" | "PrivacySettings" | "AccountSettings" | "Certifications" | "AutoAccept"
   ) => void;
 };
 
@@ -74,6 +74,10 @@ export function ProfileScreen() {
               <SettingsRow
                 label="Certifications"
                 onPress={() => navigation.navigate("Certifications")}
+              />
+              <SettingsRow
+                label="Auto-accept offers"
+                onPress={() => navigation.navigate("AutoAccept")}
               />
             </View>
 
