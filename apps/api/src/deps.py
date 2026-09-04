@@ -502,3 +502,20 @@ def get_consent_service(
     from apps.api.src.services.consent_service import ConsentService
 
     return ConsentService(consent_repo)
+
+
+def get_insight_aggregates_service(
+    charge_repo: BookingChargeRepository = Depends(get_booking_charge_repo),
+    shift_repo: ShiftRepository = Depends(get_shift_repo),
+    booking_repo: BookingRepository = Depends(get_booking_repo),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    availability: AvailabilityService = Depends(get_availability_service),
+    organisation_repo=Depends(get_organisation_repo),
+    agreement_repo=Depends(get_commercial_agreement_repo),
+) -> "InsightAggregatesService":
+    from apps.api.src.services.insight_aggregates_service import InsightAggregatesService
+
+    return InsightAggregatesService(
+        charge_repo, shift_repo, booking_repo, relationship_repo,
+        availability, organisation_repo, agreement_repo,
+    )
