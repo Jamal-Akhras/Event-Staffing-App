@@ -112,6 +112,10 @@ def get_platform_fee_percent() -> Decimal:
     return percent
 
 
+def feed_ranking_enabled() -> bool:
+    return get_bool_env("FEED_RANKING_ENABLED", False)
+
+
 def use_in_memory_repositories() -> bool:
     if _forced_in_memory():
         return True

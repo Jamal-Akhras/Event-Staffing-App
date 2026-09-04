@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 
@@ -13,6 +13,8 @@ class FeedPosition:
     start_time: datetime
     shift_id: str
     bucket: int = 2
+    slate_id: str | None = None
+    slate_position: int = 0
 
 
 @dataclass(frozen=True)
@@ -38,3 +40,4 @@ class WorkerFeedItem:
     bucket: int = 2
     boosted: bool = False
     boost_tier: str | None = None
+    reasons: list[str] = field(default_factory=list)

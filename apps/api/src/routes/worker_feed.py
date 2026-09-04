@@ -8,7 +8,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from uuid import uuid4
 
 from apps.api.src.auth import ActorContext, ActorRole, get_actor_context, require_role, require_worker_owner
-from apps.api.src.deps import get_event_recorder, get_worker_feed_service, get_worker_shift_feed_service
+from apps.api.src.config import feed_ranking_enabled
+from apps.api.src.deps import (
+    get_consent_service,
+    get_event_recorder,
+    get_worker_feed_service,
+    get_worker_shift_feed_service,
+)
+from apps.api.src.models.consent import PURPOSE_PROFILING
+from apps.api.src.services.consent_service import ConsentService
 from apps.api.src.helpers import _shift_view
 from apps.api.src.routes.service_errors import raise_service_error
 from apps.api.src.schemas import ErrorResponse
@@ -44,9 +52,14 @@ def list_worker_feed(
     service: WorkerShiftFeedService = Depends(get_worker_shift_feed_service),
     actor: ActorContext = Depends(get_actor_context),
     recorder: EventRecorder = Depends(get_event_recorder),
+    consent_service: ConsentService = Depends(get_consent_service),
 ) -> WorkerFeedPageResponse:
     require_role(actor.role, {ActorRole.WORKER})
     worker_id = actor.effective_worker_id
+    rank = feed_ranking_enabled()
+    profiling_consent = (
+        rank and consent_service.has_active_consent(actor.user_id, PURPOSE_PROFILING)
+    )
     try:
         page = service.list_page(
             worker_id=worker_id,
@@ -55,12 +68,14 @@ def list_worker_feed(
             search=search_query,
             timing=timing,
             minimum_pay=minimum_pay,
+            rank=rank,
+            profiling_consent=profiling_consent,
         )
     except WorkerMarketMissingError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
     except FeedCursorError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    slate_id = str(uuid4())
+    slate_id = page.slate_id or str(uuid4())
     for position, item in enumerate(page.items):
         recorder.record(
             "shift.served",
@@ -78,6 +93,7 @@ def list_worker_feed(
             WorkerFeedItemResponse(
                 **_shift_view(item.shift).model_dump(),
                 boosted=item.boosted,
+                reasons=item.reasons,
                 venue=FeedVenueResponse(
                     venue_id=item.venue.venue_id,
                     name=item.venue.name,
@@ -89,6 +105,7 @@ def list_worker_feed(
         slate_id=slate_id,
         next_cursor=page.next_cursor,
         market=MarketResponse.from_domain(page.market),
+        personalized=page.personalized,
     )
 
 

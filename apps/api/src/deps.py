@@ -99,6 +99,7 @@ from apps.api.src.services.shift_service import ShiftService
 from apps.api.src.services.shift_lifecycle_service import ShiftLifecycleService
 from apps.api.src.services.template_service import TemplateService
 from apps.api.src.services.worker_feed_service import WorkerFeedService
+from apps.api.src.services.feed_slate_store import get_feed_slate_store
 from apps.api.src.services.worker_shift_feed_service import WorkerShiftFeedService
 from apps.api.src.services.outbox_publisher import OutboxPublisher
 from apps.api.src.services.idempotency import IdempotencyService
@@ -347,8 +348,15 @@ def get_worker_shift_feed_service(
     profile_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     market_repo: MarketRepository = Depends(get_market_repo),
     query_repo: WorkerFeedQueryRepository = Depends(get_worker_feed_query_repo),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
 ) -> WorkerShiftFeedService:
-    return WorkerShiftFeedService(profile_repo, market_repo, query_repo)
+    return WorkerShiftFeedService(
+        profile_repo,
+        market_repo,
+        query_repo,
+        relationships=relationship_repo,
+        slates=get_feed_slate_store(),
+    )
 
 
 def get_shift_offer_service(

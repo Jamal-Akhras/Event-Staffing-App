@@ -16,6 +16,7 @@ class FeedVenueResponse(BaseModel):
 class WorkerFeedItemResponse(ShiftResponse):
     venue: FeedVenueResponse
     boosted: bool = False
+    reasons: list[str] = Field(default_factory=list)
 
 
 class WorkerFeedPageResponse(BaseModel):
@@ -23,6 +24,7 @@ class WorkerFeedPageResponse(BaseModel):
     slate_id: str
     next_cursor: str | None
     market: MarketResponse
+    personalized: bool = False
 
 
 class WorkerFeedStateUpdateRequest(BaseModel):
