@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
+import { VenueSwitcher } from "./VenueSwitcher";
+
 import { NotificationBell } from "../components/NotificationBell";
 import { PostShiftRatingPrompt } from "../components/PostShiftRatingPrompt";
 import { VenueRatingBadge } from "../components/VenueRatingBadge";
@@ -49,6 +51,7 @@ export function DashboardLayout() {
           </nav>
 
           <div className="topbar-actions">
+            <VenueSwitcher />
             <NotificationBell />
             <Link to="/app/settings" className="venue-chip" title={venueName}>
               <span className="venue-chip-mark">{initials(venueName)}</span>

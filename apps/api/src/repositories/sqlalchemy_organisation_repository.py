@@ -89,9 +89,36 @@ class SqlAlchemyOrganisationRepository(OrganisationRepository):
             )
             self._session.add(row)
         row.role = membership.role.value
+        row.venue_scope = list(membership.venue_scope) if membership.venue_scope else None
         row.created_at = membership.created_at
         self._session.flush()
         return _membership(row)
+
+    def list_memberships(self, organisation_id: str) -> list[OrganisationMembership]:
+        rows = (
+            self._session.query(OrganisationMembershipModel)
+            .filter(OrganisationMembershipModel.organisation_id == organisation_id)
+            .order_by(OrganisationMembershipModel.created_at)
+            .all()
+        )
+        return [_membership(row) for row in rows]
+
+    def delete_membership(self, organisation_id: str, user_id: str) -> bool:
+        row = self._session.get(OrganisationMembershipModel, (organisation_id, user_id))
+        if row is None:
+            return False
+        self._session.delete(row)
+        self._session.flush()
+        return True
+
+    def list_venues_for_organisation(self, organisation_id: str) -> list[Venue]:
+        rows = (
+            self._session.query(VenueModel)
+            .filter(VenueModel.organisation_id == organisation_id)
+            .order_by(VenueModel.created_at, VenueModel.venue_id)
+            .all()
+        )
+        return [_venue(row) for row in rows]
 
 
 def _organisation(row: OrganisationModel) -> Organisation:
@@ -129,4 +156,5 @@ def _membership(row: OrganisationMembershipModel) -> OrganisationMembership:
         user_id=row.user_id,
         role=OrganisationRole(row.role),
         created_at=row.created_at,
+        venue_scope=tuple(row.venue_scope) if row.venue_scope else None,
     )

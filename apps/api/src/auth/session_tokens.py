@@ -13,14 +13,17 @@ def resolve_session_context(user: User, organisation_repo: OrganisationRepositor
     return venue.organisation_id, venue.currency
 
 
-def issue_session(user: User, *, organisation_id: str | None, currency: str) -> TokenResponse:
+def issue_session(
+    user: User, *, organisation_id: str | None, currency: str, venue_id: str | None = None
+) -> TokenResponse:
+    session_venue_id = venue_id or user.account_id
     token = create_access_token(
         {
             "user_id": user.user_id,
             "email": user.email,
             "role": user.role,
-            "account_id": user.account_id,
-            "venue_id": user.account_id,
+            "account_id": session_venue_id,
+            "venue_id": session_venue_id,
             "organisation_id": organisation_id,
             "session_version": user.session_version,
         }
@@ -31,9 +34,9 @@ def issue_session(user: User, *, organisation_id: str | None, currency: str) -> 
         user_id=user.user_id,
         email=user.email,
         role=user.role,
-        account_id=user.account_id,
+        account_id=session_venue_id,
         organisation_id=organisation_id,
-        venue_id=user.account_id,
+        venue_id=session_venue_id,
         worker_profile_id=user.worker_profile_id,
         currency=currency,
         email_verified=user.email_verified,

@@ -56,9 +56,16 @@ class Venue:
     market_id: str | None = None
 
 
+def membership_covers(membership: "OrganisationMembership", venue_id: str) -> bool:
+    if membership.role in (OrganisationRole.OWNER, OrganisationRole.ADMIN):
+        return True
+    return membership.venue_scope is not None and venue_id in membership.venue_scope
+
+
 @dataclass(frozen=True)
 class OrganisationMembership:
     organisation_id: str
     user_id: str
     role: OrganisationRole
     created_at: datetime
+    venue_scope: tuple[str, ...] | None = None

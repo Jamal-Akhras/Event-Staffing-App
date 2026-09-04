@@ -37,7 +37,10 @@ def list_actor_notifications(
         decoded = decode_notification_cursor(cursor)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    rows = repo.list_for_recipient(recipient_kind, recipient_id, limit + 1, decoded)
+    viewer = actor.user_id if recipient_kind == "venue" else None
+    rows = repo.list_for_recipient(
+        recipient_kind, recipient_id, limit + 1, decoded, viewer_user_id=viewer
+    )
     has_more = len(rows) > limit
     items = rows[:limit]
     next_cursor = (
@@ -48,7 +51,7 @@ def list_actor_notifications(
     return NotificationPageResponse(
         items=[_view(item) for item in items],
         next_cursor=next_cursor,
-        unread_count=repo.unread_count(recipient_kind, recipient_id),
+        unread_count=repo.unread_count(recipient_kind, recipient_id, viewer_user_id=viewer),
     )
 
 
@@ -59,7 +62,8 @@ def mark_notification_read(
     actor: ActorContext = Depends(get_actor_context),
 ) -> dict[str, bool]:
     recipient_kind, recipient_id = _recipient(actor)
-    if not repo.mark_read(notification_id, recipient_kind, recipient_id):
+    viewer = actor.user_id if recipient_kind == "venue" else None
+    if not repo.mark_read(notification_id, recipient_kind, recipient_id, viewer_user_id=viewer):
         raise HTTPException(status_code=404, detail="Notification not found.")
     return {"read": True}
 
@@ -70,7 +74,12 @@ def mark_actor_notifications_read(
     actor: ActorContext = Depends(get_actor_context),
 ) -> dict[str, int]:
     recipient_kind, recipient_id = _recipient(actor)
-    return {"marked_read": repo.mark_all_read_for_recipient(recipient_kind, recipient_id)}
+    viewer = actor.user_id if recipient_kind == "venue" else None
+    return {
+        "marked_read": repo.mark_all_read_for_recipient(
+            recipient_kind, recipient_id, viewer_user_id=viewer
+        )
+    }
 
 
 @router.get("/notification-preferences", response_model=NotificationPreferencesResponse)

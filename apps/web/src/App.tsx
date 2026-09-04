@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { JoinTeamPage } from "./pages/JoinTeamPage";
 import { SsoCallbackPage } from "./pages/SsoCallbackPage";
 import { SsoCompletePage } from "./pages/SsoCompletePage";
 import { SSO_ENABLED } from "./lib/clerk";
@@ -43,6 +44,7 @@ export default function App() {
             </Route>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/join-team" element={<JoinTeamPage />} />
             {SSO_ENABLED && <Route path="/sso-callback" element={<SsoCallbackPage />} />}
             {SSO_ENABLED && <Route path="/sso-complete" element={<SsoCompletePage />} />}
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />

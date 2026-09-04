@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from apps.api.src.auth import ActorContext, ActorRole, get_actor_context, require_role
+from apps.api.src.auth.permissions import MANAGE_BILLING, require_permission
 from apps.api.src.datetime_utils import utc_now
 from apps.api.src.deps import get_billing_service
 from apps.api.src.rate_limit import actor_or_ip, limiter
@@ -26,6 +27,7 @@ def billing_summary(
     service: BillingService = Depends(get_billing_service),
 ) -> BillingSummaryResponse:
     account_id = _venue_of(actor)
+    require_permission(actor, MANAGE_BILLING)
     now = utc_now()
     try:
         return _summary_view(service.summary(account_id, month or now.strftime("%Y-%m"), now))
@@ -42,6 +44,7 @@ def redeem_partner_code(
     service: BillingService = Depends(get_billing_service),
 ) -> WaiverResponse:
     account_id = _venue_of(actor)
+    require_permission(actor, MANAGE_BILLING)
     try:
         waiver = service.redeem(payload.code, account_id, actor.user_id, utc_now())
     except ServiceError as exc:

@@ -149,6 +149,17 @@ _WORKER_CERTIFICATIONS = _CertRepo()
 def shared_worker_certification_repository():
     return _WORKER_CERTIFICATIONS
 
+
+from apps.api.src.repositories.in_memory_manager_invitation_repository import (
+    InMemoryManagerInvitationRepository as _InvitationRepo,
+)
+
+_MANAGER_INVITATIONS = _InvitationRepo()
+
+
+def shared_manager_invitation_repository():
+    return _MANAGER_INVITATIONS
+
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
@@ -381,6 +392,16 @@ def get_worker_certification_repo(session: Session | None = Depends(get_request_
     if use_in_memory_repositories():
         return _WORKER_CERTIFICATIONS
     return SqlAlchemyWorkerCertificationRepository(_session(session))
+
+
+def get_manager_invitation_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_manager_invitation_repository import (
+        SqlAlchemyManagerInvitationRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _MANAGER_INVITATIONS
+    return SqlAlchemyManagerInvitationRepository(_session(session))
 
 
 from apps.api.src.repositories.in_memory_auto_accept_repository import (

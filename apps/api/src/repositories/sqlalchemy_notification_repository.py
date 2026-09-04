@@ -3,7 +3,11 @@ from __future__ import annotations
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
+from dataclasses import replace
+
+from apps.api.src.datetime_utils import utc_now
 from apps.api.src.db.models import NotificationModel
+from apps.api.src.db.notification_models import NotificationReceiptModel
 from apps.api.src.models.notification import Notification
 
 
@@ -20,6 +24,7 @@ class SqlAlchemyNotificationRepository:
         recipient_id: str,
         limit: int,
         cursor: tuple[object, str] | None = None,
+        viewer_user_id: str | None = None,
     ) -> list[Notification]:
         query = self._session.query(NotificationModel).filter(
             self._recipient_filter(recipient_kind, recipient_id)
@@ -40,16 +45,75 @@ class SqlAlchemyNotificationRepository:
             .limit(limit)
             .all()
         )
-        return [_to_domain(r) for r in rows]
+        items = [_to_domain(r) for r in rows]
+        if recipient_kind == "venue" and viewer_user_id is not None and items:
+            seen = {
+                receipt.notification_id
+                for receipt in self._session.query(NotificationReceiptModel)
+                .filter(
+                    NotificationReceiptModel.user_id == viewer_user_id,
+                    NotificationReceiptModel.notification_id.in_(
+                        [item.notification_id for item in items]
+                    ),
+                )
+                .all()
+            }
+            items = [replace(item, read=item.notification_id in seen) for item in items]
+        return items
 
-    def unread_count(self, recipient_kind: str, recipient_id: str) -> int:
+    def unread_count(
+        self, recipient_kind: str, recipient_id: str, viewer_user_id: str | None = None
+    ) -> int:
+        if recipient_kind == "venue" and viewer_user_id is not None:
+            seen = (
+                self._session.query(NotificationReceiptModel.notification_id)
+                .filter(NotificationReceiptModel.user_id == viewer_user_id)
+            )
+            return (
+                self._session.query(NotificationModel)
+                .filter(
+                    self._recipient_filter(recipient_kind, recipient_id),
+                    ~NotificationModel.notification_id.in_(seen),
+                )
+                .count()
+            )
         return (
             self._session.query(NotificationModel)
             .filter(self._recipient_filter(recipient_kind, recipient_id), NotificationModel.read == False)
             .count()
         )
 
-    def mark_read(self, notification_id: str, recipient_kind: str, recipient_id: str) -> bool:
+    def mark_read(
+        self,
+        notification_id: str,
+        recipient_kind: str,
+        recipient_id: str,
+        viewer_user_id: str | None = None,
+    ) -> bool:
+        if recipient_kind == "venue" and viewer_user_id is not None:
+            owned = (
+                self._session.query(NotificationModel)
+                .filter(
+                    NotificationModel.notification_id == notification_id,
+                    self._recipient_filter(recipient_kind, recipient_id),
+                )
+                .count()
+            )
+            if owned != 1:
+                return False
+            receipt = self._session.get(
+                NotificationReceiptModel, (notification_id, viewer_user_id)
+            )
+            if receipt is None:
+                self._session.add(
+                    NotificationReceiptModel(
+                        notification_id=notification_id,
+                        user_id=viewer_user_id,
+                        read_at=utc_now(),
+                    )
+                )
+                self._session.flush()
+            return True
         count = (
             self._session.query(NotificationModel)
             .filter(
@@ -84,7 +148,32 @@ class SqlAlchemyNotificationRepository:
     def mark_all_read(self, worker_id: str) -> int:
         return self.mark_all_read_for_recipient("worker", worker_id)
 
-    def mark_all_read_for_recipient(self, recipient_kind: str, recipient_id: str) -> int:
+    def mark_all_read_for_recipient(
+        self, recipient_kind: str, recipient_id: str, viewer_user_id: str | None = None
+    ) -> int:
+        if recipient_kind == "venue" and viewer_user_id is not None:
+            seen = (
+                self._session.query(NotificationReceiptModel.notification_id)
+                .filter(NotificationReceiptModel.user_id == viewer_user_id)
+            )
+            unseen = (
+                self._session.query(NotificationModel.notification_id)
+                .filter(
+                    self._recipient_filter(recipient_kind, recipient_id),
+                    ~NotificationModel.notification_id.in_(seen),
+                )
+                .all()
+            )
+            for (unseen_id,) in unseen:
+                self._session.add(
+                    NotificationReceiptModel(
+                        notification_id=unseen_id,
+                        user_id=viewer_user_id,
+                        read_at=utc_now(),
+                    )
+                )
+            self._session.flush()
+            return len(unseen)
         count = (
             self._session.query(NotificationModel)
             .filter(self._recipient_filter(recipient_kind, recipient_id), NotificationModel.read == False)

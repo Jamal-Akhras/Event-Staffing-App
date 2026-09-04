@@ -5,6 +5,7 @@ import { SkeletonCard } from "../components/SkeletonCard";
 import { useToast } from "../components/Toast";
 import { AccountPane } from "./settings/AccountPane";
 import { BillingPane } from "./settings/BillingPane";
+import { ManagersPane } from "./settings/ManagersPane";
 import { TeamPane } from "./settings/TeamPane";
 import { NotificationsPane } from "./settings/NotificationsPane";
 import { SchedulingPane } from "./settings/SchedulingPane";
@@ -18,6 +19,7 @@ const TABS = [
   { key: "scheduling", label: "Scheduling" },
   { key: "notifications", label: "Notifications" },
   { key: "team", label: "Team" },
+  { key: "managers", label: "Managers" },
   { key: "billing", label: "Billing" },
   { key: "account", label: "Account" },
 ] as const;
@@ -41,6 +43,7 @@ export function SettingsPage() {
     scheduling: <SchedulingPane settings={settings} />,
     notifications: <NotificationsPane />,
     team: <TeamPane venueName={settings.draft.name} />,
+    managers: <ManagersPane />,
     billing: <BillingPane />,
     account: <AccountPane />,
   };

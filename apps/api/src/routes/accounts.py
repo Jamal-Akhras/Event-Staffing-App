@@ -5,6 +5,7 @@ from dataclasses import replace
 from fastapi import APIRouter, Depends, HTTPException
 
 from apps.api.src.auth.dependencies import ActorContext, ActorRole, get_actor_context, require_role
+from apps.api.src.auth.permissions import MANAGE_SETTINGS, require_permission
 from apps.api.src.deps import get_account_repo, get_market_repo
 from apps.api.src.models.account import Account
 from apps.api.src.repository_dependencies import get_request_unit_of_work
@@ -75,6 +76,7 @@ def update_my_account(
     unit_of_work: RequestUnitOfWork = Depends(get_request_unit_of_work),
 ) -> AccountResponse:
     require_role(actor.role, {ActorRole.OPERATOR})
+    require_permission(actor, MANAGE_SETTINGS)
     if not actor.account_id:
         raise HTTPException(status_code=404, detail="No account associated with this user.")
     account = _get_account(repo, actor.account_id)

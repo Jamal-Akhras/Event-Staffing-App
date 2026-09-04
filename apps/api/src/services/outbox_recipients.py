@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from apps.api.src.db.models import UserModel
 from apps.api.src.db.notification_models import PushTokenModel, UserNotificationPreferenceModel
+from apps.api.src.db.tenancy_models import OrganisationMembershipModel, VenueModel
 from apps.api.src.services.notification_settings import CATEGORY_DEFAULTS, CHANNEL_DEFAULTS, normalize_flags
 
 
@@ -44,5 +45,20 @@ def _recipient_users(session: Session, recipient: dict) -> list[UserModel]:
     if recipient["kind"] == "worker":
         return session.query(UserModel).filter(UserModel.worker_profile_id == recipient["id"]).all()
     if recipient["kind"] == "venue":
-        return session.query(UserModel).filter(UserModel.active_venue_id == recipient["id"]).all()
+        venue = session.get(VenueModel, recipient["id"])
+        if venue is None:
+            return []
+        memberships = (
+            session.query(OrganisationMembershipModel)
+            .filter(OrganisationMembershipModel.organisation_id == venue.organisation_id)
+            .all()
+        )
+        user_ids = [
+            membership.user_id
+            for membership in memberships
+            if membership.venue_scope is None or recipient["id"] in membership.venue_scope
+        ]
+        if not user_ids:
+            return []
+        return session.query(UserModel).filter(UserModel.user_id.in_(user_ids)).all()
     return []

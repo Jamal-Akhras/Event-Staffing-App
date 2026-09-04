@@ -6,6 +6,18 @@ from apps.api.src.db.database import Base
 from apps.api.src.db.types import UtcDateTime
 
 
+class NotificationReceiptModel(Base):
+    __tablename__ = "notification_receipts"
+
+    notification_id = Column(
+        String,
+        ForeignKey("notifications.notification_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    user_id = Column(String, primary_key=True, index=True)
+    read_at = Column(UtcDateTime(), nullable=False)
+
+
 class NotificationModel(Base):
     __tablename__ = "notifications"
     __table_args__ = (

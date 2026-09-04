@@ -64,6 +64,23 @@ class InMemoryOrganisationRepository(OrganisationRepository):
         self._memberships[(membership.organisation_id, membership.user_id)] = membership
         return membership
 
+    def list_memberships(self, organisation_id: str) -> list[OrganisationMembership]:
+        rows = [
+            membership
+            for membership in self._memberships.values()
+            if membership.organisation_id == organisation_id
+        ]
+        return sorted(rows, key=lambda membership: membership.created_at)
+
+    def delete_membership(self, organisation_id: str, user_id: str) -> bool:
+        return self._memberships.pop((organisation_id, user_id), None) is not None
+
+    def list_venues_for_organisation(self, organisation_id: str) -> list[Venue]:
+        return sorted(
+            (venue for venue in self._venues.values() if venue.organisation_id == organisation_id),
+            key=lambda venue: (venue.created_at, venue.venue_id),
+        )
+
     def clear(self) -> None:
         self._organisations.clear()
         self._venues.clear()

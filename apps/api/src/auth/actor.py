@@ -16,6 +16,8 @@ class ActorContext:
     worker_profile_id: str | None = None
     organisation_id: str | None = None
     email_verified: bool = False
+    membership_role: str | None = None
+    venue_scope: tuple[str, ...] | None = None
 
     @property
     def effective_worker_id(self) -> str:

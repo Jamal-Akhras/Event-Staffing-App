@@ -16,6 +16,7 @@ from apps.api.src.repository_dependencies import (
     get_account_repo,
     get_booking_allocator,
     get_booking_charge_adjustment_repo,
+    get_manager_invitation_repo,
     get_shift_change_request_repo,
     get_shift_change_transition_repo,
     get_worker_certification_repo,
@@ -72,6 +73,7 @@ from apps.api.src.services.people_service import PeopleService
 from apps.api.src.services.escalation_service import EscalationService
 from apps.api.src.services.rota_service import RotaService
 from apps.api.src.services.availability_gate import AvailabilityGate
+from apps.api.src.services.organisation_service import OrganisationService
 from apps.api.src.services.certification_gate import CertificationGate
 from apps.api.src.services.availability_service import AvailabilityService
 from apps.api.src.services.shift_change_service import ShiftChangeService
@@ -433,4 +435,16 @@ def get_shift_change_service(
         RotaRevisionService(shift_repo, booking_repo, publications, outbox, account_repo, market_repo),
         gate,
         certifications,
+    )
+
+
+def get_organisation_service(
+    organisation_repo=Depends(get_organisation_repo),
+    invitation_repo=Depends(get_manager_invitation_repo),
+    user_repo=Depends(get_user_repo),
+    market_repo: MarketRepository = Depends(get_market_repo),
+    outbox: OutboxPublisher = Depends(get_outbox_publisher),
+) -> OrganisationService:
+    return OrganisationService(
+        organisation_repo, invitation_repo, user_repo, market_repo, outbox
     )
