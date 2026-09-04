@@ -45,6 +45,7 @@ from apps.api.src.db.booking_charge_models import BookingChargeModel
 from apps.api.src.db.shift_offer_models import ShiftOfferModel
 from apps.api.src.db.certification_models import WorkerCertificationModel
 from apps.api.src.db.consent_models import ConsentEventModel
+from apps.api.src.db.feed_ranking_appeal_models import FeedRankingAppealModel
 from apps.api.src.db.commercial_models import (
     CommercialAgreementModel,
     ShiftBoostModel,

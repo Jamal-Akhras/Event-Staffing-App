@@ -194,6 +194,17 @@ _CONSENT_EVENTS = _ConsentRepo()
 def shared_consent_repository():
     return _CONSENT_EVENTS
 
+
+from apps.api.src.repositories.in_memory_feed_ranking_appeal_repository import (
+    InMemoryFeedRankingAppealRepository as _AppealRepo,
+)
+
+_FEED_APPEALS = _AppealRepo()
+
+
+def shared_feed_ranking_appeal_repository():
+    return _FEED_APPEALS
+
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
@@ -477,6 +488,16 @@ def get_consent_repo(session: Session | None = Depends(get_request_session)):
     if use_in_memory_repositories():
         return _CONSENT_EVENTS
     return SqlAlchemyConsentRepository(_session(session))
+
+
+def get_feed_ranking_appeal_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_feed_ranking_appeal_repository import (
+        SqlAlchemyFeedRankingAppealRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _FEED_APPEALS
+    return SqlAlchemyFeedRankingAppealRepository(_session(session))
 
 
 from apps.api.src.repositories.in_memory_auto_accept_repository import (

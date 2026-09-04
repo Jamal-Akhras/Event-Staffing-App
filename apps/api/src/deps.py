@@ -19,6 +19,7 @@ from apps.api.src.repository_dependencies import (
     get_booking_charge_adjustment_repo,
     get_commercial_agreement_repo,
     get_consent_repo,
+    get_feed_ranking_appeal_repo,
     get_manager_invitation_repo,
     get_shift_boost_repo,
     get_subscription_charge_repo,
@@ -531,3 +532,11 @@ def get_assistant_service(
 
     provider = GuardedProvider(DeterministicAssistant(), DeterministicAssistant())
     return AssistantService(provider, shift_repo, relationship_repo, organisation_repo)
+
+
+def get_feed_appeal_service(
+    appeal_repo=Depends(get_feed_ranking_appeal_repo),
+) -> "FeedAppealService":
+    from apps.api.src.services.feed_appeal_service import FeedAppealService
+
+    return FeedAppealService(appeal_repo)
