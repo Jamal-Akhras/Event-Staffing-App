@@ -77,6 +77,7 @@ def list_worker_feed(
         items=[
             WorkerFeedItemResponse(
                 **_shift_view(item.shift).model_dump(),
+                boosted=item.boosted,
                 venue=FeedVenueResponse(
                     venue_id=item.venue.venue_id,
                     name=item.venue.name,

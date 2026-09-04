@@ -18,12 +18,24 @@ class InMemoryWorkerFeedQueryRepository:
         applications: InMemoryApplicationRepository,
         feed_states: InMemoryWorkerFeedStateRepository,
         relationships: InMemoryWorkerRelationshipRepository,
+        boosts=None,
     ) -> None:
         self._shifts = shifts
         self._organisations = organisations
         self._applications = applications
         self._feed_states = feed_states
         self._relationships = relationships
+        self._boosts = boosts
+
+    def _bucket(self, shift) -> int:
+        if shift.origin in ("assigned", "team"):
+            return 0
+        if shift.origin == "pool":
+            return 1
+        return 2
+
+    def _boosted(self, shift) -> bool:
+        return self._boosts is not None and self._boosts.get_active_for_shift(shift.shift_id) is not None
 
     def _is_related(self, shift, worker_id: str) -> bool:
         relationship = self._relationships.get_for_venue_worker(shift.account_id or "", worker_id)
@@ -80,11 +92,17 @@ class InMemoryWorkerFeedQueryRepository:
                 continue
             if query.timing == "weekend" and local_start.weekday() < 5:
                 continue
-            if query.position and (shift.start_time, shift.shift_id) <= (
+            bucket = self._bucket(shift)
+            if query.position and (bucket, shift.start_time, shift.shift_id) <= (
+                query.position.bucket,
                 query.position.start_time,
                 query.position.shift_id,
             ):
                 continue
-            items.append(WorkerFeedItem(shift=shift, venue=venue))
-        items.sort(key=lambda item: (item.shift.start_time, item.shift.shift_id))
+            items.append(
+                WorkerFeedItem(
+                    shift=shift, venue=venue, bucket=bucket, boosted=self._boosted(shift)
+                )
+            )
+        items.sort(key=lambda item: (item.bucket, item.shift.start_time, item.shift.shift_id))
         return items[: query.limit + 1]

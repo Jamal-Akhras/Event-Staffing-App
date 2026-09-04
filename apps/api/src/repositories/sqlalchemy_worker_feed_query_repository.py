@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from sqlalchemy import and_, exists, extract, func, or_, select
+from sqlalchemy import and_, case, exists, extract, func, or_, select
 from sqlalchemy.orm import Session
 
+from apps.api.src.db.commercial_models import ShiftBoostModel
 from apps.api.src.db.models import ApplicationModel, ShiftModel, WorkerFeedStateModel
 from apps.api.src.db.tenancy_models import VenueModel
 from apps.api.src.db.workforce_models import WorkerRelationshipModel
@@ -17,8 +18,14 @@ class SqlAlchemyWorkerFeedQueryRepository:
         self._session = session
 
     def list_page(self, query: WorkerFeedQuery) -> list[WorkerFeedItem]:
+        bucket = case(
+            (ShiftModel.origin.in_(("assigned", "team")), 0),
+            (ShiftModel.origin == "pool", 1),
+            else_=2,
+        ).label("feed_bucket")
+        boosted = _boost_exists().label("feed_boosted")
         statement = (
-            select(ShiftModel, VenueModel)
+            select(ShiftModel, VenueModel, bucket, boosted)
             .join(VenueModel, VenueModel.venue_id == ShiftModel.venue_id)
             .where(VenueModel.market_id == query.market_id)
             .where(ShiftModel.status == "open")
@@ -52,17 +59,41 @@ class SqlAlchemyWorkerFeedQueryRepository:
         if query.position:
             statement = statement.where(
                 or_(
-                    ShiftModel.start_time > query.position.start_time,
+                    bucket > query.position.bucket,
                     and_(
+                        bucket == query.position.bucket,
+                        ShiftModel.start_time > query.position.start_time,
+                    ),
+                    and_(
+                        bucket == query.position.bucket,
                         ShiftModel.start_time == query.position.start_time,
                         ShiftModel.shift_id > query.position.shift_id,
                     ),
                 )
             )
         rows = self._session.execute(
-            statement.order_by(ShiftModel.start_time, ShiftModel.shift_id).limit(query.limit + 1)
+            statement.order_by(bucket, ShiftModel.start_time, ShiftModel.shift_id).limit(
+                query.limit + 1
+            )
         ).all()
-        return [WorkerFeedItem(shift=_to_domain(shift), venue=_venue(venue)) for shift, venue in rows]
+        return [
+            WorkerFeedItem(
+                shift=_to_domain(shift),
+                venue=_venue(venue),
+                bucket=bucket_value,
+                boosted=bool(boosted_value),
+            )
+            for shift, venue, bucket_value, boosted_value in rows
+        ]
+
+
+def _boost_exists():
+    return exists(
+        select(1).where(
+            ShiftBoostModel.shift_id == ShiftModel.shift_id,
+            ShiftBoostModel.status == "active",
+        )
+    )
 
 
 def _passed_exists(worker_id: str):

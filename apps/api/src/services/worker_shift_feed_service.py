@@ -84,9 +84,9 @@ class WorkerShiftFeedService:
         items = rows[:limit]
         next_cursor = None
         if len(rows) > limit and items:
-            last = items[-1].shift
+            last = items[-1]
             next_cursor = encode_feed_cursor(
-                FeedPosition(last.start_time, last.shift_id),
+                FeedPosition(last.shift.start_time, last.shift.shift_id, last.bucket),
                 worker_id,
                 market.market_id,
                 fingerprint,

@@ -43,6 +43,7 @@ export function getShiftTags(shift: Shift, highPayThreshold?: number | null) {
   const daysUntilShift = getDaysUntil(startDate);
   const threshold = highPayThreshold ?? DEFAULT_HIGH_PAY_THRESHOLD;
   const tags: string[] = [];
+  if ((shift as { boosted?: boolean }).boosted) tags.push("Promoted");
   const audience = getAudienceTag(shift);
   if (audience) tags.push(audience);
   if (payRateValue(shift) >= threshold) tags.push("High pay");

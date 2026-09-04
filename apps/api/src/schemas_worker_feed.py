@@ -15,6 +15,7 @@ class FeedVenueResponse(BaseModel):
 
 class WorkerFeedItemResponse(ShiftResponse):
     venue: FeedVenueResponse
+    boosted: bool = False
 
 
 class WorkerFeedPageResponse(BaseModel):

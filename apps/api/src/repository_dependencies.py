@@ -200,6 +200,7 @@ _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _APPLICATIONS,
     _FEED_STATES,
     _RELATIONSHIPS,
+    _SHIFT_BOOSTS,
 )
 _NOTIFICATIONS = InMemoryNotificationRepository()
 _REPORTS = InMemoryReportRepository()

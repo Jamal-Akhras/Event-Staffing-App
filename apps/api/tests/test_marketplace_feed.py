@@ -112,3 +112,41 @@ def test_disabling_the_marketplace_hides_only_unrelated_open_shifts(client):
 
     client.put("/me/work-preferences", json={"marketplace_enabled": True}, headers=WORKER)
     assert _feed_ids(client) == {"s-market-open", "s-market-pool-venue", "s-pool", "s-assigned"}
+
+
+def test_the_feed_is_ordered_by_relationship_bucket_then_time(client):
+    body = client.get("/workers/me/feed?limit=20", headers=WORKER).json()
+    order = [item["shift_id"] for item in body["items"]]
+    assert order == ["s-assigned", "s-pool", "s-market-open", "s-market-pool-venue"]
+
+
+def test_a_boosted_market_shift_is_labelled_in_the_feed(client):
+    from datetime import UTC, datetime
+    from decimal import Decimal
+
+    from apps.api.src.models.commercial import ShiftBoost
+    from apps.api.src.repository_dependencies import shared_shift_boost_repository
+
+    boosts = shared_shift_boost_repository()
+    boosts.clear()
+    boosts.save(
+        ShiftBoost(
+            boost_id="boost-1",
+            shift_id="s-market-open",
+            venue_id="venue-open",
+            tier="top5",
+            price=Decimal("8.00"),
+            currency="GBP",
+            period="2030-06",
+            status="active",
+            purchased_by_user_id="operator-1",
+            purchased_at=datetime(2030, 6, 1, tzinfo=UTC),
+        )
+    )
+    try:
+        body = client.get("/workers/me/feed?limit=20", headers=WORKER).json()
+        marks = {item["shift_id"]: item["boosted"] for item in body["items"]}
+        assert marks["s-market-open"] is True
+        assert marks["s-pool"] is False
+    finally:
+        boosts.clear()

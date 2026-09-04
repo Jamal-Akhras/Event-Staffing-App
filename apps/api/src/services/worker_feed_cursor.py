@@ -69,6 +69,7 @@ def decode_feed_cursor(
         return FeedPosition(
             start_time=normalize_utc(datetime.fromisoformat(position["start_time"])),
             shift_id=position["shift_id"],
+            bucket=int(position.get("bucket", 2)),
         )
     except FeedCursorError:
         raise

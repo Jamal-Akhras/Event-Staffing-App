@@ -12,6 +12,7 @@ from apps.api.src.models.shift import Shift
 class FeedPosition:
     start_time: datetime
     shift_id: str
+    bucket: int = 2
 
 
 @dataclass(frozen=True)
@@ -34,3 +35,5 @@ class WorkerFeedQuery:
 class WorkerFeedItem:
     shift: Shift
     venue: Venue
+    bucket: int = 2
+    boosted: bool = False

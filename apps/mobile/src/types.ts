@@ -57,6 +57,7 @@ export type WorkerContext = {
 export type FeedShift = Shift & {
   created_at?: string;
   venue?: FeedVenue | null;
+  boosted?: boolean;
 };
 
 export type WorkerFeedPage = {
