@@ -91,7 +91,33 @@ class WorkerShiftFeedService:
                 market.market_id,
                 fingerprint,
             )
-        return WorkerFeedPage(items=items, next_cursor=next_cursor, market=market)
+        return WorkerFeedPage(
+            items=_promote_boosts(items, limit), next_cursor=next_cursor, market=market
+        )
+
+
+_TIER_RANK = {"top1": 0, "top5": 1, "top10": 2}
+BOOST_PAGE_FRACTION = 5
+
+
+def _promote_boosts(items, limit):
+    market = [item for item in items if item.bucket == 2]
+    if not any(item.boost_tier for item in market):
+        return items
+    non_market = [item for item in items if item.bucket != 2]
+    cap = max(1, limit // BOOST_PAGE_FRACTION)
+    boosted = sorted(
+        (item for item in market if item.boost_tier),
+        key=lambda item: (
+            _TIER_RANK.get(item.boost_tier, 9),
+            item.shift.start_time,
+            item.shift.shift_id,
+        ),
+    )
+    promoted = boosted[:cap]
+    promoted_ids = {item.shift.shift_id for item in promoted}
+    remaining = [item for item in market if item.shift.shift_id not in promoted_ids]
+    return non_market + promoted + remaining
 
 
 def _today_bounds(now: datetime, timezone: str) -> tuple[datetime, datetime]:

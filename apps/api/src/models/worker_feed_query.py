@@ -37,3 +37,4 @@ class WorkerFeedItem:
     venue: Venue
     bucket: int = 2
     boosted: bool = False
+    boost_tier: str | None = None

@@ -34,8 +34,11 @@ class InMemoryWorkerFeedQueryRepository:
             return 1
         return 2
 
-    def _boosted(self, shift) -> bool:
-        return self._boosts is not None and self._boosts.get_active_for_shift(shift.shift_id) is not None
+    def _boost_tier(self, shift) -> str | None:
+        if self._boosts is None:
+            return None
+        boost = self._boosts.get_active_for_shift(shift.shift_id)
+        return boost.tier if boost is not None else None
 
     def _is_related(self, shift, worker_id: str) -> bool:
         relationship = self._relationships.get_for_venue_worker(shift.account_id or "", worker_id)
@@ -99,9 +102,11 @@ class InMemoryWorkerFeedQueryRepository:
                 query.position.shift_id,
             ):
                 continue
+            tier = self._boost_tier(shift)
             items.append(
                 WorkerFeedItem(
-                    shift=shift, venue=venue, bucket=bucket, boosted=self._boosted(shift)
+                    shift=shift, venue=venue, bucket=bucket,
+                    boosted=tier is not None, boost_tier=tier,
                 )
             )
         items.sort(key=lambda item: (item.bucket, item.shift.start_time, item.shift.shift_id))

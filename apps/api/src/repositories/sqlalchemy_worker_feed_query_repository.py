@@ -23,9 +23,9 @@ class SqlAlchemyWorkerFeedQueryRepository:
             (ShiftModel.origin == "pool", 1),
             else_=2,
         ).label("feed_bucket")
-        boosted = _boost_exists().label("feed_boosted")
+        boost_tier = _boost_tier_subquery().label("feed_boost_tier")
         statement = (
-            select(ShiftModel, VenueModel, bucket, boosted)
+            select(ShiftModel, VenueModel, bucket, boost_tier)
             .join(VenueModel, VenueModel.venue_id == ShiftModel.venue_id)
             .where(VenueModel.market_id == query.market_id)
             .where(ShiftModel.status == "open")
@@ -81,18 +81,22 @@ class SqlAlchemyWorkerFeedQueryRepository:
                 shift=_to_domain(shift),
                 venue=_venue(venue),
                 bucket=bucket_value,
-                boosted=bool(boosted_value),
+                boosted=tier_value is not None,
+                boost_tier=tier_value,
             )
-            for shift, venue, bucket_value, boosted_value in rows
+            for shift, venue, bucket_value, tier_value in rows
         ]
 
 
-def _boost_exists():
-    return exists(
-        select(1).where(
+def _boost_tier_subquery():
+    return (
+        select(ShiftBoostModel.tier)
+        .where(
             ShiftBoostModel.shift_id == ShiftModel.shift_id,
             ShiftBoostModel.status == "active",
         )
+        .limit(1)
+        .scalar_subquery()
     )
 
 

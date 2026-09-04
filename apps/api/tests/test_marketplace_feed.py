@@ -150,3 +150,65 @@ def test_a_boosted_market_shift_is_labelled_in_the_feed(client):
         assert marks["s-pool"] is False
     finally:
         boosts.clear()
+
+
+def test_a_boosted_market_shift_leads_the_market_section(client):
+    from datetime import UTC, datetime
+    from decimal import Decimal
+
+    from apps.api.src.models.commercial import ShiftBoost
+    from apps.api.src.repository_dependencies import shared_shift_boost_repository
+
+    boosts = shared_shift_boost_repository()
+    boosts.clear()
+    boosts.save(
+        ShiftBoost(
+            boost_id="boost-lead", shift_id="s-market-pool-venue", venue_id="venue-pool",
+            tier="top1", price=Decimal("15.00"), currency="GBP", period="2030-06",
+            status="active", purchased_by_user_id="operator-1",
+            purchased_at=datetime(2030, 6, 1, tzinfo=UTC),
+        )
+    )
+    try:
+        body = client.get("/workers/me/feed?limit=20", headers=WORKER).json()
+        order = [item["shift_id"] for item in body["items"]]
+        assert order == ["s-assigned", "s-pool", "s-market-pool-venue", "s-market-open"]
+        marks = {item["shift_id"]: item["boosted"] for item in body["items"]}
+        assert marks["s-market-pool-venue"] is True
+    finally:
+        boosts.clear()
+
+
+def test_boost_promotion_is_capped_at_a_fifth_of_the_page():
+    from datetime import UTC, datetime, timedelta
+
+    from apps.api.src.models.organisation import Venue
+    from apps.api.src.models.shift import Shift
+    from apps.api.src.models.worker_feed_query import WorkerFeedItem
+    from apps.api.src.services.worker_shift_feed_service import _promote_boosts
+
+    base = datetime(2030, 6, 10, 18, 0, tzinfo=UTC)
+    venue = Venue(
+        venue_id="v", organisation_id="o", name="V", country="GB", currency="GBP",
+        created_at=base, market_id="bath-gb",
+    )
+
+    def item(index: int, boosted: bool) -> WorkerFeedItem:
+        shift = Shift(
+            shift_id=f"m{index}", operator_id="op", account_id="v", role="Bartender",
+            location="Bar", start_time=base + timedelta(hours=index),
+            end_time=base + timedelta(hours=index + 5), pay_rate=14, notes=None,
+            status="open", created_at=base, workers_needed=1, workers_filled=0, origin="market",
+        )
+        return WorkerFeedItem(
+            shift=shift, venue=venue, bucket=2,
+            boosted=boosted, boost_tier="top5" if boosted else None,
+        )
+
+    items = [item(0, False), item(1, False), item(2, False), item(3, True), item(4, True)]
+    promoted = _promote_boosts(items, limit=5)
+    assert promoted[0].shift.shift_id == "m3"
+    assert promoted[0].boosted is True
+    assert promoted[1].shift.shift_id == "m0"
+    assert promoted[4].shift.shift_id == "m4"
+    assert {i.shift.shift_id for i in promoted} == {"m0", "m1", "m2", "m3", "m4"}
