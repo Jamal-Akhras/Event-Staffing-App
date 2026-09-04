@@ -10,6 +10,19 @@ Chosen by the user (D079). Two capabilities: a **ranked worker feed** (M4) and t
 - **L5** — objective matching criteria, non-discrimination (no protected-attribute or proxy signals), and an appeals hook on ranking output.
 - **A5** — suggestions and ranking prefer the venue's own team and pool before the market (the M5 relationship buckets already encode this; ranking refines within them).
 
+## Security (binding — user made this a priority for the AI layer, D080)
+
+Worker PII flows through assistant prompts and the ranker's per-worker slate, so these controls ship with the feature, not after. The structural backstop is C4 (human-in-the-loop) — nothing the AI produces is acted on automatically, which bounds the blast radius of any hallucination, bad ranking, or injection to "a wrong draft a human catches."
+
+- **Data residency.** Deterministic default and self-hosted Gemma keep prompt data on infra we control; PII never crosses a trust boundary. The hosted-API provider is off by default.
+- **De-identification at the provider boundary.** The `AssistantProvider` contract takes a *de-identified* prompt: real names/rates/contact are replaced with placeholders (`{worker}`, `{rate}`) before the model sees anything, and re-inserted into the draft client-side. A model — self-hosted or hosted — never receives raw PII. This is a hard interface rule, not an option.
+- **Prompt-injection safety.** All user free-text (venue/shift notes, names) is passed as delimited *data, never instructions*; system prompts are fixed and separated; an output-moderation pass screens drafts before they reach the manager; the human gate is the backstop. A pinned injection test (a note that tries to override the system prompt / produce discriminatory copy) is part of Phase 2.
+- **Non-discrimination (L5).** No protected-attribute or proxy signals in the ranker; a pinned non-discrimination test on both ranker and assistant output.
+- **No prompt bodies in logs.** Audit records who invoked the assistant and when (existing event log), never the prompt/response content. Retention follows the platform policy.
+- **Model supply chain.** Self-hosted weights are version-pinned with checksum verification; the serverless image is controlled.
+- **Access & abuse.** Assistant endpoints are operator-authenticated, rate-limited, per-venue quota'd, and timeout-bounded; the assistant only ever receives the caller's own tenancy-scoped data.
+- **Ranker slate isolation.** The persisted slate and appeals data carry the same tenancy scoping as everything else — a worker reads only their own slate, and the explainability payload never exposes signals about other workers.
+
 ## Part A — Ranked feed (M4)
 
 Turn M5's relationship-bucket ordering into a real ranking. The bucket order (your venues → pools → market) stays as the coarse sort; ranking orders shifts **within** each bucket, replacing pure `start_time`. `slate_id` already exists on feed responses (D065, built so "the ranking that produced a list can be reconstructed later") — this is the materialized-slate design it was built for.
@@ -30,7 +43,7 @@ Turn M5's relationship-bucket ordering into a real ranking. The bucket order (yo
 
 ## Part B — Assistant interface + A1 (onboarding + shift-post writing)
 
-- **`AssistantProvider` interface** (`services/assistant/`) with a **`DeterministicAssistant` default**: template + venue-data logic, zero external calls, near-zero cost (A9). The interface is shaped so a self-hosted or API model can be dropped in behind it later without touching callers. A config flag selects the provider; default is deterministic.
+- **`AssistantProvider` interface** (`services/assistant/`) with a **`DeterministicAssistant` default**: template + venue-data logic, zero external calls, near-zero cost (A9). The contract takes a **de-identified** prompt (placeholders, not PII — see Security) and returns text a caller re-hydrates client-side, so no provider ever sees raw worker data. A config flag selects the provider; default is deterministic. The model choice, when a provider is enabled, is **Gemma 3 12B** (Apache-2.0, on-hardware tested good enough for A1/A6) — local via Ollama for dev, a serverless scale-to-zero GPU endpoint (Modal/RunPod/Baseten) for production, never a dedicated always-on box or a dev PC. A hosted API (Gemini Flash-Lite / GPT-5 mini) is a further optional provider, off unless a DPA + no-train + de-identification are all in place.
 - **A1 onboarding helper** — `POST /assistant/onboarding` returns structured, prioritized setup guidance derived from the account's actual state (no venues, no team, no pay defaults, no shifts posted yet, etc.). Never blocks any flow (the "never forced" condition) — it is advice the manager can ignore.
 - **A1 shift-post writing** — `POST /assistant/shift-post` takes structured inputs (role, location, timing, optional pay) and returns a polished description **plus a suggested pay range** computed from the venue's own fill history and the market (reusing the I4 "what helps fill" signals). The manager edits and posts; the assistant never posts.
 - Guardrails: outputs are drafts a human owns (C4); pay suggestions cite their basis (A7); uses only the venue's own data (A8).
