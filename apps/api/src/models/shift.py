@@ -39,3 +39,4 @@ class Shift:
     rota_state: str = "published"
     needs_attention: bool = False
     required_certification: str | None = None
+    risk_information: str | None = None

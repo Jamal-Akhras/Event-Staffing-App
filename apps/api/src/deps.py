@@ -18,6 +18,7 @@ from apps.api.src.repository_dependencies import (
     get_booking_allocator,
     get_booking_charge_adjustment_repo,
     get_commercial_agreement_repo,
+    get_consent_repo,
     get_manager_invitation_repo,
     get_shift_boost_repo,
     get_subscription_charge_repo,
@@ -493,3 +494,11 @@ def get_commercial_service(
     return CommercialService(
         agreement_repo, subscription_repo, boost_repo, organisation_repo, shift_repo
     )
+
+
+def get_consent_service(
+    consent_repo=Depends(get_consent_repo),
+) -> "ConsentService":
+    from apps.api.src.services.consent_service import ConsentService
+
+    return ConsentService(consent_repo)

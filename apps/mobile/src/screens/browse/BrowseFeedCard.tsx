@@ -47,6 +47,9 @@ export function BrowseFeedCard({
             {shift.required_certification ? (
               <Text style={styles.requires}>Requires {shift.required_certification}</Text>
             ) : null}
+            {shift.risk_information ? (
+              <Text style={styles.requires} numberOfLines={2}>Safety: {shift.risk_information}</Text>
+            ) : null}
           </View>
           <StatusBadge status={shift.status} size="small" />
         </View>

@@ -24,6 +24,7 @@ export type ShiftDraft = {
   notes: string;
   assigned_worker_id: string;
   required_certification: string;
+  risk_information: string;
 };
 
 type ShiftCreateFormProps = {
@@ -50,6 +51,7 @@ export function ShiftCreateForm({ initial, timezone, durationHours, onCreated, o
     notes: "",
     assigned_worker_id: "",
     required_certification: "",
+    risk_information: "",
     ...initial,
   });
   const [saving, setSaving] = useState(false);
@@ -95,6 +97,7 @@ export function ShiftCreateForm({ initial, timezone, durationHours, onCreated, o
         workers_needed: form.assigned_worker_id ? 1 : Number(form.workers_needed),
         notes: form.notes || null,
         required_certification: form.required_certification.trim() || null,
+        risk_information: form.risk_information.trim() || null,
         now: new Date().toISOString(),
         ...(form.assigned_worker_id
           ? { assigned_worker_id: form.assigned_worker_id, rota_state: "draft" }
@@ -145,6 +148,15 @@ export function ShiftCreateForm({ initial, timezone, durationHours, onCreated, o
             value={form.required_certification}
             onChange={(event) => update({ required_certification: event.target.value })}
             placeholder="Optional — e.g. Personal Licence"
+          />
+        </label>
+        <label>
+          Risk information for workers
+          <textarea
+            value={form.risk_information}
+            onChange={(event) => update({ risk_information: event.target.value })}
+            placeholder="Hazards, safety gear, site notes — shown to the worker before they accept"
+            rows={2}
           />
         </label>
         <label>

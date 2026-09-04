@@ -44,6 +44,7 @@ class ShiftService:
             latitude=None,
             longitude=None,
             required_certification=request.required_certification,
+            risk_information=request.risk_information,
         )
         return self._repo.save(shift)
 

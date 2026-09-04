@@ -54,6 +54,7 @@ class ShiftCreateRequest(BaseModel):
     assigned_worker_id: str | None = Field(default=None, max_length=100)
     rota_state: Literal["draft", "published"] = "published"
     required_certification: str | None = Field(default=None, max_length=120)
+    risk_information: str | None = Field(default=None, max_length=2000)
     now: UtcTimestamp | None = None
 
     @model_validator(mode="after")
@@ -91,6 +92,7 @@ class ShiftResponse(BaseModel):
     rota_state: str = "published"
     needs_attention: bool = False
     required_certification: str | None = None
+    risk_information: str | None = None
 
 
 class ApplicationCreateRequest(BaseModel):

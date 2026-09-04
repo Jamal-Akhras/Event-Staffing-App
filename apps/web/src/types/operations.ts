@@ -24,6 +24,7 @@ export type Shift = {
   rota_state?: "draft" | "published";
   needs_attention?: boolean;
   required_certification?: string | null;
+  risk_information?: string | null;
 };
 
 export type Application = {

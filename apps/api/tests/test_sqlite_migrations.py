@@ -51,6 +51,7 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
         "commercial_agreements",
         "subscription_charges",
         "shift_boosts",
+        "consent_events",
         "message_threads",
         "message_thread_participants",
         "message_read_receipts",
@@ -113,7 +114,7 @@ def test_sqlite_migrations_reach_head(tmp_path, monkeypatch):
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-        assert version == "055"
+        assert version == "056"
 
     command.downgrade(config, "022")
     downgraded_rating_columns = {

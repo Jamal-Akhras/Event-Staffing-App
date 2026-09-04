@@ -38,6 +38,7 @@ def test_every_shift_field_survives_a_sql_round_trip(repo_session):
         billable=False,
         offer_team_at=START,
         required_certification="Personal Licence",
+        risk_information="Wet floors near the cellar; steel-toe boots advised.",
         rota_state="draft",
         needs_attention=False,
     )

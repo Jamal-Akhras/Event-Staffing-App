@@ -44,6 +44,7 @@ from apps.api.src.db.event_models import EventModel
 from apps.api.src.db.booking_charge_models import BookingChargeModel
 from apps.api.src.db.shift_offer_models import ShiftOfferModel
 from apps.api.src.db.certification_models import WorkerCertificationModel
+from apps.api.src.db.consent_models import ConsentEventModel
 from apps.api.src.db.commercial_models import (
     CommercialAgreementModel,
     ShiftBoostModel,
@@ -187,6 +188,7 @@ class ShiftModel(Base):
     rota_state = Column(String(12), nullable=False, default="published", server_default="published")
     needs_attention = Column(Boolean, nullable=False, default=False, server_default=false())
     required_certification = Column(String(120), nullable=True)
+    risk_information = Column(String(2000), nullable=True)
 
 
 class ApplicationModel(Base):

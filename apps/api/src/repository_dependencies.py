@@ -183,6 +183,17 @@ def shared_subscription_charge_repository():
 def shared_shift_boost_repository():
     return _SHIFT_BOOSTS
 
+
+from apps.api.src.repositories.in_memory_consent_repository import (
+    InMemoryConsentRepository as _ConsentRepo,
+)
+
+_CONSENT_EVENTS = _ConsentRepo()
+
+
+def shared_consent_repository():
+    return _CONSENT_EVENTS
+
 _FEED_QUERY = InMemoryWorkerFeedQueryRepository(
     _SHIFTS,
     _ORGANISATIONS,
@@ -455,6 +466,16 @@ def get_shift_boost_repo(session: Session | None = Depends(get_request_session))
     if use_in_memory_repositories():
         return _SHIFT_BOOSTS
     return SqlAlchemyShiftBoostRepository(_session(session))
+
+
+def get_consent_repo(session: Session | None = Depends(get_request_session)):
+    from apps.api.src.repositories.sqlalchemy_consent_repository import (
+        SqlAlchemyConsentRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _CONSENT_EVENTS
+    return SqlAlchemyConsentRepository(_session(session))
 
 
 from apps.api.src.repositories.in_memory_auto_accept_repository import (

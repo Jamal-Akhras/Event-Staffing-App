@@ -12,6 +12,7 @@ class ShiftTemplate(BaseModel):
     operator_id: str
     name: str
     role: str
+    risk_information: str | None = None
     location: str
     duration_hours: float
     pay_rate: Decimal

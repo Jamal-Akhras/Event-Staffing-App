@@ -18,6 +18,7 @@ from apps.api.src.auth.session_tokens import issue_session, resolve_session_cont
 from apps.api.src.config import get_bool_env
 from apps.api.src.datetime_utils import utc_now
 from apps.api.src.deps import (
+    get_consent_service,
     get_event_recorder,
     get_join_code_service,
     get_market_repo,
@@ -28,6 +29,7 @@ from apps.api.src.deps import (
 )
 from apps.api.src.routes.service_errors import raise_service_error
 from apps.api.src.services.errors import ServiceError
+from apps.api.src.services.consent_service import ConsentService
 from apps.api.src.services.join_code_service import JoinCodeService
 from apps.api.src.models.organisation import (
     Organisation,
@@ -64,6 +66,7 @@ def register(
     worker_repo: WorkerProfileRepository = Depends(get_worker_profile_repo),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
     join_codes: JoinCodeService = Depends(get_join_code_service),
+    consent_service: ConsentService = Depends(get_consent_service),
 ) -> TokenResponse:
     if user_repo.get_by_email(payload.email) is not None:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -90,6 +93,7 @@ def register(
         email_verification_token=verification_token,
     )
     user_repo.save(user)
+    consent_service.record_registration(user.user_id, now)
     worker_repo.save(
         WorkerProfile(
             worker_id=worker_profile_id,

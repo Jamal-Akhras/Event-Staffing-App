@@ -122,4 +122,5 @@ def _shift_from_template(
         workers_needed=template.workers_needed,
         workers_filled=0,
         account_id=template.account_id,
+        risk_information=template.risk_information,
     )

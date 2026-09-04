@@ -61,6 +61,7 @@ class ShiftLifecycleService:
                 notes=request.notes.strip() if request.notes else None,
                 workers_needed=request.workers_needed,
                 required_certification=request.required_certification,
+                risk_information=request.risk_information,
                 status=status,
                 updated_at=now,
             )

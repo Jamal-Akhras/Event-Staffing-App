@@ -28,6 +28,7 @@ export function ShiftManagementModal({ shift, timezone, bookings, workers, onCha
     workers_needed: String(shift.workers_needed),
     notes: shift.notes ?? "",
     required_certification: shift.required_certification ?? "",
+    risk_information: shift.risk_information ?? "",
   }));
   const [cancellationReason, setCancellationReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export function ShiftManagementModal({ shift, timezone, bookings, workers, onCha
         workers_needed: Number(form.workers_needed),
         notes: form.notes || null,
         required_certification: form.required_certification.trim() || null,
+        risk_information: form.risk_information.trim() || null,
         now: new Date().toISOString(),
       });
       await onSaved("Shift updated.");
@@ -129,6 +131,11 @@ export function ShiftManagementModal({ shift, timezone, bookings, workers, onCha
                 label="Requires certification"
                 value={form.required_certification}
                 onChange={(required_certification) => setForm({ ...form, required_certification })}
+              />
+              <Field
+                label="Risk information"
+                value={form.risk_information}
+                onChange={(risk_information) => setForm({ ...form, risk_information })}
               />
               <Field label="Location" value={form.location} onChange={(location) => setForm({ ...form, location })} />
               <Field label="Start" type="datetime-local" value={form.start_time} onChange={(start_time) => setForm({ ...form, start_time })} />

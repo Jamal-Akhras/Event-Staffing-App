@@ -47,6 +47,7 @@ def in_memory_repositories() -> dict[Callable[..., Any], Any]:
         rd.get_commercial_agreement_repo: rd._COMMERCIAL_AGREEMENTS,
         rd.get_subscription_charge_repo: rd._SUBSCRIPTION_CHARGES,
         rd.get_shift_boost_repo: rd._SHIFT_BOOSTS,
+        rd.get_consent_repo: rd._CONSENT_EVENTS,
         rd.get_auto_accept_rule_repo: rd._AUTO_ACCEPT_RULES,
         rd.get_auto_accept_attempt_repo: rd._AUTO_ACCEPT_ATTEMPTS,
         rd.get_message_thread_repo: rd._MESSAGE_THREADS,

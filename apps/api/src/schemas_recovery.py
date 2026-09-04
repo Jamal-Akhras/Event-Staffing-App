@@ -48,6 +48,7 @@ class ShiftUpdateRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
     workers_needed: int = Field(ge=1, le=100)
     required_certification: str | None = Field(default=None, max_length=120)
+    risk_information: str | None = Field(default=None, max_length=2000)
     now: UtcTimestamp | None = None
 
     @model_validator(mode="after")
