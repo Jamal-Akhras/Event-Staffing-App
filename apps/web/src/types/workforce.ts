@@ -50,3 +50,40 @@ export type TimeOffRequest = {
   decided_at: string | null;
   decided_by_user_id: string | null;
 };
+
+export type ShiftChangeStatus =
+  | "pending_replacement"
+  | "pending_manager"
+  | "approved"
+  | "declined"
+  | "withdrawn"
+  | "expired";
+
+export type ShiftChangeShift = {
+  shift_id: string;
+  role: string;
+  location: string;
+  pay_rate: string;
+  currency: string;
+  start_time: string;
+  end_time: string;
+  venue_id?: string | null;
+  venue_name?: string | null;
+};
+
+export type ShiftChangeRequest = {
+  request_id: string;
+  booking_id: string;
+  shift_id: string;
+  venue_id: string;
+  worker_id: string;
+  change_type: "release" | "cover";
+  status: ShiftChangeStatus;
+  reason: string;
+  replacement_worker_id: string | null;
+  created_at: string;
+  updated_at: string;
+  decided_at: string | null;
+  decided_by_user_id: string | null;
+  shift?: ShiftChangeShift | null;
+};

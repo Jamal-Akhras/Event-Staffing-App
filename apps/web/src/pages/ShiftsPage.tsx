@@ -20,6 +20,7 @@ import { PostShiftModal, type PostDraft } from "./shifts/PostShiftModal";
 import { PublishBar } from "./shifts/PublishBar";
 import { ShiftManagementModal } from "./shifts/ShiftManagementModal";
 import { TemplateChips } from "./shifts/TemplateChips";
+import { ChangeRequestQueue } from "./shifts/ChangeRequestQueue";
 import { TimeOffQueue } from "./shifts/TimeOffQueue";
 import { TonightRail } from "./shifts/TonightRail";
 import { WeekBoard } from "./shifts/WeekBoard";
@@ -35,6 +36,7 @@ import {
 } from "./shifts/boardUtils";
 import { useBoardData } from "./shifts/useBoardData";
 import { usePublications, useRotaActions } from "./shifts/useRota";
+import { useChangeRequests } from "./shifts/useChangeRequests";
 import { useTimeOffQueue } from "./shifts/useTimeOffQueue";
 import { usePeople } from "./workers/useDirectory";
 import "./DashboardPage.css";
@@ -69,6 +71,7 @@ export function ShiftsPage() {
   const publications = usePublications(weekKey, timezone !== null);
   const rota = useRotaActions(weekKey, (type, message) => toast({ type, message }));
   const timeOff = useTimeOffQueue((type, message) => toast({ type, message }));
+  const changes = useChangeRequests((type, message) => toast({ type, message }));
   const location = venue.data?.default_location ?? "";
   const currency = venue.data?.currency ?? "GBP";
   const peopleNames = Object.fromEntries(
@@ -177,6 +180,15 @@ export function ShiftsPage() {
           error={timeOff.query.error as Error | null}
           busyId={timeOff.decision.isPending ? timeOff.decision.variables?.requestId ?? null : null}
           onDecide={(requestId, action) => timeOff.decision.mutate({ requestId, action })}
+        />
+        <ChangeRequestQueue
+          requests={changes.query.data ?? []}
+          people={peopleNames}
+          timezone={timezone}
+          loading={changes.query.isLoading}
+          error={changes.query.error as Error | null}
+          busyId={changes.decision.isPending ? changes.decision.variables?.requestId ?? null : null}
+          onDecide={(requestId, action) => changes.decision.mutate({ requestId, action })}
         />
         <DecisionList
           pending={pending}

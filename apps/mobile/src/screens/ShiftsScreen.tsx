@@ -14,6 +14,7 @@ import type { Application, Booking } from "../types";
 import { CancellationReasonModal } from "./shifts/CancellationReasonModal";
 import { MessagingModal } from "./shifts/MessagingModal";
 import { InvitationCard } from "./shifts/InvitationCard";
+import { CoverAskCard } from "./shifts/CoverAskCard";
 import { OfferCard } from "./shifts/OfferCard";
 import { NextShiftCard } from "./shifts/NextShiftCard";
 import { PastShiftItem, ShiftListItem } from "./shifts/ShiftListItem";
@@ -44,6 +45,7 @@ export function ShiftsScreen() {
   const [tab, setTab] = useState<VisibleTab>("upcoming");
   const [messaging, setMessaging] = useState<Booking | null>(null);
   const [cancelling, setCancelling] = useState<Booking | null>(null);
+  const [releasing, setReleasing] = useState<Booking | null>(null);
   const polling = useRef(false);
 
   const load = async () => {
@@ -100,6 +102,7 @@ export function ShiftsScreen() {
 
         {tab === "upcoming" && <InvitationCard />}
         {tab === "upcoming" && <OfferCard onChanged={() => void load()} />}
+        {tab === "upcoming" && <CoverAskCard onChanged={() => void load()} />}
 
         {tab === "upcoming" &&
           (next ? (
@@ -111,6 +114,7 @@ export function ShiftsScreen() {
                 onCheckIn={(code) => transition(next, "check-in", code)}
                 onCheckOut={() => transition(next, "check-out")}
                 onMessage={() => setMessaging(next)}
+                onRelease={() => setReleasing(next)}
               />
               {later.length > 0 && (
                 <View>
@@ -180,6 +184,15 @@ export function ShiftsScreen() {
         onClose={() => setCancelling(null)}
         onConfirm={cancelBooking}
       />
+
+      <CancellationReasonModal
+        visible={releasing !== null}
+        title="Ask to be released?"
+        consequence="The manager decides. You stay on this shift until they approve, and an approved release does not count against you."
+        confirmLabel="Send request"
+        onClose={() => setReleasing(null)}
+        onConfirm={requestRelease}
+      />
     </View>
   );
 
@@ -194,6 +207,22 @@ export function ShiftsScreen() {
       if (action === "check-out") await refreshRatingPrompt();
     } catch (err) {
       setError((err as Error).message);
+    }
+  }
+
+  async function requestRelease(reason: string) {
+    if (!releasing) return;
+    try {
+      await postWorker("/me/shift-change-requests", {
+        booking_id: releasing.booking_id,
+        change_type: "release",
+        reason,
+        now: new Date().toISOString(),
+      });
+      setReleasing(null);
+    } catch (err) {
+      if (err instanceof ApiError && err.serverDetail) throw new Error(err.serverDetail);
+      throw err;
     }
   }
 

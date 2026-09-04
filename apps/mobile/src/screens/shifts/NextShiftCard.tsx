@@ -15,9 +15,10 @@ type NextShiftCardProps = {
   onCheckIn: (code: string) => void;
   onCheckOut: () => void;
   onMessage: () => void;
+  onRelease?: () => void;
 };
 
-export function NextShiftCard({ booking, now, error, onCheckIn, onCheckOut, onMessage }: NextShiftCardProps) {
+export function NextShiftCard({ booking, now, error, onCheckIn, onCheckOut, onMessage, onRelease }: NextShiftCardProps) {
   const [entering, setEntering] = useState(false);
   const [code, setCode] = useState("");
   const value = shiftValue(booking);
@@ -95,6 +96,11 @@ export function NextShiftCard({ booking, now, error, onCheckIn, onCheckOut, onMe
       <Pressable style={styles.link} onPress={onMessage} accessibilityRole="button">
         <Text style={styles.linkText}>Message venue</Text>
       </Pressable>
+      {onRelease && !onShift ? (
+        <Pressable style={styles.link} onPress={onRelease} accessibilityRole="button">
+          <Text style={styles.linkText}>Can't make it?</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

@@ -147,3 +147,26 @@ export type WorkerProfile = {
   avatar_url?: string | null;
   allow_venue_recontact?: boolean;
 };
+
+export type ShiftChangeRequest = {
+  request_id: string;
+  booking_id: string;
+  shift_id: string;
+  venue_id: string;
+  worker_id: string;
+  change_type: "release" | "cover";
+  status:
+    | "pending_replacement"
+    | "pending_manager"
+    | "approved"
+    | "declined"
+    | "withdrawn"
+    | "expired";
+  reason: string;
+  replacement_worker_id: string | null;
+  created_at: string;
+  updated_at: string;
+  decided_at: string | null;
+  decided_by_user_id: string | null;
+  shift?: ShiftSummary | null;
+};
