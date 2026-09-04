@@ -26,6 +26,7 @@ export function ShiftManagementModal({ shift, timezone, bookings, workers, onCha
     pay_rate: String(shift.pay_rate),
     workers_needed: String(shift.workers_needed),
     notes: shift.notes ?? "",
+    required_certification: shift.required_certification ?? "",
   }));
   const [cancellationReason, setCancellationReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -43,6 +44,7 @@ export function ShiftManagementModal({ shift, timezone, bookings, workers, onCha
         pay_rate: Number(form.pay_rate),
         workers_needed: Number(form.workers_needed),
         notes: form.notes || null,
+        required_certification: form.required_certification.trim() || null,
         now: new Date().toISOString(),
       });
       await onSaved("Shift updated.");
@@ -116,6 +118,11 @@ export function ShiftManagementModal({ shift, timezone, bookings, workers, onCha
           <form className="shift-management-body" onSubmit={save}>
             <div className="shift-management-grid">
               <Field label="Role" value={form.role} onChange={(role) => setForm({ ...form, role })} />
+              <Field
+                label="Requires certification"
+                value={form.required_certification}
+                onChange={(required_certification) => setForm({ ...form, required_certification })}
+              />
               <Field label="Location" value={form.location} onChange={(location) => setForm({ ...form, location })} />
               <Field label="Start" type="datetime-local" value={form.start_time} onChange={(start_time) => setForm({ ...form, start_time })} />
               <Field label="End" type="datetime-local" value={form.end_time} onChange={(end_time) => setForm({ ...form, end_time })} />

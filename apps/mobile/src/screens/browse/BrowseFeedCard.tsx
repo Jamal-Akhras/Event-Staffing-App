@@ -44,6 +44,9 @@ export function BrowseFeedCard({
           <View style={styles.headerCopy}>
             <Text style={styles.role} numberOfLines={1}>{shift.role}</Text>
             <Text style={styles.location} numberOfLines={1}>{placeLine}</Text>
+            {shift.required_certification ? (
+              <Text style={styles.requires}>Requires {shift.required_certification}</Text>
+            ) : null}
           </View>
           <StatusBadge status={shift.status} size="small" />
         </View>
@@ -129,6 +132,7 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1, gap: 2 },
   role: { ...TYPE.section, color: COLORS.ink, fontSize: 18 },
   location: { ...TYPE.body, color: COLORS.inkMuted },
+  requires: { ...TYPE.caption, color: COLORS.inkSubtle, marginTop: 2 },
   payRow: {
     flexDirection: "row",
     alignItems: "flex-end",

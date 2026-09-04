@@ -23,6 +23,7 @@ export type ShiftDraft = {
   workers_needed: string;
   notes: string;
   assigned_worker_id: string;
+  required_certification: string;
 };
 
 type ShiftCreateFormProps = {
@@ -48,6 +49,7 @@ export function ShiftCreateForm({ initial, timezone, durationHours, onCreated, o
     workers_needed: "1",
     notes: "",
     assigned_worker_id: "",
+    required_certification: "",
     ...initial,
   });
   const [saving, setSaving] = useState(false);
@@ -92,6 +94,7 @@ export function ShiftCreateForm({ initial, timezone, durationHours, onCreated, o
         pay_rate: Number(form.pay_rate),
         workers_needed: form.assigned_worker_id ? 1 : Number(form.workers_needed),
         notes: form.notes || null,
+        required_certification: form.required_certification.trim() || null,
         now: new Date().toISOString(),
         ...(form.assigned_worker_id
           ? { assigned_worker_id: form.assigned_worker_id, rota_state: "draft" }
@@ -135,6 +138,14 @@ export function ShiftCreateForm({ initial, timezone, durationHours, onCreated, o
         <label>
           Role
           <input value={form.role} onChange={(event) => update({ role: event.target.value })} placeholder="Bartender, Server, Host" required />
+        </label>
+        <label>
+          Requires certification
+          <input
+            value={form.required_certification}
+            onChange={(event) => update({ required_certification: event.target.value })}
+            placeholder="Optional — e.g. Personal Licence"
+          />
         </label>
         <label>
           Location

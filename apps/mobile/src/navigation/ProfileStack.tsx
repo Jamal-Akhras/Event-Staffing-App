@@ -7,6 +7,7 @@ import {
   PrivacySettingsScreen,
   ProfileDetailsScreen,
 } from "../screens/profile/SettingsDetailScreens";
+import { CertificationsScreen } from "../screens/profile/CertificationsScreen";
 import { COLORS } from "../theme/colors";
 import { NotificationBell } from "./NotificationBell";
 import type { ProfileStackParamList } from "./navigationTypes";
@@ -44,6 +45,11 @@ export function ProfileStack() {
         name="PrivacySettings"
         component={PrivacySettingsScreen}
         options={{ title: "Privacy" }}
+      />
+      <Stack.Screen
+        name="Certifications"
+        component={CertificationsScreen}
+        options={{ title: "Certifications" }}
       />
       <Stack.Screen
         name="AccountSettings"

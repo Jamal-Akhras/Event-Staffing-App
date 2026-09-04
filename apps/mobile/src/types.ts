@@ -14,6 +14,7 @@ export type Shift = {
   latitude?: number | null;
   longitude?: number | null;
   origin?: "assigned" | "team" | "pool" | "market";
+  required_certification?: string | null;
 };
 
 export type Market = {

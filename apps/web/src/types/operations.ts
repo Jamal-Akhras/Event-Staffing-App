@@ -23,6 +23,7 @@ export type Shift = {
   publish_market_at?: string | null;
   rota_state?: "draft" | "published";
   needs_attention?: boolean;
+  required_certification?: string | null;
 };
 
 export type Application = {

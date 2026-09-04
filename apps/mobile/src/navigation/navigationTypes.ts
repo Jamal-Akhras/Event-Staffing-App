@@ -20,6 +20,7 @@ export type ProfileStackParamList = {
   ProfileDetails: undefined;
   NotificationSettings: undefined;
   PrivacySettings: undefined;
+  Certifications: undefined;
   AccountSettings: undefined;
 };
 

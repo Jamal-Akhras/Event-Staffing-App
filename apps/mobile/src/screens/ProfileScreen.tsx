@@ -21,7 +21,7 @@ const TABS: { key: ProfileTab; label: string }[] = [
 
 type SettingsNav = {
   navigate: (
-    screen: "ProfileDetails" | "NotificationSettings" | "PrivacySettings" | "AccountSettings"
+    screen: "ProfileDetails" | "NotificationSettings" | "PrivacySettings" | "AccountSettings" | "Certifications"
   ) => void;
 };
 
@@ -70,6 +70,10 @@ export function ProfileScreen() {
                 label="Privacy"
                 value={allowRecontact ? "Visible to past venues" : "Hidden from past venues"}
                 onPress={() => navigation.navigate("PrivacySettings")}
+              />
+              <SettingsRow
+                label="Certifications"
+                onPress={() => navigation.navigate("Certifications")}
               />
             </View>
 

@@ -105,6 +105,9 @@ function BoardCard({
       )}
       {(draft || attention) && (
         <span className="bd-flags">
+          {shift.required_certification && (
+            <span className="bd-badge">Requires {shift.required_certification}</span>
+          )}
           {draft && <span className="bd-badge">Draft</span>}
           {attention && <span className="bd-badge warn">Needs attention</span>}
         </span>
