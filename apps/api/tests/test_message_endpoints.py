@@ -4,17 +4,20 @@ from fastapi.testclient import TestClient
 
 from apps.api.src import main
 from apps.api.src.auth import ActorContext, ActorRole, get_actor_context
-from apps.api.src.deps import get_application_repo, get_booking_charge_repo, get_booking_repo, get_booking_transition_repo, get_message_repo, get_shift_repo
+from apps.api.src.deps import get_application_repo, get_booking_charge_repo, get_booking_repo, get_booking_transition_repo, get_message_repo, get_message_thread_repo, get_organisation_repo, get_shift_repo
 from apps.api.src.models.application import Application
+from apps.api.src.models.organisation import Organisation, Venue
 from apps.api.src.models.shift import Shift
 from apps.api.src.repositories.in_memory_application_repository import InMemoryApplicationRepository
 from apps.api.src.repositories.in_memory_booking_repository import InMemoryBookingRepository
 from apps.api.src.repositories.in_memory_message_repository import InMemoryMessageRepository
+from apps.api.src.repositories.in_memory_message_thread_repository import InMemoryMessageThreadRepository
+from apps.api.src.repositories.in_memory_organisation_repository import InMemoryOrganisationRepository
 from apps.api.src.repositories.in_memory_shift_repository import InMemoryShiftRepository
 from apps.api.src.repository_dependencies import shared_booking_charge_repository, shared_booking_transition_repository
 
-OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-1"}
-OTHER_OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-2"}
+OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-1", "X-Account-Id": "venue-1"}
+OTHER_OPERATOR_HEADERS = {"X-Actor-Role": "operator", "X-Actor-Id": "operator-2", "X-Account-Id": "venue-2"}
 WORKER_HEADERS = {"X-Actor-Role": "worker", "X-Actor-Id": "worker-1"}
 OTHER_WORKER_HEADERS = {"X-Actor-Role": "worker", "X-Actor-Id": "worker-2"}
 
@@ -27,10 +30,15 @@ def _client() -> TestClient:
     application_repo.attach_shift_repo(shift_repo)
     booking_repo.attach_shift_repo(shift_repo)
     message_repo = InMemoryMessageRepository()
+    thread_repo = InMemoryMessageThreadRepository()
+    organisation_repo = InMemoryOrganisationRepository()
+    organisation_repo.save_organisation(Organisation("org-1", "Group", "GB", "GBP", now))
+    organisation_repo.save_venue(Venue("venue-1", "org-1", "Venue", "GB", "GBP", now))
     shift_repo.save(
         Shift(
             shift_id="shift-1",
             operator_id="operator-1",
+            account_id="venue-1",
             role="server",
             location="Downtown",
             start_time=now + timedelta(hours=2),
@@ -60,6 +68,8 @@ def _client() -> TestClient:
     main.app.dependency_overrides[get_shift_repo] = lambda: shift_repo
     main.app.dependency_overrides[get_application_repo] = lambda: application_repo
     main.app.dependency_overrides[get_message_repo] = lambda: message_repo
+    main.app.dependency_overrides[get_message_thread_repo] = lambda: thread_repo
+    main.app.dependency_overrides[get_organisation_repo] = lambda: organisation_repo
     main.app.dependency_overrides[get_booking_repo] = lambda: booking_repo
     main.app.dependency_overrides[get_booking_transition_repo] = shared_booking_transition_repository
     main.app.dependency_overrides[get_booking_charge_repo] = shared_booking_charge_repository

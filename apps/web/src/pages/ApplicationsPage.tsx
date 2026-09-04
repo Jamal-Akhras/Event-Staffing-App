@@ -217,7 +217,6 @@ export function ApplicationsPage() {
             <MessageThread
               shiftId={messaging.shift_id}
               applicationId={messaging.application_id}
-              currentUserRole="operator"
             />
           </section>
         </div>

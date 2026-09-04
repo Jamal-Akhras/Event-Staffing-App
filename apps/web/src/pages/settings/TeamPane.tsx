@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { useToast } from "../../components/Toast";
+import { EmploymentThreads } from "../../components/EmploymentThreads";
 import { useAuth } from "../../contexts/AuthContext";
 import { initials } from "../../lib/useVenue";
 import type { EmployedType, JoinCode } from "../../types/workforce";
@@ -42,6 +43,7 @@ export function TeamPane({ venueName }: { venueName: string }) {
 
   return (
     <>
+      <EmploymentThreads />
       <Group
         title="Join codes"
         hint="Give a code to staff you already employ so they can add themselves to this venue. Flexible workers join your pool after they have worked a shift, not with a code."

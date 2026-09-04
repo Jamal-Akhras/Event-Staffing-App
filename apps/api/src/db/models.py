@@ -29,7 +29,13 @@ from apps.api.src.db.tenancy_models import (
     OrganisationModel,
     VenueModel,
 )
-from apps.api.src.db.message_models import ApplicationMessageHistoryModel, MessageModel
+from apps.api.src.db.message_models import (
+    ApplicationMessageHistoryModel,
+    MessageModel,
+    MessageReadReceiptModel,
+    MessageThreadModel,
+    MessageThreadParticipantModel,
+)
 from apps.api.src.db.notification_models import NotificationModel
 from apps.api.src.db.trust_models import ReportModel
 from apps.api.src.db.idempotency_models import IdempotencyRecordModel

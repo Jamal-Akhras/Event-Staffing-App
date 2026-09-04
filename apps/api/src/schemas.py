@@ -266,14 +266,36 @@ class MessageThreadReadRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message_id: str
-    shift_id: str
+    thread_id: str
+    thread_kind: str
+    shift_id: str | None
     application_id: str | None
     booking_id: str | None
+    relationship_id: str | None
     sender_id: str
     sender_role: str
     content: str
     read_at: UtcTimestamp | None
     created_at: UtcTimestamp
+
+
+class MessageThreadSummaryResponse(BaseModel):
+    thread_id: str
+    kind: str
+    venue_id: str
+    shift_id: str | None
+    application_id: str | None
+    booking_id: str | None
+    relationship_id: str | None
+    worker_id: str | None
+    role: str | None
+    venue_name: str
+    created_at: UtcTimestamp
+    can_post: bool
+
+
+class MessageThreadResponse(MessageThreadSummaryResponse):
+    messages: list[MessageResponse]
 
 
 class EarningsEntryResponse(BaseModel):

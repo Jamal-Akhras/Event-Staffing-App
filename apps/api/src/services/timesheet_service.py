@@ -5,7 +5,6 @@ import io
 from dataclasses import dataclass, replace
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Any
 from uuid import uuid4
 
 from apps.api.src.models.booking_charge import BookingCharge
@@ -23,6 +22,7 @@ from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_profile_repository import WorkerProfileRepository
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.services.billing_math import PENNY, money, worked_hours
+from apps.api.src.services.csv_safety import escape_csv_formula
 from apps.api.src.services.errors import NotFoundError, ValidationError
 from apps.api.src.services.rota_week import local_day, venue_timezone, week_window
 from packages.domain.src.booking import Booking
@@ -341,13 +341,6 @@ def _hours_between(start: datetime, end: datetime) -> Decimal:
     return Decimal((end - start).total_seconds() / 3600).quantize(PENNY, rounding=ROUND_HALF_UP)
 
 
-def _escape(value: Any) -> str:
-    text = str(value)
-    if text and text[0] in ("=", "+", "-", "@"):
-        return "'" + text
-    return text
-
-
 def _charge_row(charge: BookingCharge, booking: Booking | None, zone) -> list[str]:
     source = "scheduled"
     if booking is not None and booking.override_checked_in_at is not None:
@@ -355,10 +348,10 @@ def _charge_row(charge: BookingCharge, booking: Booking | None, zone) -> list[st
     elif booking is not None and booking.checked_in_at is not None:
         source = "clocked"
     return [
-        _escape(charge.worker_id),
-        _escape(charge.worker_name),
-        _escape(charge.worker_relationship or "one_off"),
-        _escape(charge.role),
+        escape_csv_formula(charge.worker_id),
+        escape_csv_formula(charge.worker_name),
+        escape_csv_formula(charge.worker_relationship or "one_off"),
+        escape_csv_formula(charge.role),
         str(local_day(charge.start_time, zone)),
         charge.start_time.astimezone(zone).strftime("%H:%M"),
         charge.end_time.astimezone(zone).strftime("%H:%M"),
@@ -374,17 +367,17 @@ def _charge_row(charge: BookingCharge, booking: Booking | None, zone) -> list[st
 
 def _adjustment_row(charge: BookingCharge, adjustment: BookingChargeAdjustment, zone) -> list[str]:
     return [
-        _escape(charge.worker_id),
-        _escape(charge.worker_name),
-        _escape(charge.worker_relationship or "one_off"),
-        _escape(charge.role),
+        escape_csv_formula(charge.worker_id),
+        escape_csv_formula(charge.worker_name),
+        escape_csv_formula(charge.worker_relationship or "one_off"),
+        escape_csv_formula(charge.role),
         str(local_day(charge.start_time, zone)),
         "",
         "",
-        _escape(str(adjustment.delta_hours)),
+        escape_csv_formula(str(adjustment.delta_hours)),
         "correction",
         str(charge.pay_rate),
-        _escape(str(adjustment.delta_wages)),
+        escape_csv_formula(str(adjustment.delta_wages)),
         adjustment.adjustment_id,
         charge.currency,
         charge.booking_id,

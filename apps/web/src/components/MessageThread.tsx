@@ -1,10 +1,11 @@
 import { useState, useEffect, FormEvent, useRef } from "react";
 
 import { fetchJson, postJson } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
 
 type Message = {
   message_id: string;
-  shift_id: string;
+  shift_id: string | null;
   application_id: string | null;
   booking_id: string | null;
   sender_id: string;
@@ -15,15 +16,25 @@ type Message = {
 };
 
 type MessageThreadProps = {
-  shiftId: string;
+  kind?: "direct" | "group" | "employment";
+  shiftId?: string;
+  relationshipId?: string;
   applicationId?: string;
   bookingId?: string;
-  currentUserRole: "worker" | "operator";
 };
+
+type ThreadEnvelope = { messages: Message[]; can_post: boolean };
 
 const POLL_INTERVAL_MS = 5000;
 
-export function MessageThread({ shiftId, applicationId, bookingId, currentUserRole }: MessageThreadProps) {
+export function MessageThread({
+  kind = "direct",
+  shiftId,
+  relationshipId,
+  applicationId,
+  bookingId,
+}: MessageThreadProps) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -31,16 +42,17 @@ export function MessageThread({ shiftId, applicationId, bookingId, currentUserRo
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const threadPath = buildThreadPath(shiftId, applicationId, bookingId);
+  const paths = buildThreadPaths(kind, shiftId, relationshipId, applicationId, bookingId);
   const threadBody = { application_id: applicationId, booking_id: bookingId };
 
   const loadMessages = async () => {
     try {
-      const data = await fetchJson<Message[]>(threadPath);
+      const payload = await fetchJson<Message[] | ThreadEnvelope>(paths.read);
+      const data = Array.isArray(payload) ? payload : payload.messages;
       setMessages(data);
       setError(null);
-      if (data.some((msg) => msg.sender_role !== currentUserRole && msg.read_at === null)) {
-        await postJson(`/shifts/${shiftId}/messages/read`, threadBody);
+      if (data.some((msg) => msg.sender_id !== user?.user_id && msg.read_at === null)) {
+        await postJson(paths.markRead, kind === "direct" ? threadBody : {});
       }
     } catch (err) {
       setError((err as Error).message);
@@ -53,7 +65,7 @@ export function MessageThread({ shiftId, applicationId, bookingId, currentUserRo
     loadMessages();
     const interval = setInterval(loadMessages, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [shiftId, applicationId, bookingId]);
+  }, [kind, shiftId, relationshipId, applicationId, bookingId, user?.user_id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -66,7 +78,7 @@ export function MessageThread({ shiftId, applicationId, bookingId, currentUserRo
 
     setSending(true);
     try {
-      await postJson(`/shifts/${shiftId}/messages`, { content, ...threadBody });
+      await postJson(paths.send, { content, ...(kind === "direct" ? threadBody : {}) });
       setNewMessage("");
       await loadMessages();
     } catch (err) {
@@ -107,7 +119,7 @@ export function MessageThread({ shiftId, applicationId, bookingId, currentUserRo
           </div>
         ) : (
           messages.map((msg) => (
-            <MessageBubble key={msg.message_id} message={msg} isCurrentUser={msg.sender_role === currentUserRole} />
+            <MessageBubble key={msg.message_id} message={msg} isCurrentUser={msg.sender_id === user?.user_id} />
           ))
         )}
         <div ref={messagesEndRef} />
@@ -182,11 +194,31 @@ function MessageBubble({ message, isCurrentUser }: { message: Message; isCurrent
   );
 }
 
-function buildThreadPath(shiftId: string, applicationId?: string, bookingId?: string) {
+function buildThreadPaths(
+  kind: "direct" | "group" | "employment",
+  shiftId?: string,
+  relationshipId?: string,
+  applicationId?: string,
+  bookingId?: string
+) {
+  if (kind === "employment") {
+    if (!relationshipId) throw new Error("relationshipId is required for employment messages");
+    const base = `/employment-threads/${relationshipId}`;
+    return { read: base, send: `${base}/messages`, markRead: `${base}/read` };
+  }
+  if (!shiftId) throw new Error("shiftId is required for shift messages");
+  if (kind === "group") {
+    const base = `/shifts/${shiftId}/group-thread`;
+    return { read: base, send: `${base}/messages`, markRead: `${base}/read` };
+  }
   const params = new URLSearchParams();
   if (applicationId) params.set("application_id", applicationId);
   if (bookingId) params.set("booking_id", bookingId);
-  return `/shifts/${shiftId}/messages?${params.toString()}`;
+  return {
+    read: `/shifts/${shiftId}/messages?${params.toString()}`,
+    send: `/shifts/${shiftId}/messages`,
+    markRead: `/shifts/${shiftId}/messages/read`,
+  };
 }
 
 function formatTimestamp(value: string) {

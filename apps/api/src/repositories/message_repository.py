@@ -15,11 +15,16 @@ class MessageRepository(Protocol):
     def list_by_shift(self, shift_id: str, limit: int = 100) -> list[Message]:
         ...
 
+    def list_by_thread(self, thread_id: str, limit: int = 100) -> list[Message]:
+        ...
+
     def list_by_application(self, application_id: str, limit: int = 100) -> list[Message]:
         ...
 
     def list_by_booking(self, booking_id: str, limit: int = 100) -> list[Message]:
         ...
 
-    def mark_as_read(self, message_id: str) -> bool:
+    def list_for_threads_between(
+        self, thread_ids: list[str], since, until
+    ) -> list[Message]:
         ...

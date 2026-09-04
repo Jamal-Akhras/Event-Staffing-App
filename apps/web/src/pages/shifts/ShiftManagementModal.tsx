@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 
 import { ApiError, postJson, putJson } from "../../lib/api";
+import { MessageThread } from "../../components/MessageThread";
 import { fromVenueInput, toVenueInput } from "../../lib/venueTime";
 import type { Booking, Shift, WorkerProfile } from "../../types/operations";
 import { BookedWorkers } from "./BookedWorkers";
@@ -31,6 +32,7 @@ export function ShiftManagementModal({ shift, timezone, bookings, workers, onCha
   const [cancellationReason, setCancellationReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showGroupMessages, setShowGroupMessages] = useState(false);
   const canManage = shift.status === "open" || shift.status === "filled";
 
   async function save(event: FormEvent) {
@@ -113,6 +115,11 @@ export function ShiftManagementModal({ shift, timezone, bookings, workers, onCha
             onChanged={onChanged}
           />
         )}
+
+        <button className="btn secondary" type="button" onClick={() => setShowGroupMessages(!showGroupMessages)}>
+          {showGroupMessages ? "Hide shift group" : "Open shift group"}
+        </button>
+        {showGroupMessages && <MessageThread kind="group" shiftId={shift.shift_id} />}
 
         {canManage ? (
           <form className="shift-management-body" onSubmit={save}>

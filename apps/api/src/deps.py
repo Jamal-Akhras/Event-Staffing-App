@@ -7,6 +7,7 @@ from apps.api.src.repositories.application_message_history_repository import App
 from apps.api.src.repositories.application_repository import ApplicationRepository
 from apps.api.src.repositories.booking_repository import BookingRepository
 from apps.api.src.repositories.message_repository import MessageRepository
+from apps.api.src.repositories.message_thread_repository import MessageThreadRepository
 from apps.api.src.repositories.market_repository import MarketRepository
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.template_repository import TemplateRepository
@@ -33,6 +34,7 @@ from apps.api.src.repository_dependencies import (
     get_booking_transition_repo,
     get_event_repo,
     get_message_repo,
+    get_message_thread_repo,
     get_market_repo,
     get_notification_repo,
     get_outbox_publisher,
@@ -114,6 +116,7 @@ __all__ = [
     "get_event_repo",
     "get_event_recorder",
     "get_message_repo",
+    "get_message_thread_repo",
     "get_message_service",
     "get_idempotency_service",
     "get_market_repo",
@@ -311,12 +314,24 @@ def get_template_service(
 
 def get_message_service(
     message_repo: MessageRepository = Depends(get_message_repo),
+    thread_repo: MessageThreadRepository = Depends(get_message_thread_repo),
     shift_repo: ShiftRepository = Depends(get_shift_repo),
     application_repo: ApplicationRepository = Depends(get_application_repo),
     booking_repo: BookingRepository = Depends(get_booking_repo),
+    relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    organisation_repo=Depends(get_organisation_repo),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
 ) -> MessageService:
-    return MessageService(message_repo, shift_repo, application_repo, booking_repo, outbox)
+    return MessageService(
+        message_repo,
+        thread_repo,
+        shift_repo,
+        application_repo,
+        booking_repo,
+        relationship_repo,
+        organisation_repo,
+        outbox,
+    )
 
 
 def get_worker_feed_service(

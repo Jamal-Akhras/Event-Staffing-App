@@ -492,3 +492,23 @@ def get_auto_accept_attempt_repo(session: Session | None = Depends(get_request_s
     if use_in_memory_repositories():
         return _AUTO_ACCEPT_ATTEMPTS
     return SqlAlchemyAutoAcceptAttemptRepository(_session(session))
+
+
+from apps.api.src.repositories.in_memory_message_thread_repository import (
+    InMemoryMessageThreadRepository as _MessageThreadRepo,
+)
+from apps.api.src.repositories.message_thread_repository import MessageThreadRepository
+
+_MESSAGE_THREADS = _MessageThreadRepo()
+
+
+def get_message_thread_repo(
+    session: Session | None = Depends(get_request_session),
+) -> MessageThreadRepository:
+    from apps.api.src.repositories.sqlalchemy_message_thread_repository import (
+        SqlAlchemyMessageThreadRepository,
+    )
+
+    if use_in_memory_repositories():
+        return _MESSAGE_THREADS
+    return SqlAlchemyMessageThreadRepository(_session(session))
