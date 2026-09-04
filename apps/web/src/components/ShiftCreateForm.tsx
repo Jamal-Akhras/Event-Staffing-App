@@ -84,6 +84,38 @@ export function ShiftCreateForm({ initial, timezone, durationHours, onCreated, o
     update(patch);
   };
 
+  const [drafting, setDrafting] = useState(false);
+
+  const draftPost = async () => {
+    if (!form.role || !form.location || !form.start_time || !form.end_time) {
+      onError("Add role, location and times first, then I can draft it.");
+      return;
+    }
+    setDrafting(true);
+    try {
+      const draft = await postJson<{
+        description: string;
+        suggested_pay_low: string | null;
+        suggested_pay_high: string | null;
+        pay_basis: string;
+      }>("/assistant/shift-post", {
+        role: form.role,
+        location: form.location,
+        start_time: fromVenueInput(form.start_time, timezone),
+        end_time: fromVenueInput(form.end_time, timezone),
+        pay_rate: form.pay_rate ? Number(form.pay_rate) : null,
+        note: form.notes || null,
+      });
+      const patch: Partial<ShiftDraft> = { notes: draft.description };
+      if (!form.pay_rate && draft.suggested_pay_low) patch.pay_rate = draft.suggested_pay_low;
+      update(patch);
+    } catch (err) {
+      onError((err as Error).message);
+    } finally {
+      setDrafting(false);
+    }
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
@@ -194,7 +226,12 @@ export function ShiftCreateForm({ initial, timezone, durationHours, onCreated, o
         )}
         <label>
           Notes (optional)
-          <input value={form.notes} onChange={(event) => update({ notes: event.target.value })} placeholder="Dress code, arrival details, requirements" />
+          <span className="st-inline">
+            <input value={form.notes} onChange={(event) => update({ notes: event.target.value })} placeholder="Dress code, arrival details, requirements" />
+            <button type="button" className="btn ghost compact" disabled={drafting} onClick={() => void draftPost()}>
+              {drafting ? "Writing..." : "Help me write this"}
+            </button>
+          </span>
         </label>
         <button className="btn primary" type="submit" disabled={saving}>
           {saving ? "Saving..." : form.assigned_worker_id ? "Save draft" : "Post shift"}
