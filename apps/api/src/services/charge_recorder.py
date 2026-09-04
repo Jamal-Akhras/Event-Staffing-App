@@ -14,7 +14,12 @@ from apps.api.src.repositories.worker_relationship_repository import (
     RelationshipTransitionRepository,
     WorkerRelationshipRepository,
 )
+from apps.api.src.repositories.organisation_repository import OrganisationRepository
 from apps.api.src.services.billing_math import completed_at, money, worked_hours
+from apps.api.src.services.org_affiliation import (
+    relationship_type_as_of,
+    sibling_employed_venue_as_of,
+)
 from apps.api.src.services.errors import NotFoundError
 from packages.domain.src.booking import Booking
 
@@ -29,6 +34,7 @@ class ChargeRecorder:
         fee_percent: Decimal,
         relationships: WorkerRelationshipRepository,
         relationship_transitions: RelationshipTransitionRepository,
+        organisations: OrganisationRepository,
     ) -> None:
         self._charges = charges
         self._shifts = shifts
@@ -37,6 +43,7 @@ class ChargeRecorder:
         self._fee_percent = fee_percent
         self._relationships = relationships
         self._relationship_transitions = relationship_transitions
+        self._organisations = organisations
 
     def freeze(self, booking: Booking, now: datetime) -> BookingCharge:
         existing = self._charges.get_for_booking(booking.booking_id)
@@ -51,7 +58,25 @@ class ChargeRecorder:
         wages = money(hours * pay_rate)
         waiver_code = self._active_waiver_code(shift.account_id, now)
         relationship_at_start = self._relationship_as_of(shift.account_id, booking.worker_id, booking.start_time)
-        exempt = relationship_at_start in EMPLOYED_TYPES
+        source_venue_id = None
+        if relationship_at_start in EMPLOYED_TYPES:
+            fee_basis = "venue_employed"
+        else:
+            source_venue_id = sibling_employed_venue_as_of(
+                self._organisations,
+                self._relationships,
+                self._relationship_transitions,
+                shift.account_id,
+                booking.worker_id,
+                booking.start_time,
+            )
+            if source_venue_id is not None:
+                fee_basis = "organisation_employed"
+            elif relationship_at_start == "pool":
+                fee_basis = "venue_pool"
+            else:
+                fee_basis = "outside"
+        exempt = fee_basis in ("venue_employed", "organisation_employed")
         fee_percent = Decimal("0.00") if exempt else self._fee_percent
         fee = Decimal("0.00") if (waiver_code or exempt) else money(wages * fee_percent / Decimal(100))
         completed = completed_at(booking)
@@ -79,30 +104,15 @@ class ChargeRecorder:
                 waiver_code=waiver_code,
                 recorded_at=now,
                 worker_relationship=relationship_at_start,
+                fee_basis=fee_basis,
+                source_venue_id=source_venue_id,
             )
         )
 
     def _relationship_as_of(self, venue_id: str, worker_id: str, at) -> str:
-        relationship = self._relationships.get_for_venue_worker(venue_id, worker_id)
-        if relationship is None:
-            return "one_off"
-        recorded = self._relationship_transitions.list_for_relationship(relationship.relationship_id)
-        if not recorded:
-            if relationship.created_at <= at and relationship.status in ("active", "invited"):
-                return relationship.relationship_type
-            return "one_off"
-        state_type = recorded[0].from_relationship_type
-        state_status = recorded[0].from_status
-        for transition in recorded:
-            if transition.occurred_at > at:
-                break
-            if transition.to_status == "invited":
-                continue
-            state_type = transition.to_relationship_type
-            state_status = transition.to_status
-        if state_type is None or state_status != "active":
-            return "one_off"
-        return state_type
+        return relationship_type_as_of(
+            self._relationships, self._relationship_transitions, venue_id, worker_id, at
+        )
 
     def _active_waiver_code(self, account_id: str, now: datetime) -> str | None:
         redemption = self._codes.get_redemption_for_account(account_id)

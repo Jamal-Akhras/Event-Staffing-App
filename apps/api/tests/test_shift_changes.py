@@ -281,6 +281,7 @@ def test_an_approved_cover_swaps_the_worker_on_the_same_slot(harness):
     ]
     assert [b.worker_id for b in live] == ["worker-2"]
     assert live[0].attendance_mode == "employed"
+    assert live[0].allocation_source == "cover"
     assert harness.escalations.restarts == []
     assert len(harness.revisions.minted) == 1
     assert harness.revisions.notified[0][1] == {"worker-1", "worker-2"}

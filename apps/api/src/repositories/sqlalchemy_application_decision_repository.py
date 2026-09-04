@@ -122,6 +122,7 @@ def _booking_to_model(booking: Booking) -> BookingModel:
         check_in_code=booking.check_in_code,
         completion_code=booking.completion_code,
         attendance_mode=booking.attendance_mode,
+        allocation_source=booking.allocation_source,
         override_checked_in_at=booking.override_checked_in_at,
         override_checked_out_at=booking.override_checked_out_at,
     )
@@ -147,6 +148,7 @@ def _booking_to_domain(model: BookingModel) -> Booking:
         check_in_code=model.check_in_code,
         completion_code=model.completion_code,
         attendance_mode=model.attendance_mode,
+        allocation_source=model.allocation_source,
         override_checked_in_at=model.override_checked_in_at,
         override_checked_out_at=model.override_checked_out_at,
     )

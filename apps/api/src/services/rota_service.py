@@ -31,6 +31,7 @@ from apps.api.src.services.rota_revisions import (
 )
 from apps.api.src.services.availability_gate import ApprovedTimeOffConflictError, AvailabilityGate
 from apps.api.src.services.certification_gate import CertificationGate, MissingCertificationError
+from apps.api.src.services.org_affiliation import sibling_employed_now
 from apps.api.src.services.shift_offer_service import ShiftOfferService
 from apps.api.src.services.rota_week import local_day, week_window
 from packages.domain.src.booking import Booking
@@ -55,6 +56,7 @@ class RotaService:
         offers: ShiftOfferService,
         gate: AvailabilityGate,
         certifications: CertificationGate,
+        organisations=None,
     ) -> None:
         self._shifts = shifts
         self._bookings = bookings
@@ -68,6 +70,7 @@ class RotaService:
         self._offers = offers
         self._gate = gate
         self._certifications = certifications
+        self._organisations = organisations
         self._revisions = RotaRevisionService(shifts, bookings, publications, outbox, accounts, markets)
 
     def publish(self, venue_id: str, week_start: date, actor_user_id: str, now: datetime) -> PublishOutcome:
@@ -84,10 +87,19 @@ class RotaService:
         for draft in drafts:
             relationship = self._relationships.get_for_venue_worker(venue_id, draft.assigned_worker_id)
             if relationship is None or relationship.status != "active":
-                raise ValidationError(
-                    f"{draft.role} on {local_day(draft.start_time, zone)} is assigned to someone "
-                    f"without an active relationship (shift {draft.shift_id}). Reassign it, then publish."
+                sibling = (
+                    sibling_employed_now(
+                        self._organisations, self._relationships, venue_id, draft.assigned_worker_id
+                    )
+                    if self._organisations is not None
+                    else None
                 )
+                if sibling is None:
+                    raise ValidationError(
+                        f"{draft.role} on {local_day(draft.start_time, zone)} is assigned to someone "
+                        f"without an active relationship (shift {draft.shift_id}). Reassign it, then publish."
+                    )
+                relationship = None
             try:
                 self._gate.ensure_no_approved_time_off(
                     draft.assigned_worker_id, venue_id, draft.start_time, draft.end_time
@@ -104,7 +116,7 @@ class RotaService:
                     f"{draft.role} on {local_day(draft.start_time, zone)} requires a current "
                     f"{exc.required} certification its assignee does not hold (shift {draft.shift_id})."
                 ) from exc
-            employed = relationship.relationship_type in EMPLOYED_TYPES
+            employed = relationship is not None and relationship.relationship_type in EMPLOYED_TYPES
             if employed:
                 try:
                     self._allocator.check_availability(
@@ -207,7 +219,13 @@ class RotaService:
             raise ValidationError("This shift has already started.")
         relationship = self._relationships.get_for_venue_worker(venue_id, new_worker_id)
         if relationship is None or relationship.status != "active":
-            raise ValidationError("That worker does not have an active relationship with your venue.")
+            sibling = (
+                sibling_employed_now(self._organisations, self._relationships, venue_id, new_worker_id)
+                if self._organisations is not None
+                else None
+            )
+            if sibling is None:
+                raise ValidationError("That worker does not have an active relationship with your venue.")
 
         live = self._live_bookings(shift_id)
         if len(live) > 1:

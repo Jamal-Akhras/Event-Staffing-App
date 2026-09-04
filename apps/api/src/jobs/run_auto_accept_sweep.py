@@ -9,6 +9,9 @@ from apps.api.src.db.database import SessionLocal
 from apps.api.src.repositories.sqlalchemy_account_repository import (
     SqlAlchemyAccountRepository,
 )
+from apps.api.src.repositories.sqlalchemy_organisation_repository import (
+    SqlAlchemyOrganisationRepository,
+)
 from apps.api.src.repositories.sqlalchemy_auto_accept_repository import (
     SqlAlchemyAutoAcceptAttemptRepository,
     SqlAlchemyWorkerAutoAcceptRuleRepository,
@@ -81,6 +84,7 @@ def run(now: datetime | None = None) -> int:
             ),
             outbox,
             CertificationGate(SqlAlchemyWorkerCertificationRepository(session)),
+            SqlAlchemyOrganisationRepository(session),
         )
         service = AutoAcceptService(
             SqlAlchemyWorkerAutoAcceptRuleRepository(session),

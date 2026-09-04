@@ -20,6 +20,7 @@ from apps.api.src.repositories.shift_offer_repository import ShiftOfferRepositor
 from apps.api.src.repositories.shift_repository import ShiftRepository
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.services.certification_gate import CertificationGate
+from apps.api.src.services.org_affiliation import sibling_employed_now
 from apps.api.src.services.errors import NotFoundError, ValidationError
 from apps.api.src.services.outbox_publisher import OutboxPublisher
 from packages.domain.src.booking import Booking
@@ -36,6 +37,7 @@ class ShiftOfferService:
         escalations,
         outbox: OutboxPublisher,
         certifications: CertificationGate,
+        organisations=None,
     ) -> None:
         self._offers = offers
         self._shifts = shifts
@@ -45,6 +47,7 @@ class ShiftOfferService:
         self._escalations = escalations
         self._outbox = outbox
         self._certifications = certifications
+        self._organisations = organisations
 
     def offer(
         self, shift: Shift, worker_id: str, source: str, now: datetime,
@@ -81,10 +84,21 @@ class ShiftOfferService:
         shift = self._offer_shift(offer, worker_id, now)
         relationship = self._relationships.get_for_venue_worker(offer.venue_id, worker_id)
         if relationship is None or relationship.status != "active":
-            raise ValidationError("You no longer have an active relationship with this venue.")
+            sibling = (
+                sibling_employed_now(
+                    self._organisations, self._relationships, offer.venue_id, worker_id
+                )
+                if self._organisations is not None
+                else None
+            )
+            if sibling is None:
+                raise ValidationError("You no longer have an active relationship with this venue.")
+            relationship = None
         self._certifications.ensure_certified(worker_id, shift)
         attendance_mode = (
-            "employed" if relationship.relationship_type in EMPLOYED_TYPES else "pin"
+            "employed"
+            if relationship is not None and relationship.relationship_type in EMPLOYED_TYPES
+            else "pin"
         )
         try:
             allocated = self._allocator.allocate(

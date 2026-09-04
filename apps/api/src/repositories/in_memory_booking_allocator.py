@@ -45,6 +45,7 @@ class InMemoryBookingAllocator:
         now: datetime,
         booking_id: str,
         attendance_mode: str = "pin",
+        allocation_source: str | None = None,
     ) -> AllocatedBooking:
         with _ALLOCATOR_LOCK:
             shift = self._shifts.get(shift_id)
@@ -77,6 +78,7 @@ class InMemoryBookingAllocator:
                 end_time=shift.end_time,
                 created_at=now,
                 attendance_mode=attendance_mode,
+                allocation_source=allocation_source or shift.origin,
             ).transition_to(BookingState.CONFIRMED, now)
             self._bookings.save(booking)
 

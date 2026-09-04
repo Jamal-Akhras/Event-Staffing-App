@@ -15,6 +15,7 @@ from apps.api.src.deps import (
     get_idempotency_service,
     get_shift_lifecycle_service,
     get_shift_repo,
+    get_organisation_repo,
     get_shift_service,
 )
 from apps.api.src.helpers import _now_or, _shift_view
@@ -38,6 +39,7 @@ from apps.api.src.services.geocoding import geocode
 from apps.api.src.services.idempotency import IdempotencyConflict, IdempotencyService
 from apps.api.src.repositories.worker_relationship_repository import WorkerRelationshipRepository
 from apps.api.src.services.escalation_service import EscalationService
+from apps.api.src.services.org_affiliation import sibling_employed_now
 from apps.api.src.services.shift_visibility import worker_can_see_shift
 from apps.api.src.services.shift_service import ShiftService
 from apps.api.src.services.shift_lifecycle_service import ShiftLifecycleService
@@ -63,6 +65,7 @@ def create_shift(
     unit_of_work: RequestUnitOfWork = Depends(get_request_unit_of_work),
     escalations: EscalationService = Depends(get_escalation_service),
     relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
+    organisation_repo=Depends(get_organisation_repo),
 ) -> ShiftResponse:
     require_role(actor.role, {ActorRole.OPERATOR})
     require_verified_actor(actor, "posting shifts")
@@ -87,10 +90,14 @@ def create_shift(
     if payload.assigned_worker_id is not None and actor.account_id:
         assignee = relationship_repo.get_for_venue_worker(actor.account_id, payload.assigned_worker_id)
         if assignee is None or assignee.status != "active":
-            raise HTTPException(
-                status_code=400,
-                detail="That worker does not have an active relationship with your venue.",
+            sibling = sibling_employed_now(
+                organisation_repo, relationship_repo, actor.account_id, payload.assigned_worker_id
             )
+            if sibling is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="That worker does not have an active relationship with your venue.",
+                )
     shift = service.create_shift(payload, actor.user_id, actor.account_id, currency)
     if payload.assigned_worker_id is not None:
         shift = replace(shift, assigned_worker_id=payload.assigned_worker_id)

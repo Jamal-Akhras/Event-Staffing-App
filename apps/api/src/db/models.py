@@ -103,6 +103,7 @@ class BookingModel(Base):
     check_in_code = Column(String(4), nullable=False)
     completion_code = Column(String(4), nullable=False)
     attendance_mode = Column(String(12), nullable=False, default="pin", server_default="pin")
+    allocation_source = Column(String(16), nullable=True)
     override_checked_in_at = Column(UtcDateTime(), nullable=True)
     override_checked_out_at = Column(UtcDateTime(), nullable=True)
 

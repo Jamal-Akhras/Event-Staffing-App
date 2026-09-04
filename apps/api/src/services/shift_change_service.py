@@ -234,6 +234,7 @@ class ShiftChangeService:
                 allocated = self._allocator.allocate(
                     request.shift_id, replacement, now, str(uuid4()),
                     attendance_mode=attendance_mode,
+                    allocation_source="cover",
                 )
             except (ShiftFullError, WorkerAlreadyBookedError, OverlappingBookingError) as exc:
                 raise ConflictError(

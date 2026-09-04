@@ -37,6 +37,7 @@ class Booking:
     check_in_code: str = field(default_factory=new_attendance_code)
     completion_code: str = field(default_factory=new_attendance_code)
     attendance_mode: str = "pin"
+    allocation_source: str | None = None
     override_checked_in_at: datetime | None = None
     override_checked_out_at: datetime | None = None
 

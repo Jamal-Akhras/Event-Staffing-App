@@ -8,6 +8,9 @@ from apps.api.src.repositories.in_memory_worker_relationship_repository import (
     InMemoryRelationshipTransitionRepository,
     InMemoryWorkerRelationshipRepository,
 )
+from apps.api.src.repositories.in_memory_organisation_repository import (
+    InMemoryOrganisationRepository,
+)
 from apps.api.src.services.charge_recorder import ChargeRecorder
 
 CREATED = datetime(2030, 3, 1, tzinfo=UTC)
@@ -23,7 +26,10 @@ def repos():
 
 
 def _recorder(relationships, transitions) -> ChargeRecorder:
-    return ChargeRecorder(None, None, None, None, Decimal("8.00"), relationships, transitions)
+    return ChargeRecorder(
+        None, None, None, None, Decimal("8.00"), relationships, transitions,
+        InMemoryOrganisationRepository(),
+    )
 
 
 def _relationship(repo, relationship_type: str, status: str, created_at: datetime = CREATED):

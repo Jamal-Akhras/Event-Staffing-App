@@ -35,6 +35,7 @@ class SqlAlchemyBookingAllocator:
         now: datetime,
         booking_id: str,
         attendance_mode: str = "pin",
+        allocation_source: str | None = None,
     ) -> AllocatedBooking:
         self._serialize_on_worker(worker_id)
 
@@ -69,6 +70,7 @@ class SqlAlchemyBookingAllocator:
             end_time=shift_model.end_time,
             created_at=now,
             attendance_mode=attendance_mode,
+            allocation_source=allocation_source or shift_model.origin,
         ).transition_to(BookingState.CONFIRMED, now)
 
         try:

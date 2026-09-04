@@ -29,3 +29,5 @@ class BookingCharge:
     waiver_code: str | None
     recorded_at: datetime
     worker_relationship: str | None = None
+    fee_basis: str | None = None
+    source_venue_id: str | None = None

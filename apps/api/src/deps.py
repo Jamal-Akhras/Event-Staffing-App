@@ -164,6 +164,7 @@ def get_charge_recorder(
     partner_code_repo: PartnerCodeRepository = Depends(get_partner_code_repo),
     relationship_repo: WorkerRelationshipRepository = Depends(get_worker_relationship_repo),
     relationship_transition_repo: RelationshipTransitionRepository = Depends(get_relationship_transition_repo),
+    organisation_repo=Depends(get_organisation_repo),
 ) -> ChargeRecorder:
     return ChargeRecorder(
         charge_repo,
@@ -173,6 +174,7 @@ def get_charge_recorder(
         get_platform_fee_percent(),
         relationship_repo,
         relationship_transition_repo,
+        organisation_repo,
     )
 
 
@@ -331,6 +333,7 @@ def get_shift_offer_service(
     escalations: EscalationService = Depends(get_escalation_service),
     outbox: OutboxPublisher = Depends(get_outbox_publisher),
     certifications: CertificationGate = Depends(get_certification_gate),
+    organisation_repo=Depends(get_organisation_repo),
 ) -> ShiftOfferService:
     return ShiftOfferService(
         offer_repo,
@@ -341,6 +344,7 @@ def get_shift_offer_service(
         escalations,
         outbox,
         certifications,
+        organisation_repo,
     )
 
 
@@ -360,6 +364,7 @@ def get_rota_service(
     offers: ShiftOfferService = Depends(get_shift_offer_service),
     gate: AvailabilityGate = Depends(get_availability_gate),
     certifications: CertificationGate = Depends(get_certification_gate),
+    organisation_repo=Depends(get_organisation_repo),
 ) -> RotaService:
     return RotaService(
         shift_repo,
@@ -377,6 +382,7 @@ def get_rota_service(
         offers,
         gate,
         certifications,
+        organisation_repo,
     )
 
 
