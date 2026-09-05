@@ -11,9 +11,9 @@
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 28px;
   padding: 24px 26px;
-  border: 1px solid rgba(14, 90, 58, 0.24);
+  border: 1px solid rgba(47, 93, 80, 0.24);
   border-radius: 18px;
-  background: rgba(14, 90, 58, 0.05);
+  background: rgba(47, 93, 80, 0.05);
 }
 
 .tp-run h2 {
@@ -75,7 +75,7 @@
 .tp-field input:focus,
 .tp-field select:focus {
   outline: none;
-  border-color: rgba(14, 90, 58, 0.55);
+  border-color: rgba(47, 93, 80, 0.55);
   box-shadow: var(--focus-ring);
 }
 
@@ -100,7 +100,7 @@
 .tp-days button.on {
   border-color: transparent;
   background: var(--ocean-500);
-  color: #fffaf2;
+  color: #fcfaf4;
 }
 
 .tp-preview {
@@ -111,7 +111,7 @@
   padding: 20px;
   border-radius: 14px;
   background: var(--ocean-500);
-  color: #fffaf2;
+  color: #fcfaf4;
 }
 
 .tp-preview .tp-kicker {
@@ -140,7 +140,7 @@
 .tp-go {
   margin-top: 6px;
   border-color: transparent;
-  background: #fffaf2;
+  background: #fcfaf4;
   color: var(--ocean-500);
 }
 
@@ -185,7 +185,7 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: rgba(14, 90, 58, 0.1);
+  background: rgba(47, 93, 80, 0.1);
   color: var(--ocean-500);
   font-size: 15px;
   font-weight: 700;
@@ -282,7 +282,7 @@
 }
 
 .tp-delete:hover {
-  color: #b42318;
+  color: #b23a2a;
 }
 
 @media (max-width: 960px) {

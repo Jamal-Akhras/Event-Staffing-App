@@ -50,7 +50,7 @@
 }
 
 .legal-hero-link:hover {
-  border-color: rgba(15, 23, 32, 0.12);
+  border-color: rgba(28, 26, 23, 0.12);
 }
 
 .legal-hero-link.primary {
@@ -116,7 +116,7 @@
 
 .legal-card section {
   padding-bottom: 24px;
-  border-bottom: 1px solid rgba(15, 23, 32, 0.08);
+  border-bottom: 1px solid rgba(28, 26, 23, 0.08);
 }
 
 .legal-card section:last-child {

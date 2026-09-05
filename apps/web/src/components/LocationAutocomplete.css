@@ -23,7 +23,7 @@
   width: 100%;
   padding: 10px 36px 10px 34px;
   border-radius: 10px;
-  border: 1.5px solid rgba(15, 23, 32, 0.12);
+  border: 1.5px solid rgba(28, 26, 23, 0.12);
   font-size: 0.95rem;
   background: var(--paper-1);
   color: var(--ink-900);
@@ -43,7 +43,7 @@
   height: 22px;
   border: none;
   border-radius: 50%;
-  background: rgba(15, 23, 32, 0.1);
+  background: rgba(28, 26, 23, 0.1);
   color: var(--ink-500);
   font-size: 10px;
   cursor: pointer;
@@ -56,7 +56,7 @@
 }
 
 .loc-clear:hover {
-  background: rgba(15, 23, 32, 0.18);
+  background: rgba(28, 26, 23, 0.18);
   color: var(--ink-900);
 }
 
@@ -70,9 +70,9 @@
   padding: 4px;
   list-style: none;
   background: #fff;
-  border: 1px solid rgba(15, 23, 32, 0.1);
+  border: 1px solid rgba(28, 26, 23, 0.1);
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(15, 23, 32, 0.12);
+  box-shadow: 0 8px 24px rgba(28, 26, 23, 0.12);
 }
 
 .loc-suggestion {

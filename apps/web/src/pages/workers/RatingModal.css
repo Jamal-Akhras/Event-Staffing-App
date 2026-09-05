@@ -24,7 +24,7 @@
 }
 
 .rating-prompt-kicker {
-  color: var(--ocean-500, #0e5a3a);
+  color: var(--ocean-500, #2f5d50);
   font-size: .68rem;
   font-weight: 800;
   letter-spacing: .13em;
@@ -42,7 +42,7 @@
 }
 
 .rating-prompt-avatar.fallback {
-  background: var(--ocean-500, #0e5a3a);
+  background: var(--ocean-500, #2f5d50);
   color: #fff;
   font-size: 1.25rem;
   font-weight: 850;
@@ -50,7 +50,7 @@
 
 .rating-prompt h2 {
   margin: 18px 0 0;
-  color: var(--ink-900, #0d1721);
+  color: var(--ink-900, #1c1a17);
   font-size: clamp(1.65rem, 4vw, 2.1rem);
   letter-spacing: -.035em;
   text-align: center;
@@ -75,7 +75,7 @@
 
 .rating-prompt-stars button:hover { transform: translateY(-2px) scale(1.05); }
 .rating-prompt-stars button.selected { color: #f5b82e; }
-.rating-prompt-stars button:focus-visible { outline: 3px solid rgba(14, 90, 58, .25); outline-offset: 2px; border-radius: 10px; }
+.rating-prompt-stars button:focus-visible { outline: 3px solid rgba(47, 93, 80, .25); outline-offset: 2px; border-radius: 10px; }
 .rating-prompt-label { min-height: 20px; margin: 8px 0 0; color: var(--ink-500); font-size: .82rem; font-weight: 700; }
 
 .rating-prompt-feedback { display: grid; width: 100%; gap: 8px; margin-top: 20px; color: var(--ink-700); font-size: .78rem; font-weight: 750; }
@@ -89,7 +89,7 @@
   margin-top: 22px;
   border: 0;
   border-radius: 15px;
-  background: var(--ocean-500, #0e5a3a);
+  background: var(--ocean-500, #2f5d50);
   color: #fff;
   cursor: pointer;
   font-size: .95rem;

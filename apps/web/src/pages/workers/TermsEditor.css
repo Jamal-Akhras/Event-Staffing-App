@@ -8,7 +8,7 @@
   gap: 10px;
   width: 100%;
   padding: 12px;
-  border: 1px solid rgba(15, 23, 32, 0.1);
+  border: 1px solid rgba(28, 26, 23, 0.1);
   border-radius: 12px;
   background: rgba(255, 252, 247, 0.7);
 }
@@ -24,9 +24,9 @@
 
 .te-form input {
   padding: 8px 10px;
-  border: 1px solid rgba(15, 23, 32, 0.14);
+  border: 1px solid rgba(28, 26, 23, 0.14);
   border-radius: 10px;
-  background: #fffdf9;
+  background: #fcfaf4;
   font: inherit;
 }
 

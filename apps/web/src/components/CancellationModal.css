@@ -9,7 +9,7 @@
 
 .cancellation-eyebrow {
   margin: 0 0 4px;
-  color: #b42318;
+  color: #b23a2a;
   font-size: 0.7rem;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -48,7 +48,7 @@
 }
 
 .btn.danger {
-  border-color: #b42318;
-  background: #b42318;
+  border-color: #b23a2a;
+  background: #b23a2a;
   color: white;
 }

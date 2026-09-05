@@ -12,7 +12,7 @@
 }
 
 .shift-card.cancelled {
-  border-left-color: #b42318;
+  border-left-color: #b23a2a;
   background: rgba(220, 38, 38, 0.04);
 }
 
@@ -46,7 +46,7 @@
 .bd-nav {
   display: flex;
   overflow: hidden;
-  border: 1px solid rgba(15, 23, 32, 0.12);
+  border: 1px solid rgba(28, 26, 23, 0.12);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.7);
 }
@@ -64,7 +64,7 @@
 }
 
 .bd-nav button:hover {
-  background: rgba(15, 23, 32, 0.04);
+  background: rgba(28, 26, 23, 0.04);
 }
 
 .bd-nav-arrow {
@@ -73,8 +73,8 @@
 
 .bd-nav-today {
   padding: 0 14px;
-  border-left: 1px solid rgba(15, 23, 32, 0.1) !important;
-  border-right: 1px solid rgba(15, 23, 32, 0.1) !important;
+  border-left: 1px solid rgba(28, 26, 23, 0.1) !important;
+  border-right: 1px solid rgba(28, 26, 23, 0.1) !important;
   color: var(--ink-700) !important;
   font-size: 14px;
   font-weight: 600;
@@ -95,7 +95,7 @@
   border: 1px solid rgba(245, 165, 36, 0.3);
   border-radius: 999px;
   background: rgba(245, 165, 36, 0.12);
-  color: #b45309;
+  color: #c0872e;
   font-size: 12px;
   font-weight: 700;
 }
@@ -103,7 +103,7 @@
 .bd-seats.ok {
   border-color: rgba(4, 120, 87, 0.25);
   background: rgba(4, 120, 87, 0.08);
-  color: #047857;
+  color: #2f5d50;
 }
 
 .bd-header-actions {
@@ -148,10 +148,10 @@
   gap: 8px;
   height: 38px;
   padding: 0 14px;
-  border: 1px solid rgba(14, 90, 58, 0.22);
+  border: 1px solid rgba(47, 93, 80, 0.22);
   border-radius: 999px;
-  background: rgba(14, 90, 58, 0.08);
-  color: #0e5a3a;
+  background: rgba(47, 93, 80, 0.08);
+  color: #2f5d50;
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -160,7 +160,7 @@
 }
 
 .bd-chip:hover {
-  background: rgba(14, 90, 58, 0.14);
+  background: rgba(47, 93, 80, 0.14);
 }
 
 .bd-chip span {
@@ -190,7 +190,7 @@
   padding: 18px 20px;
   border-radius: 16px;
   background: var(--ocean-500);
-  color: #fffaf2;
+  color: #fcfaf4;
 }
 
 .bd-tonight-kicker {
@@ -229,7 +229,7 @@
 .bd-week-start select {
   height: 40px;
   padding: 0 10px;
-  border: 1px solid rgba(15, 23, 32, 0.12);
+  border: 1px solid rgba(28, 26, 23, 0.12);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.7);
   color: var(--ink-700);

@@ -13,7 +13,7 @@
   flex-direction: column;
   gap: 10px;
   padding: 14px 0;
-  border-top: 1px solid rgba(15, 23, 32, 0.08);
+  border-top: 1px solid rgba(28, 26, 23, 0.08);
 }
 
 .toq-copy {
@@ -44,7 +44,7 @@
 }
 
 .toq-decline {
-  border: 1px solid rgba(15, 23, 32, 0.12);
+  border: 1px solid rgba(28, 26, 23, 0.12);
   border-radius: 8px;
   background: transparent;
   color: var(--ink-500);

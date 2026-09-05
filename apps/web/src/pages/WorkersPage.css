@@ -36,7 +36,7 @@
 .wk-filters button.on {
   border-color: transparent;
   background: var(--ocean-500);
-  color: #fffaf2;
+  color: #fcfaf4;
 }
 
 .wk-filters small {
@@ -129,11 +129,11 @@
 }
 
 .wk-table tbody tr:hover {
-  background: rgba(14, 90, 58, 0.035);
+  background: rgba(47, 93, 80, 0.035);
 }
 
 .wk-table tbody tr.sel {
-  background: rgba(14, 90, 58, 0.06);
+  background: rgba(47, 93, 80, 0.06);
   box-shadow: inset 3px 0 0 var(--ocean-500);
 }
 
@@ -196,7 +196,7 @@
   width: 54px;
   height: 6px;
   border-radius: 3px;
-  background: rgba(15, 23, 32, 0.1);
+  background: rgba(28, 26, 23, 0.1);
   overflow: hidden;
 }
 
@@ -231,7 +231,7 @@
 }
 
 .wk-tag.team {
-  background: rgba(14, 90, 58, 0.1);
+  background: rgba(47, 93, 80, 0.1);
   color: var(--ocean-500);
 }
 

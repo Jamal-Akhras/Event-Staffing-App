@@ -118,7 +118,7 @@
 .st-select:focus,
 .st-textarea:focus {
   outline: none;
-  border-color: rgba(14, 90, 58, 0.55);
+  border-color: rgba(47, 93, 80, 0.55);
   box-shadow: var(--focus-ring);
 }
 
@@ -160,12 +160,12 @@
 .st-btn.primary {
   border-color: transparent;
   background: var(--ocean-500);
-  color: #fffaf2;
+  color: #fcfaf4;
 }
 
 .st-btn.danger {
   border-color: rgba(180, 35, 24, 0.3);
-  color: #b42318;
+  color: #b23a2a;
 }
 
 .st-btn:disabled {
@@ -185,12 +185,12 @@
 
 .st-tag.live {
   background: rgba(4, 120, 87, 0.1);
-  color: #047857;
+  color: #2f5d50;
 }
 
 .st-tag.soon {
   background: rgba(245, 165, 36, 0.16);
-  color: #b45309;
+  color: #c0872e;
 }
 
 .st-switch {
