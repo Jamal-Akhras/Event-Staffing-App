@@ -1,24 +1,25 @@
 :root {
   color-scheme: light;
-  --ink-900: #0f1720;
-  --ink-700: #1f2a37;
-  --ink-500: #4b5563;
-  --ink-300: #6b7280;
-  --paper-0: #fefcf9;
-  --paper-1: #fbf7f1;
-  --paper-2: #eee4d7;
+  --ink-900: #1c1a17;
+  --ink-700: #3a342b;
+  --ink-500: #6b655c;
+  --ink-300: #938c81;
+  --paper-0: #fcfaf4;
+  --paper-1: #f6f1e7;
+  --paper-2: #e9e0d0;
   --paper-3: #fff8e9;
-  --ocean-500: #0e5a3a;
-  --ocean-300: #2f8f5f;
-  --sun-500: #f5a524;
-  --sun-300: #f9d07f;
-  --rose-400: #f06b6b;
-  --success-500: #10b981;
-  --info-500: #3b82f6;
-  --warning-500: #f59e0b;
-  --danger-500: #ef4444;
-  --border-soft: rgba(15, 23, 32, 0.08);
-  --border-strong: rgba(15, 23, 32, 0.14);
+  --ocean-500: #2f5d50;
+  --ocean-300: #57907e;
+  --sun-500: #c0872e;
+  --sun-300: #e0c48c;
+  --brass: #b8863b;
+  --rose-400: #c15b4e;
+  --success-500: #2f5d50;
+  --info-500: #3e5c6b;
+  --warning-500: #c0872e;
+  --danger-500: #b23a2a;
+  --border-soft: rgba(28, 26, 23, 0.09);
+  --border-strong: rgba(28, 26, 23, 0.15);
 
   --space-1: 4px;
   --space-2: 8px;
@@ -35,11 +36,37 @@
   --shadow-soft: 0 8px 24px rgba(25, 31, 40, 0.06);
   --shadow-lift: 0 16px 40px rgba(25, 31, 40, 0.10);
 
-  --focus-ring: 0 0 0 3px rgba(14, 90, 58, 0.22);
+  --focus-ring: 0 0 0 3px rgba(47, 93, 80, 0.22);
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 
-  font-family: "Space Grotesk", "Manrope", "Segoe UI", sans-serif;
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   color: var(--ink-900);
   background: var(--paper-1);
+}
+
+.u-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-300);
+}
+
+.u-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.u-serif {
+  font-family: var(--font-display);
+}
+
+.u-hero {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
 }
 
 :focus-visible {
@@ -84,9 +111,10 @@ a { color: inherit; }
 .page-title {
   margin: 0 0 var(--space-2);
   color: var(--ink-900);
-  font-size: 1.875rem;
-  font-weight: 800;
-  line-height: 1.15;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
   letter-spacing: -0.01em;
 }
 
