@@ -19,6 +19,7 @@ import { WorkersPage } from "./pages/WorkersPage";
 import { TimesheetPage } from "./pages/TimesheetPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { BillingPage } from "./pages/BillingPage";
 import { CookiesPage, PrivacyPage, TermsPage } from "./pages/LegalPage";
 import { PublicLayout } from "./pages/public/PublicLayout";
 import { HomePage } from "./pages/public/HomePage";
@@ -63,6 +64,7 @@ export default function App() {
                 <Route path="timesheet" element={<TimesheetPage />} />
                 <Route path="schedule" element={<Navigate to="/app/shifts" replace />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
+                <Route path="billing" element={<BillingPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
             </Route>
