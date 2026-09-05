@@ -24,10 +24,11 @@
   align-items: center;
   gap: 8px;
   margin: 0;
-  color: var(--ocean-500);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.11em;
+  font-family: var(--font-mono);
+  color: var(--ink-500);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
@@ -35,29 +36,36 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--sun-500);
-  box-shadow: 0 0 0 5px rgba(245, 165, 36, 0.13);
+  background: var(--ocean-500);
+  box-shadow: 0 0 0 5px rgba(47, 93, 80, 0.12);
 }
 
 .ov-title {
   margin: 0;
   color: var(--ink-900);
-  font-size: 42px;
-  font-weight: 700;
-  letter-spacing: -0.05em;
-  line-height: 1.05;
+  font-family: var(--font-display);
+  font-size: 52px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+}
+
+.ov-title-unit {
+  color: var(--ink-500);
+  font-size: 0.42em;
+  font-weight: 500;
 }
 
 .ov-lead {
   margin: 0;
   color: var(--ink-500);
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.6;
 }
 
 .ov-lead em {
   color: var(--ocean-500);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
   font-style: italic;
   font-weight: 500;
 }
@@ -73,34 +81,35 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 52px;
-  padding: 0 22px;
+  min-height: 46px;
+  padding: 0 20px;
   border: 1px solid transparent;
-  border-radius: 12px;
-  font-size: 14.5px;
-  font-weight: 700;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
   text-decoration: none;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-}
-
-.ov-btn:hover {
-  transform: translateY(-2px);
+  transition: box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 
 .ov-btn-primary {
   background: var(--ocean-500);
-  color: #fffaf2;
-  box-shadow: 0 12px 28px rgba(14, 90, 58, 0.22);
+  color: var(--paper-0);
+  box-shadow: 0 10px 24px -12px rgba(47, 93, 80, 0.5);
 }
 
 .ov-btn-primary:hover {
-  background: var(--ocean-300);
+  background: #274e43;
 }
 
 .ov-btn-light {
-  border-color: rgba(15, 23, 32, 0.14);
-  background: rgba(255, 255, 255, 0.68);
-  color: var(--ink-900);
+  border-color: var(--border-strong);
+  background: transparent;
+  color: var(--ink-700);
+}
+
+.ov-btn-light:hover {
+  border-color: var(--ocean-500);
+  color: var(--ocean-500);
 }
 
 .ov-inline-btn {
@@ -126,11 +135,11 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 26px 28px;
-  border: 1px solid rgba(15, 23, 32, 0.08);
-  border-radius: 18px;
-  background: rgba(255, 252, 247, 0.94);
-  box-shadow: var(--shadow-soft);
+  padding: 22px 24px;
+  border: 1px solid rgba(47, 93, 80, 0.14);
+  border-radius: 14px;
+  background: var(--paper-0);
+  box-shadow: 0 1px 2px rgba(28, 26, 23, 0.04), 0 12px 26px -18px rgba(28, 26, 23, 0.18);
 }
 
 .ov-card-tight {
@@ -147,10 +156,11 @@
 }
 
 .ov-kicker {
+  font-family: var(--font-mono);
   color: var(--ink-300);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.11em;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
@@ -167,9 +177,10 @@
 .ov-card-title {
   margin: 0;
   color: var(--ink-900);
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .ov-link {

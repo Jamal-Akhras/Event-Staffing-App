@@ -1,40 +1,40 @@
 .ov-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-top: 1px solid rgba(15, 23, 32, 0.1);
-  border-bottom: 1px solid rgba(15, 23, 32, 0.1);
+  border: 1px solid rgba(47, 93, 80, 0.14);
+  border-radius: 14px;
+  background: var(--paper-0);
+  box-shadow: 0 1px 2px rgba(28, 26, 23, 0.04), 0 12px 26px -18px rgba(28, 26, 23, 0.18);
+  overflow: hidden;
 }
 
 .ov-stat {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 22px 28px;
-  border-right: 1px solid rgba(15, 23, 32, 0.08);
-}
-
-.ov-stat:first-child {
-  padding-left: 0;
+  padding: 18px 22px;
+  border-right: 1px solid var(--border-soft);
 }
 
 .ov-stat:last-child {
-  padding-right: 0;
   border-right: 0;
 }
 
 .ov-stat-label {
+  font-family: var(--font-mono);
   color: var(--ink-300);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
 .ov-stat-value {
   color: var(--ink-900);
-  font-size: 40px;
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   line-height: 1;
 }
 
@@ -44,13 +44,13 @@
 }
 
 .ov-stat-note.warning {
-  color: #b45309;
-  font-weight: 600;
+  color: var(--warning-500);
+  font-weight: 500;
 }
 
 .ov-stat-note.success {
-  color: #047857;
-  font-weight: 600;
+  color: var(--ocean-500);
+  font-weight: 500;
 }
 
 @media (max-width: 980px) {
@@ -59,9 +59,8 @@
   }
 
   .ov-stat {
-    padding: 16px 0;
     border-right: 0;
-    border-bottom: 1px solid rgba(15, 23, 32, 0.08);
+    border-bottom: 1px solid var(--border-soft);
   }
 
   .ov-stat:last-child {

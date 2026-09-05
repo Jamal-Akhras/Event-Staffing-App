@@ -35,12 +35,7 @@ export function TonightCard({ rows }: { rows: TonightRow[] }) {
               {names.length ? names.map((name, index) => (codes[index] ? `${name} · code ${codes[index]}` : name)).join(", ") : "Nobody booked yet"}
             </span>
             {missing === 0 ? (
-              <span className="ov-status ok">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M5 13l4 4L19 7" />
-                </svg>
-                Confirmed
-              </span>
+              <span className="ov-status ok">Confirmed</span>
             ) : (
               <Link to="/app/applications" className="ov-status warn">{missing} open · Find cover</Link>
             )}

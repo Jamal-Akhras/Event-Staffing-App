@@ -44,6 +44,8 @@ export function DashboardPage() {
   const turnout = overview.attendance;
   const tonight = tonightRows(overview.tonight, data.workers);
   const tonightMissing = tonight.reduce((sum, row) => sum + row.missing, 0);
+  const tonightNeeded = overview.tonight.reduce((sum, row) => sum + row.shift.workers_needed, 0);
+  const tonightCovered = tonightNeeded - tonightMissing;
   const nextGap = days.slice(1).find((day) => day.openSeats > 0);
   const openSeats = overview.open_seats;
 
@@ -56,7 +58,7 @@ export function DashboardPage() {
 
   return (
     <div className="overview">
-      <OverviewHeader venueName={venue.data?.name ?? "team"} now={now} lead={lead} emphasis={emphasis} />
+      <OverviewHeader venueName={venue.data?.name ?? "team"} now={now} covered={tonightCovered} needed={tonightNeeded} lead={lead} emphasis={emphasis} />
 
       <StatRow
         stats={[

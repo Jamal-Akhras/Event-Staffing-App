@@ -5,19 +5,26 @@ import { greetingFor } from "./dashboardUtils";
 type OverviewHeaderProps = {
   venueName: string;
   now: Date;
+  covered: number;
+  needed: number;
   lead: string;
   emphasis: string;
 };
 
-export function OverviewHeader({ venueName, now, lead, emphasis }: OverviewHeaderProps) {
+export function OverviewHeader({ venueName, now, covered, needed, lead, emphasis }: OverviewHeaderProps) {
+  const dateLabel = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   return (
     <div className="ov-header">
       <div className="ov-header-copy">
         <p className="ov-eyebrow">
           <span className="ov-eyebrow-dot" aria-hidden="true" />
-          {now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+          {needed > 0 ? "Tonight's coverage" : dateLabel}
         </p>
-        <h1 className="ov-title">{greetingFor(now)}, {venueName}.</h1>
+        {needed > 0 ? (
+          <h1 className="ov-title">{covered}/{needed} <span className="ov-title-unit">covered</span></h1>
+        ) : (
+          <h1 className="ov-title">{greetingFor(now)}, {venueName}.</h1>
+        )}
         <p className="ov-lead">
           {lead} <em>{emphasis}</em>
         </p>

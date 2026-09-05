@@ -9,7 +9,7 @@
   align-items: center;
   gap: 16px;
   padding: 12px 0;
-  border-top: 1px solid rgba(15, 23, 32, 0.07);
+  border-top: 1px solid var(--border-soft);
 }
 
 .ov-row-role {
@@ -26,18 +26,27 @@
 .ov-status {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-size: 12.5px;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
 }
 
+.ov-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
 .ov-status.ok {
-  color: #047857;
+  color: var(--ocean-500);
 }
 
 .ov-status.warn {
-  color: #b45309;
+  color: var(--warning-500);
 }
 
 .ov-week {
@@ -50,7 +59,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 6px 12px;
-  border-right: 1px solid rgba(15, 23, 32, 0.07);
+  border-right: 1px solid var(--border-soft);
 }
 
 .ov-day:first-child {
@@ -63,33 +72,37 @@
 }
 
 .ov-day.gap {
-  background: rgba(245, 165, 36, 0.1);
+  background: rgba(192, 135, 46, 0.1);
 }
 
 .ov-day-label {
+  font-family: var(--font-mono);
   color: var(--ink-300);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .ov-day-label.warn {
-  color: #b45309;
+  color: var(--warning-500);
 }
 
 .ov-day-number {
   color: var(--ink-900);
+  font-family: var(--font-display);
   font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .ov-day-state {
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
-.ov-day-state.ok { color: #047857; }
-.ov-day-state.warn { color: #b45309; font-weight: 700; }
+.ov-day-state.ok { color: var(--ocean-500); }
+.ov-day-state.warn { color: var(--warning-500); font-weight: 600; }
 .ov-day-state.muted { color: var(--ink-300); font-weight: 500; }
 
 .ov-decision {
@@ -98,7 +111,7 @@
   align-items: center;
   gap: 14px;
   padding: 12px 0;
-  border-top: 1px solid rgba(15, 23, 32, 0.07);
+  border-top: 1px solid var(--border-soft);
 }
 
 .ov-avatar {
@@ -158,8 +171,8 @@
 
 .ov-approve {
   padding: 0 14px;
-  border: 1px solid rgba(14, 90, 58, 0.22);
-  background: rgba(14, 90, 58, 0.08);
+  border: 1px solid rgba(47, 93, 80, 0.22);
+  background: rgba(47, 93, 80, 0.08);
   color: var(--ocean-500);
 }
 
@@ -183,7 +196,7 @@
   padding: 20px 24px;
   border-radius: 18px;
   background: var(--ocean-500);
-  color: #fffaf2;
+  color: var(--paper-0);
 }
 
 .ov-avatars {
@@ -209,7 +222,7 @@
 
 .ov-avatar-stack.more {
   background: rgba(255, 255, 255, 0.18);
-  color: #fffaf2;
+  color: var(--paper-0);
 }
 
 .ov-regulars-copy {
@@ -237,7 +250,7 @@
   padding: 0 14px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.16);
-  color: #fffaf2;
+  color: var(--paper-0);
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
