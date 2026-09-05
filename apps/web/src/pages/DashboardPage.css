@@ -30,6 +30,7 @@
   font-weight: 500;
   letter-spacing: 0.09em;
   text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .ov-eyebrow-dot {
@@ -45,6 +46,7 @@
   color: var(--ink-900);
   font-family: var(--font-display);
   font-size: 52px;
+  font-family: var(--font-display);
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.02;
@@ -162,6 +164,7 @@
   font-weight: 500;
   letter-spacing: 0.09em;
   text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .ov-kicker.ocean {
@@ -179,6 +182,7 @@
   color: var(--ink-900);
   font-family: var(--font-display);
   font-size: 24px;
+  font-family: var(--font-display);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -205,6 +209,7 @@
 
   .ov-title {
     font-size: 32px;
+    font-family: var(--font-display);
   }
 
   .ov-grid {

@@ -81,6 +81,7 @@
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .legal-hero h1 {

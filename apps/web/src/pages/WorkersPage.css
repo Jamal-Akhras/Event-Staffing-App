@@ -8,6 +8,7 @@
 
 .wk-summary .ov-stat-value {
   font-size: 32px;
+  font-family: var(--font-display);
 }
 
 .wk-filters {
@@ -94,6 +95,7 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .wk-table thead th button {

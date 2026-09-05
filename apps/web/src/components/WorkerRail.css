@@ -20,6 +20,7 @@
   font-weight: 700;
   letter-spacing: 0.11em;
   text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .rail-person {
@@ -77,6 +78,7 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .rail-stats b {
@@ -109,6 +111,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .rail-section p {
