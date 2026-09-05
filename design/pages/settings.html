@@ -1,0 +1,53 @@
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:24px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div class="eyebrow" style="padding:0 12px 8px">Settings</div>
+          <div style="padding:9px 12px;border-radius:6px;color:var(--muted);font-weight:500">Venue details</div>
+          <div style="padding:9px 12px;border-radius:6px;background:var(--tint);color:var(--forest);font-weight:600">Scheduling policy</div>
+          <div style="padding:9px 12px;border-radius:6px;color:var(--muted);font-weight:500">Organisation</div>
+          <div style="padding:9px 12px;border-radius:6px;color:var(--muted);font-weight:500">Privacy &amp; consent</div>
+          <div style="padding:9px 12px;border-radius:6px;color:var(--muted);font-weight:500">Account</div>
+        </div>
+
+        <div class="card">
+          <div class="hd"><span class="eyebrow">Escalation ladder</span></div>
+          <div style="padding:20px 20px 4px">
+            <div style="color:var(--muted);max-width:560px">When a shift goes unfilled, Venue OS widens who can see it — from the person you named, out to your team, your pool, then the open market. Set how long each rung waits.</div>
+
+            <div style="display:flex;align-items:center;gap:8px;margin:22px 0 26px">
+              <span class="pill" style="background:var(--tint);color:var(--forest);font-weight:600">Assigned</span>
+              <span class="mono" style="font-size:11px;color:var(--faint)">4h →</span>
+              <span class="pill" style="background:var(--tint);color:var(--forest);font-weight:600">Team</span>
+              <span class="mono" style="font-size:11px;color:var(--faint)">12h →</span>
+              <span class="pill" style="background:#EEE9DE;color:var(--muted);font-weight:600">Pool</span>
+              <span class="mono" style="font-size:11px;color:var(--faint)">24h →</span>
+              <span class="pill" style="background:#EDE7DB;color:var(--faint);font-weight:600">Market</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px 24px;max-width:640px">
+              <div>
+                <label class="eyebrow" style="display:block;margin-bottom:7px">Named offer hold</label>
+                <div style="display:flex;align-items:center;border:1px solid var(--hair);border-radius:6px;overflow:hidden"><input value="4" class="mono" style="border:0;padding:9px 12px;width:100%;font-size:14px;background:transparent;color:var(--ink);outline:none"><span class="mono" style="padding:9px 12px;color:var(--faint);border-left:1px solid var(--hair)">hours</span></div>
+                <div style="font-size:12px;color:var(--faint);margin-top:6px">How long the named person has before the team sees it.</div>
+              </div>
+              <div>
+                <label class="eyebrow" style="display:block;margin-bottom:7px">Team rung</label>
+                <div style="display:flex;align-items:center;border:1px solid var(--hair);border-radius:6px;overflow:hidden"><input value="12" class="mono" style="border:0;padding:9px 12px;width:100%;font-size:14px;background:transparent;color:var(--ink);outline:none"><span class="mono" style="padding:9px 12px;color:var(--faint);border-left:1px solid var(--hair)">hours</span></div>
+                <div style="font-size:12px;color:var(--faint);margin-top:6px">Employed staff only, before the wider pool.</div>
+              </div>
+              <div>
+                <label class="eyebrow" style="display:block;margin-bottom:7px">Pool rung</label>
+                <div style="display:flex;align-items:center;border:1px solid var(--hair);border-radius:6px;overflow:hidden"><input value="24" class="mono" style="border:0;padding:9px 12px;width:100%;font-size:14px;background:transparent;color:var(--ink);outline:none"><span class="mono" style="padding:9px 12px;color:var(--faint);border-left:1px solid var(--hair)">hours</span></div>
+                <div style="font-size:12px;color:var(--faint);margin-top:6px">Your wider pool, before the open market.</div>
+              </div>
+              <div>
+                <label class="eyebrow" style="display:block;margin-bottom:7px">Market lead time</label>
+                <div style="display:flex;align-items:center;border:1px solid var(--hair);border-radius:6px;overflow:hidden"><input value="48" class="mono" style="border:0;padding:9px 12px;width:100%;font-size:14px;background:transparent;color:var(--ink);outline:none"><span class="mono" style="padding:9px 12px;color:var(--faint);border-left:1px solid var(--hair)">hours</span></div>
+                <div style="font-size:12px;color:var(--faint);margin-top:6px">Latest the market can be reached before start.</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;padding:18px 20px;border-top:1px solid var(--hair);margin-top:18px">
+            <button class="btn primary">Save policy</button>
+          </div>
+        </div>
+      </div>

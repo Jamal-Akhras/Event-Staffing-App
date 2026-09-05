@@ -1,0 +1,16 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1280, "h": 864, "title": "Overview" },
+    { "file": "Schedule.dc.html", "x": 1400, "y": 0, "w": 1280, "h": 864, "title": "Schedule" },
+    { "file": "Requests.dc.html", "x": 2800, "y": 0, "w": 1280, "h": 864, "title": "Requests" },
+    { "file": "People.dc.html", "x": 4200, "y": 0, "w": 1280, "h": 864, "title": "People" },
+    { "file": "Timesheets.dc.html", "x": 0, "y": 1064, "w": 1280, "h": 864, "title": "Timesheets" },
+    { "file": "Insight.dc.html", "x": 1400, "y": 1064, "w": 1280, "h": 864, "title": "Insight" },
+    { "file": "Billing.dc.html", "x": 2800, "y": 1064, "w": 1280, "h": 864, "title": "Billing" },
+    { "file": "Settings.dc.html", "x": 4200, "y": 1064, "w": 1280, "h": 864, "title": "Settings" },
+    { "file": "States.dc.html", "x": 0, "y": 2128, "w": 1280, "h": 1160, "title": "States & forms" },
+    { "file": "OverviewDark.dc.html", "x": 1400, "y": 2128, "w": 1280, "h": 864, "title": "Overview · Dark" },
+    { "file": "TimesheetsDark.dc.html", "x": 2800, "y": 2128, "w": 1280, "h": 864, "title": "Timesheets · Dark" }
+  ],
+  "launch": { "view": "canvas" }
+}

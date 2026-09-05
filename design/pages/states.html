@@ -1,0 +1,83 @@
+      <div>
+        <div class="eyebrow">Design system</div>
+        <div class="serif" style="font-size:30px;font-weight:600;margin-top:4px">States &amp; forms</div>
+      </div>
+
+      <div class="row2" style="grid-template-columns:1fr 1fr;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <div class="card" style="padding:16px">
+            <div class="eyebrow">Buttons</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px">
+              <button class="btn primary">Post a shift</button>
+              <button class="btn primary" style="background:var(--forest);filter:brightness(.9)">Hover</button>
+              <button class="btn ghost">Secondary</button>
+              <button class="btn" style="background:transparent;color:var(--forest);padding-left:6px;padding-right:6px">Text action</button>
+              <button class="btn" style="background:var(--hair);color:var(--faint)">Disabled</button>
+            </div>
+          </div>
+
+          <div class="card" style="padding:16px">
+            <div class="eyebrow">Inputs &amp; fields</div>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+              <div class="inp" style="color:var(--faint)">Role — Bartender, Server…</div>
+              <div class="inp" style="border-color:var(--forest);box-shadow:0 0 0 3px rgba(47,93,80,.20)">Bartender<span style="margin-left:auto;width:1px;height:16px;background:var(--forest)"></span></div>
+              <div>
+                <div class="inp" style="border-color:var(--rust)">14</div>
+                <div style="color:var(--rust);font-size:12px;margin-top:6px">Pay must be at least £11.44 (National Living Wage).</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="padding:16px">
+            <div class="eyebrow">Status</div>
+            <div style="display:flex;flex-wrap:wrap;gap:14px 20px;margin-top:14px">
+              <span style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:var(--forest)"></span>Confirmed</span>
+              <span style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:var(--amber)"></span>1 open</span>
+              <span style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:var(--amber)"></span>Away</span>
+              <span style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:var(--rust)"></span>Cancelled</span>
+              <span style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:var(--faint)"></span>Draft</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <div class="card">
+            <div class="hd"><span class="eyebrow">Rows · default &amp; hover</span></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--hair)"><span class="av" style="width:26px;height:26px"></span><span style="flex:1;font-weight:500">Aisha Karim</span><span class="mono" style="font-size:12px;color:var(--muted)">Bartender</span></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--tint)"><span class="av" style="width:26px;height:26px"></span><span style="flex:1;font-weight:500">Tom Reilly</span><span class="mono" style="font-size:12px;color:var(--muted)">Server</span></div>
+          </div>
+
+          <div class="card" style="padding:16px">
+            <div class="eyebrow">Loading</div>
+            <div style="display:flex;flex-direction:column;gap:11px;margin-top:14px">
+              <div class="sk" style="width:60%"></div>
+              <div class="sk" style="width:90%"></div>
+              <div class="sk" style="width:75%"></div>
+              <div class="sk" style="width:40%"></div>
+            </div>
+          </div>
+
+          <div class="card" style="padding:26px 20px;text-align:center">
+            <div class="eyebrow">Empty state</div>
+            <div class="serif" style="font-size:24px;font-weight:600;margin:12px 0 6px">Every shift covered</div>
+            <div style="color:var(--muted);font-size:14px;max-width:280px;margin:0 auto">Nothing waiting on you this week — nicely done. New requests will land here.</div>
+            <button class="btn ghost" style="margin-top:16px">Plan next week</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><span class="eyebrow">Post a shift</span></div>
+        <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px 20px">
+          <div><label class="eyebrow" style="display:block;margin-bottom:7px">Role</label><div class="inp">Bartender</div></div>
+          <div><label class="eyebrow" style="display:block;margin-bottom:7px">Location</label><div class="inp">Main bar</div></div>
+          <div><label class="eyebrow" style="display:block;margin-bottom:7px">Start</label><div class="inp mono" style="color:var(--muted)">Fri 6 Sep · 18:00</div></div>
+          <div><label class="eyebrow" style="display:block;margin-bottom:7px">End</label><div class="inp mono" style="color:var(--muted)">Fri 6 Sep · 23:00</div></div>
+          <div><label class="eyebrow" style="display:block;margin-bottom:7px">Pay rate (£/hr)</label><div class="inp mono">14.50</div></div>
+          <div><label class="eyebrow" style="display:block;margin-bottom:7px">Workers needed</label><div style="display:flex;align-items:center;gap:0;border:1px solid var(--hair);border-radius:6px;overflow:hidden;width:fit-content"><span style="padding:8px 14px;color:var(--muted)">−</span><span class="mono" style="padding:8px 16px;border-left:1px solid var(--hair);border-right:1px solid var(--hair)">2</span><span style="padding:8px 14px;color:var(--forest)">+</span></div></div>
+          <div style="grid-column:1 / -1"><label class="eyebrow" style="display:flex;justify-content:space-between;margin-bottom:7px"><span>Notes</span><span style="display:flex;align-items:center;gap:6px;color:var(--forest);text-transform:none;letter-spacing:0;font-family:var(--sans);font-size:12px;font-weight:600"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>Help me write this</span></label><div class="inp" style="color:var(--faint)">Dress code, arrival details, anything workers should know…</div></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--hair)">
+          <button class="btn primary">Post shift</button>
+        </div>
+      </div>

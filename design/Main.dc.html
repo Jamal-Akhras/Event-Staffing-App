@@ -1,0 +1,148 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <style>
+*{box-sizing:border-box}
+body{margin:0}
+a{color:#2F5D50;text-decoration:none}a:hover{color:#274E43}
+.app{--bone:#F6F1E7;--surface:#FCFAF4;--ink:#1C1A17;--muted:#6B655C;--faint:#938C81;--hair:#E3DCCF;--forest:#2F5D50;--tint:#E7EDEA;--line:rgba(47,93,80,.20);--brass:#B8863B;--brasstint:#F1E7D2;--amber:#C0872E;--rust:#B23A2A;--slate:#3E5C6B;--av:#D8CFBE;
+  --serif:'Fraunces',Georgia,serif;--sans:'IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;
+  width:1280px;height:864px;position:relative;background:linear-gradient(180deg,#F1E9DB 0%,var(--bone) 46%);color:var(--ink);font-family:var(--sans);font-size:14px;display:flex;overflow:hidden}
+.app::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.45;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.26'/%3E%3C/svg%3E")}
+.app::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'%3E%3Cg fill='none' stroke='%232F5D50' stroke-width='0.9' opacity='0.14'%3E%3Cpath d='M17 1 33 17 17 33 1 17z'/%3E%3Ccircle cx='17' cy='17' r='4.4'/%3E%3C/g%3E%3C/svg%3E");background-size:34px 34px;-webkit-mask-image:radial-gradient(120% 90% at 85% 0%,#000 0%,transparent 72%);mask-image:radial-gradient(120% 90% at 85% 0%,#000 0%,transparent 72%)}
+.app>*{position:relative;z-index:1}
+.side{width:232px;flex:none;background:var(--surface);border-right:1px solid var(--hair);display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:9px;padding:20px 20px 16px;border-bottom:1px solid var(--hair)}
+.mark{width:22px;height:22px;border-radius:6px;background:var(--forest);flex:none}
+.brand b{font-family:var(--serif);font-weight:600;font-size:18px;letter-spacing:-.01em}
+.nav{display:flex;flex-direction:column;gap:2px;padding:14px 12px}
+.nav a{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:6px;color:var(--muted);font-weight:500}
+.nav a .ico{width:18px;height:18px;flex:none}
+.nav a.on{background:var(--tint);color:var(--forest);font-weight:600}
+.nav .badge{margin-left:auto;font-family:var(--mono);font-size:11px;background:var(--forest);color:var(--bone);border-radius:9px;padding:1px 7px}
+.foot{margin-top:auto;padding:14px 18px;border-top:1px solid var(--hair);display:flex;align-items:center;gap:10px}
+.av{width:28px;height:28px;border-radius:50%;background:var(--av);flex:none}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.top{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--hair)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+.chip{display:inline-flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--hair);border-radius:8px;padding:6px 12px;font-weight:500}
+.body{padding:24px 28px;overflow:auto;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 2px rgba(28,26,23,.04),0 10px 22px -16px rgba(28,26,23,.16)}
+.hd{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--hair)}
+.serif{font-family:var(--serif)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.hero{font-family:var(--serif);font-weight:600;line-height:1;letter-spacing:-.01em}
+.btn{font-family:var(--sans);font-weight:600;font-size:14px;border-radius:8px;padding:10px 16px;border:1px solid transparent}
+.primary{background:var(--forest);color:var(--bone)}
+.ghost{background:transparent;color:var(--forest);border:1px solid var(--line)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:500}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.tiles4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.row2{display:grid;grid-template-columns:1.6fr 1fr;gap:20px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:left;font-weight:500;padding:10px 16px;border-bottom:1px solid var(--hair)}
+.tbl td{padding:12px 16px;border-bottom:1px solid var(--hair)}
+.tab{display:flex;gap:4px}
+.tab .t{padding:8px 14px;border-radius:6px;color:var(--muted);font-weight:500;font-size:13px}
+.tab .t.on{background:var(--tint);color:var(--forest);font-weight:600}
+.seg{display:inline-flex;gap:6px;flex-wrap:wrap}
+.seg .s{border:1px solid var(--hair);border-radius:999px;padding:5px 12px;font-size:13px;color:var(--muted)}
+.seg .s.on{background:var(--forest);color:var(--bone);border-color:var(--forest)}
+.app.dark{--bone:#16130D;--surface:#201C15;--ink:#F2EDE1;--muted:#A79E8E;--faint:#7C7466;--hair:#332E23;--forest:#6FA893;--tint:#23312B;--line:rgba(111,168,147,.22);--brass:#CBA05A;--brasstint:#33291A;--amber:#D2A24E;--rust:#E0796B;--slate:#7C93A0;--av:#4A4335;background:linear-gradient(180deg,#1C1810 0%,#16130D 46%)}
+.app.dark::before{opacity:.24}
+.app.dark::after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34' viewBox='0 0 34 34'%3E%3Cg fill='none' stroke='%236FA893' stroke-width='0.9' opacity='0.17'%3E%3Cpath d='M17 1 33 17 17 33 1 17z'/%3E%3Ccircle cx='17' cy='17' r='4.4'/%3E%3C/g%3E%3C/svg%3E")}
+.sk{background:linear-gradient(90deg,var(--hair),#EFE8DB,var(--hair));border-radius:6px;height:12px}
+.app.dark .sk{background:linear-gradient(90deg,#2A251C,#3A3326,#2A251C)}
+.inp{display:flex;align-items:center;border:1px solid var(--hair);border-radius:6px;padding:9px 12px;background:var(--surface);color:var(--ink)}
+.app.tall{height:1160px}
+</style>
+</helmet>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="mark"></span><b>Venue OS</b></div>
+    <nav class="nav">
+      <a class="on"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>Overview</a>
+      <a class=""><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/></svg>Schedule</a>
+      <a class=""><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3.5 13.5 6 5.5h12l2.5 8V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19z"/><path d="M3.5 13.5h5l1.5 2.5h4l1.5-2.5h5"/></svg>Requests<span class="badge">7</span></a>
+      <a class=""><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 6.6a3 3 0 0 1 0 5.8M20.5 20c0-2.2-1.4-4-3.6-4.6"/></svg>People</a>
+      <a class=""><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Timesheets</a>
+      <a class=""><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 20h16"/><path d="M7 17v-5M12 17V8M17 17v-3"/></svg>Insight</a>
+      <a class=""><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3z"/><path d="M9 8h6M9 11.5h6"/></svg>Billing</a>
+      <a class=""><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h8M16 7h4M4 12h4M12 12h8M4 17h6M14 17h6"/><circle cx="14" cy="7" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="12" cy="17" r="2"/></svg>Settings</a>
+    </nav>
+    <div class="foot"><span class="av"></span><div><div style="font-weight:600">Sam Whitby</div><div style="font-size:12px;color:var(--faint)">Manager</div></div></div>
+  </aside>
+  <div class="main">
+    <div class="top">
+      <div class="eyebrow">Overview · The Grapes</div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <span class="chip"><span style="color:var(--brass)">★</span> The Grapes · 4.8</span>
+        <span style="display:flex;align-items:center;gap:16px;color:var(--muted)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4.5 5h15A1.5 1.5 0 0 1 21 6.5v8A1.5 1.5 0 0 1 19.5 16H12l-4.5 3.6V16H4.5A1.5 1.5 0 0 1 3 14.5v-8A1.5 1.5 0 0 1 4.5 5z"/></svg><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 8.5a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10.5 20a1.7 1.7 0 0 0 3 0"/></svg></span>
+      </div>
+    </div>
+    <div class="body">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between">
+        <div>
+          <div class="eyebrow">Tonight's coverage</div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:6px">
+            <span class="hero" style="font-size:58px">18/20</span>
+            <span class="serif" style="font-size:22px;color:var(--muted)">covered</span>
+          </div>
+          <div style="color:var(--muted);margin-top:8px">2 seats open across 2 shifts — you're on track for a full night.</div>
+        </div>
+        <button class="btn primary">Post a shift</button>
+      </div>
+
+      <div class="tiles">
+        <div class="card" style="padding:16px"><div class="eyebrow">Open seats</div><div class="hero" style="font-size:36px;margin:8px 0 2px">2</div><div style="color:var(--faint);font-size:13px">across 2 shifts tonight</div></div>
+        <div class="card" style="padding:16px"><div class="eyebrow">Applications waiting</div><div class="hero" style="font-size:36px;margin:8px 0 2px">6</div><div style="color:var(--faint);font-size:13px">oldest arrived 2h ago</div></div>
+        <div class="card" style="padding:16px"><div class="eyebrow">Fill rate · 30d</div><div class="hero" style="font-size:36px;margin:8px 0 2px">92%</div><div style="color:var(--forest);font-size:13px;font-weight:500">▲ 4 pts on last month</div></div>
+      </div>
+
+      <div class="row2">
+        <div class="card">
+          <div class="hd"><span class="eyebrow">Tonight</span><span class="mono" style="font-size:12px;color:var(--muted)">4 shifts</span></div>
+          <div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--hair)"><span class="serif" style="font-size:15px;flex:1">Bartender</span><span class="mono" style="font-size:12px;color:var(--muted);width:120px">6:00–11:00pm</span><span class="mono" style="font-size:12px;color:var(--muted);width:44px">2/2</span><span style="display:flex;align-items:center;gap:7px;width:110px"><span class="dot" style="background:var(--forest)"></span>Confirmed</span></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--hair)"><span class="serif" style="font-size:15px;flex:1">Server</span><span class="mono" style="font-size:12px;color:var(--muted);width:120px">5:00–11:00pm</span><span class="mono" style="font-size:12px;color:var(--muted);width:44px">4/5</span><span style="display:flex;align-items:center;gap:7px;width:110px"><span class="dot" style="background:var(--amber)"></span>1 open</span></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--hair)"><span class="serif" style="font-size:15px;flex:1">Host</span><span class="mono" style="font-size:12px;color:var(--muted);width:120px">6:00–10:00pm</span><span class="mono" style="font-size:12px;color:var(--muted);width:44px">1/1</span><span style="display:flex;align-items:center;gap:7px;width:110px"><span class="dot" style="background:var(--forest)"></span>Confirmed</span></div>
+            <div style="display:flex;align-items:center;gap:14px;padding:13px 16px"><span class="serif" style="font-size:15px;flex:1">Kitchen porter</span><span class="mono" style="font-size:12px;color:var(--muted);width:120px">5:00–10:00pm</span><span class="mono" style="font-size:12px;color:var(--muted);width:44px">2/3</span><span style="display:flex;align-items:center;gap:7px;width:110px"><span class="dot" style="background:var(--amber)"></span>1 open</span></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <div class="card">
+            <div class="hd"><span class="eyebrow">This week</span></div>
+            <div style="display:flex;justify-content:space-between;padding:14px 16px;text-align:center">
+              <div><div class="eyebrow" style="font-size:10px">Mon</div><div class="serif" style="font-size:17px;margin-top:5px">6/6</div></div>
+              <div><div class="eyebrow" style="font-size:10px">Tue</div><div class="serif" style="font-size:17px;margin-top:5px">8/8</div></div>
+              <div><div class="eyebrow" style="font-size:10px">Wed</div><div class="serif" style="font-size:17px;margin-top:5px">7/8</div></div>
+              <div><div class="eyebrow" style="font-size:10px">Thu</div><div class="serif" style="font-size:17px;margin-top:5px">9/9</div></div>
+              <div style="color:var(--forest)"><div class="eyebrow" style="font-size:10px;color:var(--forest)">Fri</div><div class="serif" style="font-size:17px;margin-top:5px">18/20</div></div>
+              <div><div class="eyebrow" style="font-size:10px">Sat</div><div class="serif" style="font-size:17px;margin-top:5px">—</div></div>
+              <div><div class="eyebrow" style="font-size:10px">Sun</div><div class="serif" style="font-size:17px;margin-top:5px">—</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="hd"><span class="eyebrow">Waiting on you</span><a style="font-size:13px;font-weight:600">Review all</a></div>
+            <div style="padding:6px 16px 10px">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--hair)"><span class="av" style="width:24px;height:24px"></span><div style="flex:1"><div style="font-weight:500">Priya N.</div><div style="font-size:12px;color:var(--faint)">Server · applied 2h ago</div></div><a style="font-size:13px;font-weight:600">Review</a></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 0"><span class="av" style="width:24px;height:24px"></span><div style="flex:1"><div style="font-weight:500">Marcus B.</div><div style="font-size:12px;color:var(--faint)">Kitchen porter · applied 3h ago</div></div><a style="font-size:13px;font-weight:600">Review</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
